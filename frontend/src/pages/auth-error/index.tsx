@@ -10,7 +10,7 @@ export default function AuthErrorPage() {
 
   // Get error details from URL params (if available)
   const errorCode = searchParams.get("error") || "idp_auth_failed"
-  const errorMessage = searchParams.get("message") || "We couldn't log you in."
+  // const errorMessage = searchParams.get("message") || "We couldn't log you in."
 
   // Retry authentication mutation
   const retryMutation = useMutation({
