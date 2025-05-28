@@ -46,15 +46,15 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
         )
       default:
         return (
-          <div className="p-4 md:px-6 w-full font-inter">
+          <div className="px-4 md:px-6 w-full font-inter  ">
             <h1 className="text-xl md:text-3xl font-semibold text-gray-900 mb-4 md:mb-6 text-center">Plans & Billing</h1>
             
             {/* Cards container with proper scrolling */}
-            <div className="space-y-4 md:space-y-3">
+            <div className="space-b-4 md:space-b-3 ">
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
                 {/* Free Plan - $0 */}
                 <Card className="relative w-full h-fit">
-                  <CardHeader className="p-4 md:p-6">
+                  <CardHeader className="px-4 md:px-6">
                     <CardTitle className="text-base md:text-lg font-medium">Free</CardTitle>
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl md:text-3xl font-bold">$0</span>
@@ -91,7 +91,7 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
 
                 {/* Paid Plan - $20 */}
                 <Card className="relative  w-full">
-                  <CardHeader className="p-4 md:p-6">
+                  <CardHeader className="px-4 md:px-6">
                     <CardTitle className="text-base md:text-lg font-medium ">Pro</CardTitle>
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl md:text-3xl font-bold">$20</span>
@@ -120,9 +120,9 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
                       </div>
                     </div>
 
-                    <div className="space-y-3 md:space-y-4 pt-3 md:pt-4">
-                      <Select defaultValue="100 ">
-                        <SelectTrigger className="text-sm">
+                    <div className="space-y-3 md:space-y-4 pt-3 ">
+                      <Select defaultValue="100">
+                        <SelectTrigger className="text-sm ">
                           <SelectValue placeholder="Select credits" />
                         </SelectTrigger>
                         <SelectContent>
@@ -148,9 +148,9 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="!max-w-[75vw] !w-[1100px] h-[90vh] p-0 gap-0 sm:!max-w-[95vw] font-inter border-1 border-gray-400 hidden md:block">
+      <DialogContent className="!max-w-[75vw] !w-[1250px] h-[75vh] p-0 gap-0 sm:!max-w-[95vw] font-inter border-1 border-gray-400 hidden md:block">
         <VisuallyHidden>
-          <DialogTitle>Plans and Billing</DialogTitle>
+          <DialogTitle >Plans and Billing</DialogTitle>
         </VisuallyHidden>
         <div className="flex h-full">
           {/* Sidebar - hidden on mobile, 20% width on desktop */}
@@ -208,7 +208,7 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
             </div>
 
             {/* Close button for desktop */}
-            <div className="hidden md:flex items-center justify-end p-4">
+            <div className="hidden md:flex items-center justify-end px-4">
               <DialogClose asChild>
                 <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-600">
                   {/* <X className="w-5 h-5 sm:w-4 sm:h-4" />/ */}

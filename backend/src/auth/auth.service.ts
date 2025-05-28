@@ -5,6 +5,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -204,7 +205,31 @@ export class AuthService {
       { isEmailVerified: true, isActive: true },
     );
 
-    return { message: 'Congratulation, your email verified successfully' };
+
+    const user = await this.usersRepository.findOne({
+      where: {
+        email: identifier
+      }
+    })
+
+    if (!user) {
+      throw new InternalServerErrorException("Error creating Token")
+    }
+
+    const token = this.jwtService.sign(
+      { id: user.id, role: user.role },
+      {
+        secret: this.configService.get('JWT_SECRET'),
+        expiresIn: '7d',
+      },
+    );
+
+    const {password, ...userData} = user;
+
+    return {
+      token,
+      user: userData,
+    };
   }
 
   async sendEmailVerification(input: EmailVerificationInput) {

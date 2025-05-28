@@ -14,7 +14,7 @@ export function useResetPassword() {
       return response.data;
     },
     onSuccess: (data) => {
-      alert(data.message);
+      toast.success(data.message);
       navigate('/');
     },
     onError: (error: string) => {

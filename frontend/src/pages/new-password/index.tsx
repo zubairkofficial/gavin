@@ -104,88 +104,90 @@ export default function NewPasswordForm() {
 
 
   return (
-    <div className="w-full flex flex-col items-center">
-      <div className="mt-8">
-        <h2 className="text-5xl font-bold font-lora mb-4">Reset your password</h2>
-        <p className="mt-2 text-gray-600">Enter a new password below to change your password</p>
-      </div>
+    <div className="w-full flex-1 flex flex-col items-center">
+  <div className="mt-8 md:text-center">
+    <h2 className="text-3xl md:text-5xl font-bold font-lora mb-4">Reset your password</h2>
+    <p className="mt-2 text-gray-600">Enter a new password below to change your password</p>
+  </div>
 
-      <div className="mt-6 w-full max-w-md space-y-8">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>New password:</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input type={showPassword ? "text" : "password"} {...field} onChange={(e) => {
-                        field.onChange(e)
-                        checkPasswordStrength(e.target.value)
-                      }} />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                        <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+  <div className="w-full max-w-md flex-1 md:flex-none flex flex-col justify-between">
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 space-y-6 mt-6 flex flex-col justify-between">
+        <div className="space-y-6">
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>New password:</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input type={showPassword ? "text" : "password"} {...field} onChange={(e) => {
+                      field.onChange(e)
+                      checkPasswordStrength(e.target.value)
+                    }} />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                      <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+                    </Button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Re-enter new password:</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input type={showConfirmPassword ? "text" : "password"} {...field} onChange={(e) => {
-                        field.onChange(e)
-                        checkPasswordStrength(e.target.value)
-                      }} />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                        <span className="sr-only">{showConfirmPassword ? "Hide password" : "Show password"}</span>
-                      </Button>
-                    </div>
-                  </FormControl>
-                  {form.formState.isSubmitted && passwordStrength.isWeak && (
-                    <p className="text-sm text-destructive mt-1">{passwordStrength.message}</p>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Re-enter new password:</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input type={showConfirmPassword ? "text" : "password"} {...field} onChange={(e) => {
+                      field.onChange(e)
+                      checkPasswordStrength(e.target.value)
+                    }} />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                      <span className="sr-only">{showConfirmPassword ? "Hide password" : "Show password"}</span>
+                    </Button>
+                  </div>
+                </FormControl>
+                {form.formState.isSubmitted && passwordStrength.isWeak && (
+                  <p className="text-sm text-destructive mt-1">{passwordStrength.message}</p>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-            <Button type="submit" className="w-full bg-black text-white hover:bg-black/90" disabled={isResetting}>
-              {isResetting ? "Processing..." : "Continue"}
-            </Button>
-          </form>
-        </Form>
-      </div>
+        <Button type="submit" className="w-full bg-black text-white hover:bg-black/90" disabled={isResetting}>
+          {isResetting ? "Processing..." : "Continue"}
+        </Button>
+      </form>
+    </Form>
+  </div>
 
-      <div className="mt-6 text-center">
-        <Link to=".." className="text-sm hover:underline">
-          Go to back
-        </Link>
-      </div>
-    </div >
+  <div className="mt-4 text-center">
+    <Link to=".." className="text-sm text-primary hover:underline">
+      Go to back
+    </Link>
+  </div>
+</div>
   )
 }

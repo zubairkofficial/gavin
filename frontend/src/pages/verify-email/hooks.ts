@@ -1,3 +1,4 @@
+import { useAuth } from "@/context/Auth.context"
 import API from "@/lib/api"
 import { useMutation } from "@tanstack/react-query"
 import { AxiosError } from "axios"
@@ -5,6 +6,8 @@ import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 export const useVerifyEmailMutation = () => {
+
+const { onAuth } = useAuth();
   const navigate = useNavigate();
   return useMutation({
     mutationKey: ["verify-email"],
@@ -16,7 +19,10 @@ export const useVerifyEmailMutation = () => {
     },
     onSuccess: ({data}) => {
       toast.success(data?.message || "Email verified successfully.") 
-      navigate("/")
+      console.log(data.token)
+      console.log(data.user)
+      onAuth(data.token , data.user)
+      navigate("/onboarding")
     },
     onError: (error: AxiosError<{ message: string }>) => {
       toast.error(error.response?.data?.message || "An error occurred")
