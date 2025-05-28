@@ -35,7 +35,6 @@ export const useLoginMutation = () => {
 
 export const useGoogleLoginMutation = () => {
   const { onAuth } = useAuth();
-  const navigate = useNavigate();
   return useMutation({
     mutationKey: ["google-login"],
     mutationFn: async ({ token }: { token: string }) => {
@@ -46,7 +45,6 @@ export const useGoogleLoginMutation = () => {
       },
     onSuccess: (res) => {
       onAuth(res.data?.token, res.data?.user)
-      navigate(0)
       toast.success("Login successful") 
     },
     onError: (error: AxiosError<{ message: string }>) => {

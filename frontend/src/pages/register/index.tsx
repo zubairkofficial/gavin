@@ -99,6 +99,7 @@ export default function SignUpPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const token = await result.user.getIdToken();
       await googleLogin({ token })
+      navigate('/')
       console.log("Token:", token);
     } catch (error) {
       console.error("Google sign in failed:", error)

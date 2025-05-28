@@ -10,7 +10,7 @@ export default function AuthenticateRoutes() {
         loader={() => {
           const userData = localStorage.getItem("userData");
           const user = userData ? JSON.parse(userData) : null;
-          if (user && !user?.fullName && !user?.companySize && !user?.firmName) {
+          if (user && (!user?.fullName || !user?.companySize || !user?.firmName)) {
             return redirect("/onboarding")
           }
           return null;
