@@ -5,6 +5,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
   // const [user, setUser] = useState<IUser | null>(null);
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+
   
   useEffect(() => {
     // Check for existing tokens in localStorage

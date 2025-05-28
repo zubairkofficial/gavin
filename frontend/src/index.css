@@ -134,3 +134,11 @@
     @apply bg-background text-foreground;
   }
 }
+.swiper-button-disabled {
+  display: none !important;
+}
+
+.gradiant-co:has(~ :not(.swiper-button-disabled)) {
+  /* your styles here */
+  display: block !important;
+}

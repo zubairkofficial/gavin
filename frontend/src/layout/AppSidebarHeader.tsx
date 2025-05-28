@@ -1,17 +1,35 @@
-import { SidebarHeader } from "@/components/ui/sidebar";
+import { SidebarHeader, useSidebar } from "@/components/ui/sidebar";
 import { Logo } from "@/components/Logo";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { BookOpenText, ChevronLeft, ChevronRight, CreditCard, LogOutIcon, UserIcon } from "lucide-react";
-import { useState } from "react";
+import {  useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/Auth.context";
+import { useModel } from "@/context/Model.context";
 
 export function AppSidebarHeader() {
+
+  const { setIsModalOpen} = useModel();
+  const {toggleSidebar} = useSidebar()
   const [isInnerSideBarOpen, setIsInnerSideBarOpen] = useState(false)
+  
   const { logout } = useAuth()
   const navigate = useNavigate()
+ useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 724) { // Set threshold for large screen (1024px)
+        setIsModalOpen(false); // Close the modal on large screen
+      }
+    };
 
+    window.addEventListener("resize", handleResize);
+    handleResize(); // Check on initial load
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [setIsModalOpen]);
   return (
     <SidebarHeader className="px-3 pt-6 border-b md:border-none">
       <div className=" hidden md:block">
@@ -45,9 +63,9 @@ export function AppSidebarHeader() {
                   <span className="text-base">Account</span>
                 </div>
 
-                <div className="py-1 flex items-center cursor-pointer px-0">
+                <div className="py-1 flex items-center cursor-pointer px-0" onClick={() => {setIsModalOpen(true); setIsInnerSideBarOpen(!isInnerSideBarOpen); toggleSidebar()}}>
                   <CreditCard className="mr-2 !h-[18px] !w-[1" />
-                  <span className="text-base">Plans & Billing</span>
+                  <button   className="text-base">Plans & Billing</button>
                 </div>
 
                 <div className="py-1 flex items-center cursor-pointer px-0">
@@ -78,6 +96,7 @@ export function AppSidebarHeader() {
           </div>
         </div>
       </div>
+     
     </SidebarHeader>
   );
 }

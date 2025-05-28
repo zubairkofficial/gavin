@@ -5,11 +5,15 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/context/Auth.context"
 import { useNavigate } from "react-router-dom"
+import { useState } from "react"
+import { PlansBillingModal } from "./plans-biling-model"
 
 export default function ProfileDropdown() {
   const { logout } = useAuth()
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const navigate = useNavigate()
   return (
+    <>
     <div className="flex justify-center p-4">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -47,9 +51,9 @@ export default function ProfileDropdown() {
                 <span className="text-base">Account</span>
               </DropdownMenuItem>
 
-              <DropdownMenuItem className="py-1 cursor-pointer px-0">
+              <DropdownMenuItem className="py-1 cursor-pointer px-0" onClick={() => setIsModalOpen(true)}>
                 <CreditCard className="mr-2 !h-[18px] !w-[1" />
-                <span className="text-base">Plans & Billing</span>
+                <button   className="text-base">Plans & Billing</button>
               </DropdownMenuItem>
 
               <DropdownMenuItem className="py-1 cursor-pointer px-0">
@@ -68,6 +72,9 @@ export default function ProfileDropdown() {
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
+      
     </div>
+    <PlansBillingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </>
   )
 }
