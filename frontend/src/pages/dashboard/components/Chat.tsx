@@ -56,7 +56,7 @@ const Chat = ({ messages, setMessages }: { messages: any; setMessages: any }) =>
       WebkitMaskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)',
     }}
   >
-    <div className="md:max-w-[850px] px-2 md:px-8 flex items-center justify-center mx-auto mb-4 overflow-hidden">
+    <div className="md:max-w-[950px] px-2 md:px-8 flex items-center justify-center mx-auto mb-4 overflow-hidden">
       <div className="w-full space-y-4 pt-6 md:pt-12 ">
         {/* Question */}
         <div className="flex justify-end">
@@ -467,7 +467,7 @@ const Chat = ({ messages, setMessages }: { messages: any; setMessages: any }) =>
       {/* Chat Input Section */}
       <div
         className={cn(
-            "mx-auto w-full max-w-4xl bg-background px-2 md:px-8 flex-shrink-0 relative ",
+            "mx-auto w-full max-w-5xl bg-background px-2 md:px-8 flex-shrink-0 relative ",
             messages.length > 0
             ? "pb-10" // Simple bottom padding when messages exist
             : "mt-auto", // Keep original styling when no messages
