@@ -579,7 +579,7 @@ const Chat = ({ messages, setMessages }: { messages: any; setMessages: any }) =>
 
             <Button
               onClick={() => setMessages([...messages, { role: "user", content: message }])}
-              className="rounded-sm ml-auto justify-self-end text-white hover:text-foreground bg-foreground px-3 md:px-4 py-2 text-xs md:text-sm"
+              className="rounded-sm ml-auto justify-self-end text-white hover:text-white bg-foreground hover:bg-gray-600 px-3 md:px-4 py-2 text-xs md:text-sm"
             >
               Ask Gavin
             </Button>

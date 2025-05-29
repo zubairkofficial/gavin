@@ -5,9 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Link } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { useUpdateProfileMutation } from "./hooks"
 import { Logo } from "@/components/Logo"
+import { useAuth } from "@/context/Auth.context"
+
+import { useEffect, useState } from "react"
 
 // Form validation schema
 const formSchema = z.object({
@@ -28,7 +31,9 @@ const companySizeOptions = [
 
 export default function OnboardingPage() {
   const { mutateAsync: updateProfile, isPending: isUpdating } = useUpdateProfileMutation()
-
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+  const [isUser, setIsUser] = useState<boolean>(true)
   // Initialize React Hook Form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -39,9 +44,18 @@ export default function OnboardingPage() {
     },
   })
 
+  useEffect(() => {
+    const auth = localStorage.getItem("authToken")
+    const usr = localStorage.getItem("userData")
+    if (!auth || !usr) {
+      
+      navigate("/")
+    }
+  }, [isUser]) 
+
   // Form submission handler
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (isUpdating) return;
+    if (isUpdating) return
     await updateProfile(values)
   }
 
@@ -113,20 +127,22 @@ export default function OnboardingPage() {
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full bg-black hover:bg-gray-800"
-              disabled={isUpdating}
-            >
+            <Button type="submit" className="w-full bg-black hover:bg-gray-800" disabled={isUpdating}>
               {isUpdating ? "Saving..." : "Continue"}
             </Button>
           </form>
         </Form>
       </div>
       <div className="mt-4 text-center">
-        <Link to="/onboarding" className="text-sm text-gray-600 hover:underline">
+        <button
+          className="text-sm text-gray-600 hover:underline"
+          onClick={() => {
+            logout()
+            setIsUser(false) // trigger useEffect to re-check localStorage and navigate
+          }}
+        >
           Back
-        </Link>
+        </button>
       </div>
     </div>
   )
