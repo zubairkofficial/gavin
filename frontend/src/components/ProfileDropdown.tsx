@@ -6,12 +6,22 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/context/Auth.context"
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
-import { PlansBillingModal } from "./plans-biling-model"
+import { PlansBillingModal } from "../pages/Accounts/desktopPages/plans-biling-model"
 
 export default function ProfileDropdown() {
   const { logout } = useAuth()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const navigate = useNavigate()
+
+ 
+
+
+const [activeSection, setActiveSection] = useState<any>("")
+
+  const handleOpenModal = (section: any) => {
+    setActiveSection(section)
+    setIsModalOpen(true)
+  }
   return (
     <>
     <div className="flex justify-center p-4">
@@ -46,20 +56,20 @@ export default function ProfileDropdown() {
             </div>
 
             <div className="w-full">
-              <DropdownMenuItem className="py-1 cursor-pointer px-0">
-                <User className="mr-2 !h-[18px] !w-[1" />
-                <span className="text-base">Account</span>
-              </DropdownMenuItem>
+               <DropdownMenuItem className="py-1 cursor-pointer px-0" onClick={() => handleOpenModal("account")}>
+                  <User className="mr-2 !h-[18px] !w-[18px]" />
+                  <span className="text-base">Account</span>
+                </DropdownMenuItem>
 
-              <DropdownMenuItem className="py-1 cursor-pointer px-0" onClick={() => setIsModalOpen(true)}>
-                <CreditCard className="mr-2 !h-[18px] !w-[1" />
-                <button   className="text-base">Plans & Billing</button>
-              </DropdownMenuItem>
+                <DropdownMenuItem className="py-1 cursor-pointer px-0" onClick={() => handleOpenModal("plans-billing")}>
+                  <CreditCard className="mr-2 !h-[18px] !w-[18px]" />
+                  <span className="text-base">Plans & Billing</span>
+                </DropdownMenuItem>
 
-              <DropdownMenuItem className="py-1 cursor-pointer px-0">
-                <BookOpenText className="mr-2 !h-[18px] !w-[1" />
-                <span className="text-base">Help Center</span>
-              </DropdownMenuItem>
+             <DropdownMenuItem className="py-1 cursor-pointer px-0" onClick={() => handleOpenModal("help-center")}>
+                  <BookOpenText className="mr-2 !h-[18px] !w-[18px]" />
+                  <span className="text-base">Help Center</span>
+                </DropdownMenuItem>
 
               <DropdownMenuItem className="pt-1 cursor-pointer px-0" onClick={() => {
                 logout()
@@ -74,7 +84,11 @@ export default function ProfileDropdown() {
       </DropdownMenu>
       
     </div>
-    <PlansBillingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    <PlansBillingModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        initialSection={activeSection}
+      />
     </>
   )
 }

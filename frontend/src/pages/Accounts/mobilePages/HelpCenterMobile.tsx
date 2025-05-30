@@ -1,0 +1,172 @@
+"use client"
+
+import type React from "react"
+import { useState } from "react"
+import { ChevronDown, ChevronUp, CreditCard, Shield, Users, Lock, Globe, ExternalLink, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { useModel } from "@/context/Model.context"
+
+interface FAQItem {
+  id: string
+  question: string
+  answer: string
+  icon: React.ComponentType<{ className?: string }>
+}
+
+const faqData: FAQItem[] = [
+  {
+    id: "credit-system",
+    question: "How does the credit system work?",
+    answer:
+      "Credits are used for AI-powered features like document analysis, legal research, and case predictions. Each action consumes a specific number of credits based on complexity. Free accounts get 5 daily credits, while Pro accounts include monthly credit allowances.",
+    icon: CreditCard,
+  },
+  {
+    id: "gavin-accuracy",
+    question: "How accurate is Gavin AI?",
+    answer:
+      "Gavin AI maintains a 95%+ accuracy rate across legal document analysis and research tasks. Our AI is trained on millions of legal documents and continuously updated with the latest case law and regulations.",
+    icon: Shield,
+  },
+  {
+    id: "account-sharing",
+    question: "Can I share my account with colleagues?",
+    answer:
+      "Yes! Pro accounts support unlimited team members. You can invite colleagues, assign roles, and manage permissions. Each team member gets their own login while sharing the account's credit pool.",
+    icon: Users,
+  },
+  {
+    id: "data-security",
+    question: "Is my data secure?",
+    answer:
+      "Absolutely. We use enterprise-grade encryption, SOC 2 compliance, and follow strict data protection protocols. Your documents are encrypted at rest and in transit, and we never share your data with third parties.",
+    icon: Lock,
+  },
+  {
+    id: "jurisdictions",
+    question: "What jurisdictions does Gavin AI cover?",
+    answer:
+      "Gavin AI covers all 50 US states, federal law, and major international jurisdictions including UK, Canada, Australia, and EU member states. We're continuously expanding our coverage based on user demand.",
+    icon: Globe,
+  },
+]
+
+export function HelpCenterMobile() {
+  const [openItems, setOpenItems] = useState<string[]>([])
+  const { ModalOpen, setIsModalOpen } = useModel()
+
+  const toggleItem = (itemId: string) => {
+    setOpenItems((prev) => (prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId]))
+  }
+
+  const handleContactSupport = async () => {
+    try {
+      // API call to create support ticket or redirect to support
+      const response = await fetch("/api/support/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          source: "help-center",
+          timestamp: new Date().toISOString(),
+        }),
+      })
+
+      if (response.ok) {
+        // Redirect to support portal or show success message
+        window.open("/support", "_blank")
+      }
+    } catch (error) {
+      console.error("Failed to contact support:", error)
+    }
+  }
+
+  return (
+    <div className="w-full max-w-[600px] mx-auto px-4 pb-4 font-inter md:hidden">
+      {/* Close Button */}
+      <div className="w-full flex justify-end mb-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-gray-400 hover:text-gray-600"
+          onClick={() => setIsModalOpen(!ModalOpen)}
+        >
+          <X className="w-6 h-6" />
+        </Button>
+      </div>
+
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-gray-900 text-center mb-2 font-inter">
+          Help Center
+        </h1>
+      </div>
+
+      {/* Divider */}
+      <div className="w-full h-px bg-gray-300 mb-6"></div>
+
+      {/* Content Area */}
+      <div className="space-y-6">
+        {/* FAQ Section */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-medium text-gray-900">Frequently Asked Questions</h2>
+
+          <div className="space-y-3">
+            {faqData.map((item) => {
+              const Icon = item.icon
+              const isOpen = openItems.includes(item.id)
+
+              return (
+                <Collapsible key={item.id} open={isOpen} onOpenChange={() => toggleItem(item.id)}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between p-3 h-auto text-left hover:bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                        <span className="font-medium text-gray-900 text-sm">{item.question}</span>
+                      </div>
+                      {isOpen ? (
+                        <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-3 pb-3">
+                    <p className="text-gray-600 leading-relaxed text-sm mt-2">{item.answer}</p>
+                  </CollapsibleContent>
+                </Collapsible>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Knowledge Base Link */}
+        <div className="text-center">
+          <Button
+            variant="link"
+            className="text-blue-600 hover:text-blue-700 p-0 text-sm"
+            onClick={() => window.open("/knowledge-base", "_blank")}
+          >
+            Still need help? Visit our full Knowledge Base
+            <ExternalLink className="w-3 h-3 ml-1" />
+          </Button>
+        </div>
+
+        {/* Contact Support */}
+        <div className="space-y-3">
+          <Button
+            onClick={handleContactSupport}
+            className="w-full bg-gray-600 hover:bg-gray-400 text-white py-3 text-sm"
+          >
+            Contact Support
+          </Button>
+          <p className="text-center text-xs text-gray-500">
+            Our team typically responds within 24 hours on business days.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}

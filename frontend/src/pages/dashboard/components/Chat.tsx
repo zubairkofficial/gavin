@@ -56,19 +56,19 @@ const Chat = ({ messages, setMessages }: { messages: any; setMessages: any }) =>
       WebkitMaskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)',
     }}
   >
-    <div className="md:max-w-[950px] px-2 md:pl-8 flex items-center justify-center mx-auto mb-4 overflow-hidden">
+    <div className="md:max-w-[950px] px-2 md:pl-8 flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px]">
       <div className="w-full space-y-4 pt-6 md:pt-12 ">
         {/* Question */}
         <div className="flex justify-end">
           <div className="bg-gray-200 rounded-lg px-3 md:px-4 py-2 max-w-[80%] md:max-w-md">
-            <p className="text-gray-800 text-sm md:text-base">Is a non-compete clause enforceable</p>
+            <p className="text-gray-800 text-sm md:text-sm">Is a non-compete clause enforceable</p>
           </div>
         </div>
 
         {/* Answer  */}
         <div className="rounded-lg py-4 md:py-6">
           <div className="space-y-3 md:space-y-4">
-            <p className="text-gray-800 text-sm md:text-base">
+            <p className="text-gray-800 text-sm md:text-sm">
               No, non-compete clauses are generally unenforceable in California, including for independent
               contractors.{" "}
               <DropdownMenu>
@@ -118,7 +118,7 @@ const Chat = ({ messages, setMessages }: { messages: any; setMessages: any }) =>
                 </DropdownMenuContent>
               </DropdownMenu>
             </p>
-            <p className="text-gray-800 text-sm md:text-base">
+            <p className="text-gray-800 text-sm md:text-sm">
               Pursuant to California Business and Professions Code § 16600, "every contract by which anyone is
               restrained from engaging in a lawful profession{" "}
               <DropdownMenu>
@@ -168,12 +168,12 @@ const Chat = ({ messages, setMessages }: { messages: any; setMessages: any }) =>
                 </DropdownMenuContent>
               </DropdownMenu>
             </p>
-            <p className="text-gray-800 text-sm md:text-base">
+            <p className="text-gray-800 text-sm md:text-sm">
               Pursuant to California Business and Professions Code § 16600, "every contract by which anyone is
               restrained from engaging in a lawful profession, trade, or business of any kind is to that extent
               void." This provision applies broadly to both employees and independent contractors.
             </p>
-            <p className="text-gray-800 text-sm md:text-base">
+            <p className="text-gray-800 text-sm md:text-sm">
               California courts have consistently declined to enforce non-compete clauses, except in narrow
               circumstances involving the sale of a business.{" "}
               <DropdownMenu>
@@ -260,14 +260,14 @@ const Chat = ({ messages, setMessages }: { messages: any; setMessages: any }) =>
         {/* Question */}
         <div className="flex justify-end">
           <div className="bg-gray-200 rounded-lg px-3 md:px-4 py-2 max-w-[80%] md:max-w-md">
-            <p className="text-gray-800 text-sm md:text-base">Is a non-compete clause enforceable</p>
+            <p className="text-gray-800 text-sm md:text-sm">Is a non-compete clause enforceable</p>
           </div>
         </div>
 
         {/* Answer  */}
         <div className="rounded-lg py-4 md:py-6">
           <div className="space-y-3 md:space-y-4">
-            <p className="text-gray-800 text-sm md:text-base">
+            <p className="text-gray-800 text-sm md:text-sm">
               No, non-compete clauses are generally unenforceable in California, including for independent
               contractors.{" "}
               <DropdownMenu>
@@ -317,7 +317,7 @@ const Chat = ({ messages, setMessages }: { messages: any; setMessages: any }) =>
                 </DropdownMenuContent>
               </DropdownMenu>
             </p>
-            <p className="text-gray-800 text-sm md:text-base">
+            <p className="text-gray-800 text-sm md:text-sm">
               Pursuant to California Business and Professions Code § 16600, "every contract by which anyone is
               restrained from engaging in a lawful profession{" "}
               <DropdownMenu>
@@ -367,12 +367,12 @@ const Chat = ({ messages, setMessages }: { messages: any; setMessages: any }) =>
                 </DropdownMenuContent>
               </DropdownMenu>
             </p>
-            <p className="text-gray-800 text-sm md:text-base">
+            <p className="text-gray-800 text-sm md:text-sm">
               Pursuant to California Business and Professions Code § 16600, "every contract by which anyone is
               restrained from engaging in a lawful profession, trade, or business of any kind is to that extent
               void." This provision applies broadly to both employees and independent contractors.
             </p>
-            <p className="text-gray-800 text-sm md:text-base">
+            <p className="text-gray-800 text-sm md:text-sm">
               California courts have consistently declined to enforce non-compete clauses, except in narrow
               circumstances involving the sale of a business.{" "}
               <DropdownMenu>
@@ -543,7 +543,7 @@ const Chat = ({ messages, setMessages }: { messages: any; setMessages: any }) =>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="rounded-sm mb-7 flex-1 text-start  px-1 py-2 bg-transparent outline-none border-none focus-visible:ring-[0px] shadow-none font-inter placeholder:text-muted-foreground text-sm md:text-base"
+            className="rounded-sm mb-7 flex-1 text-start  px-1 py-2 bg-transparent outline-none border-none focus-visible:ring-[0px] shadow-none font-inter placeholder:text-muted-foreground text-sm md:text-sm"
             placeholder="Ask Gavin a question..."
           />
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { X, User, CreditCard, HelpCircle, LogOut, Check } from "lucide-react"
+import {  User, CreditCard, HelpCircle, LogOut, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -9,14 +9,22 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
+import { useAuth } from "@/context/Auth.context"
+import { useNavigate } from "react-router-dom"
+import { AccountInformation } from "./account-information"
+import { HelpCenter } from "./help-center"
 
 interface PlansBillingModalProps {
   isOpen: boolean
   onClose: () => void
+  initialSection : any
 }
 
-export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
+export function PlansBillingModal({ isOpen, onClose , initialSection }: PlansBillingModalProps) {
   const [activeSection, setActiveSection] = useState("plans-billing")
+
+  const { logout } = useAuth()
+  const navigate = useNavigate()
 
   const navigationItems = [
     { id: "account", label: "Account", icon: User },
@@ -24,33 +32,36 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
     { id: "help-center", label: "Help Center", icon: HelpCircle },
   ]
 
+  const handleLogout = () => {
+    
+    console.log("Logging out...")
+  }
+
   const renderContent = () => {
     switch (activeSection) {
       case "account":
         return (
-          <div className="p-6">
-            <h1 className="text-2xl font-semibold text-gray-900 mb-6">Account Settings</h1>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <p className="text-gray-600">Account settings content goes here...</p>
-            </div>
+          <div className="h-full overflow-y-auto">
+            <AccountInformation
+              onSave={() => console.log("Account saved")}
+              onCancel={() => console.log("Account cancelled")}
+            />
           </div>
         )
       case "help-center":
         return (
-          <div className="p-6">
-            <h1 className="text-2xl font-semibold text-gray-900 mb-6">Help Center</h1>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <p className="text-gray-600">Help center content goes here...</p>
-            </div>
+          <div className="h-full overflow-y-auto">
+            <HelpCenter />
           </div>
         )
       default:
         return (
-          <div className="px-4 md:px-6 w-full font-inter  ">
-            <h1 className="text-xl md:text-3xl font-semibold text-gray-900 mb-4 md:mb-6 text-center">Plans & Billing</h1>
-            
-            {/* Cards container with proper scrolling */}
-            <div className="space-b-4 md:space-b-3 ">
+          <div className="px-4 md:px-6 w-full font-inter">
+            <h1 className="text-xl md:text-3xl font-semibold text-gray-900 mb-4 md:mb-6 text-center">
+              Plans & Billing
+            </h1>
+
+            <div className="space-y-4 md:space-y-3">
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
                 {/* Free Plan - $0 */}
                 <Card className="relative w-full h-fit">
@@ -84,15 +95,15 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
                     </div>
 
                     <div className="pt-2 md:pt-4">
-                      <Input placeholder="5 daily credits" className="text-gray-500 text-sm " disabled />
+                      <Input placeholder="5 daily credits" className="text-gray-500 text-sm" disabled />
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* Paid Plan - $20 */}
-                <Card className="relative  w-full">
+                <Card className="relative w-full">
                   <CardHeader className="px-4 md:px-6">
-                    <CardTitle className="text-base md:text-lg font-medium ">Pro</CardTitle>
+                    <CardTitle className="text-base md:text-lg font-medium">Pro</CardTitle>
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl md:text-3xl font-bold">$20</span>
                     </div>
@@ -120,9 +131,9 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
                       </div>
                     </div>
 
-                    <div className="space-y-3 md:space-y-4 pt-3 ">
+                    <div className="space-y-3 md:space-y-4 pt-3">
                       <Select defaultValue="100">
-                        <SelectTrigger className="text-sm ">
+                        <SelectTrigger className="text-sm">
                           <SelectValue placeholder="Select credits" />
                         </SelectTrigger>
                         <SelectContent>
@@ -150,13 +161,13 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="!max-w-[75vw] !w-[1250px] h-[75vh] p-0 gap-0 sm:!max-w-[95vw] font-inter border-1 border-gray-400 hidden md:block">
         <VisuallyHidden>
-          <DialogTitle >Plans and Billing</DialogTitle>
+          <DialogTitle>Plans and Billing</DialogTitle>
         </VisuallyHidden>
         <div className="flex h-full">
           {/* Sidebar - hidden on mobile, 20% width on desktop */}
           <div className="hidden md:w-[20%] md:flex md:flex-col bg-gray-50 border-1 rounded-md border-gray-200">
             {/* User Profile */}
-            <div className="p-6 mb-2 ">
+            <div className="p-6 mb-2">
               <div className="flex items-center gap-3">
                 {/* <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-gray-600" />
@@ -177,7 +188,7 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
                     key={item.id}
                     onClick={() => setActiveSection(item.id)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 text-sm  transition-colors",
+                      "w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors",
                       activeSection === item.id ? "text-white bg-gray-900" : "text-gray-700 hover:bg-gray-100",
                     )}
                   >
@@ -187,9 +198,10 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
                 )
               })}
 
-              
-
-              <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
+              <button
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+                onClick={handleLogout}
+              >
                 <LogOut className="w-4 h-4" />
                 Sign out
               </button>
@@ -202,7 +214,7 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
             <div className="flex items-center justify-end p-4 border-b border-gray-200 md:hidden">
               <DialogClose asChild>
                 <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-600">
-                  <X className="w-5 h-5 sm:w-4 sm:h-4" />
+                
                 </Button>
               </DialogClose>
             </div>
@@ -211,7 +223,7 @@ export function PlansBillingModal({ isOpen, onClose }: PlansBillingModalProps) {
             <div className="hidden md:flex items-center justify-end px-4">
               <DialogClose asChild>
                 <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-600">
-                  {/* <X className="w-5 h-5 sm:w-4 sm:h-4" />/ */}
+                  
                 </Button>
               </DialogClose>
             </div>

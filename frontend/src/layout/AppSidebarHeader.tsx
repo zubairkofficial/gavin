@@ -10,7 +10,7 @@ import { useModel } from "@/context/Model.context";
 
 export function AppSidebarHeader() {
 
-  const { setIsModalOpen} = useModel();
+  const { setIsModalOpen ,setIsModalvalue  } = useModel();
   const {toggleSidebar} = useSidebar()
   const [isInnerSideBarOpen, setIsInnerSideBarOpen] = useState(false)
   
@@ -58,17 +58,17 @@ export function AppSidebarHeader() {
                 </div>
               </div>
               <div className="flex flex-col gap-1 px-4">
-                <div className="py-1 flex items-center cursor-pointer px-0">
+                <div className="py-1 flex items-center cursor-pointer px-0" onClick={() => {setIsModalOpen(true); setIsInnerSideBarOpen(!isInnerSideBarOpen); toggleSidebar() , setIsModalvalue('Account') } }>
                   <UserIcon className="mr-2 !h-[18px] !w-[1" />
                   <span className="text-base">Account</span>
                 </div>
 
-                <div className="py-1 flex items-center cursor-pointer px-0" onClick={() => {setIsModalOpen(true); setIsInnerSideBarOpen(!isInnerSideBarOpen); toggleSidebar()}}>
+                <div className="py-1 flex items-center cursor-pointer px-0" onClick={() => {setIsModalOpen(true); setIsInnerSideBarOpen(!isInnerSideBarOpen); toggleSidebar() , setIsModalvalue('PlansBilling')} }>
                   <CreditCard className="mr-2 !h-[18px] !w-[1" />
                   <button   className="text-base">Plans & Billing</button>
                 </div>
 
-                <div className="py-1 flex items-center cursor-pointer px-0">
+                <div className="py-1 flex items-center cursor-pointer px-0" onClick={() => {setIsModalOpen(true); setIsInnerSideBarOpen(!isInnerSideBarOpen); toggleSidebar() , setIsModalvalue('HelpCenter')} }>
                   <BookOpenText className="mr-2 !h-[18px] !w-[1" />
                   <span className="text-base">Help Center</span>
                 </div>

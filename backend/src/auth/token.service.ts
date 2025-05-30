@@ -90,7 +90,7 @@ export class TokenService {
   }
 
   async signResetPasswordToken(email: string) {
-    const token = randomBytes(32).toString('hex').slice(0, 4);
+    const token = randomBytes(32).toString('hex').slice(0, 6);
 
     await this.authTokenRepository.save(
       this.authTokenRepository.create({
@@ -144,7 +144,7 @@ export class TokenService {
   }
 
   async signEmailVerificationToken(email: string) {
-    const token = randomBytes(32).toString('hex').slice(0, 4);
+    const token = randomBytes(32).toString('hex').slice(0, 6);
 
     await this.authTokenRepository.save(
       this.authTokenRepository.create({

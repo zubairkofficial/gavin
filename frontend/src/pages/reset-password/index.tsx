@@ -14,6 +14,7 @@ const formSchema = z.object({
 
 export default function ResetPasswordPage() {
   const { mutateAsync: resetPassword, isPending: isResetting, isSuccess } = useForgotPassword()
+
   const navigate = useNavigate()
 
   // Initialize React Hook Form
