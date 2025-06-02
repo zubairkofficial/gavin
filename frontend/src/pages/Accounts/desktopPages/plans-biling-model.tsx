@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import {  User, CreditCard, HelpCircle, LogOut, Check } from "lucide-react"
+import { User, CreditCard, HelpCircle, LogOut, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -29,7 +29,7 @@ export function PlansBillingModal({ isOpen, onClose, initialSection = "plans-bil
   const navigate = useNavigate()
 
 
-   useEffect(() => {
+  useEffect(() => {
     if (isOpen && initialSection) {
       setActiveSection(initialSection)
     }
@@ -41,8 +41,8 @@ export function PlansBillingModal({ isOpen, onClose, initialSection = "plans-bil
   ]
 
   const handleLogout = () => {
-    
-    console.log("Logging out...")
+    logout()
+    navigate(0)
   }
 
   const renderContent = () => {
@@ -222,7 +222,7 @@ export function PlansBillingModal({ isOpen, onClose, initialSection = "plans-bil
             <div className="flex items-center justify-end p-4 border-b border-gray-200 md:hidden">
               <DialogClose asChild>
                 <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-600">
-                
+
                 </Button>
               </DialogClose>
             </div>
@@ -231,7 +231,7 @@ export function PlansBillingModal({ isOpen, onClose, initialSection = "plans-bil
             <div className="hidden md:flex items-center justify-end px-4">
               <DialogClose asChild>
                 <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-600">
-                  
+
                 </Button>
               </DialogClose>
             </div>

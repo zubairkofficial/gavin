@@ -78,13 +78,7 @@ export function AccountInformation({ onSave, onCancel }: AccountInformationProps
             <Label htmlFor="email" className="text-base font-medium text-gray-900">
               Email Address
             </Label>
-            <Button
-              variant="link"
-              className="text-blue-600 hover:text-blue-700 p-0 h-auto"
-              onClick={() => setShowEmailModal(true)}
-            >
-              Change
-            </Button>
+            
           </div>
           <Input
             id="email"
