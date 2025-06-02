@@ -14,8 +14,8 @@ import { useEffect } from "react"
 const formSchema = z.object({
   code: z
     .string()
-    .min(4, { message: "Verification code must be 4 digits" })
-    .max(4, { message: "Verification code must be 4 digits" })
+    .min(6, { message: "Verification code must be 6 digits" })
+    .max(6, { message: "Verification code must be 6 digits" })
 })
 
 export default function VerifyPasswordPage() {
@@ -70,9 +70,9 @@ export default function VerifyPasswordPage() {
               <FormLabel>Code:</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="1234"
+                  placeholder="123456"
                   {...field}
-                  maxLength={4}
+                  maxLength={6}
                   autoComplete="one-time-code"
                 />
               </FormControl>

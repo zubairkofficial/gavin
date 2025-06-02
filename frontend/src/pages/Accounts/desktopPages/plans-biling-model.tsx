@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {  User, CreditCard, HelpCircle, LogOut, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,18 +14,26 @@ import { useNavigate } from "react-router-dom"
 import { AccountInformation } from "./account-information"
 import { HelpCenter } from "./help-center"
 
+
 interface PlansBillingModalProps {
   isOpen: boolean
   onClose: () => void
-  initialSection : any
+  initialSection?: string // Add this new prop
 }
 
-export function PlansBillingModal({ isOpen, onClose , initialSection }: PlansBillingModalProps) {
-  const [activeSection, setActiveSection] = useState("plans-billing")
+export function PlansBillingModal({ isOpen, onClose, initialSection = "plans-billing" }: PlansBillingModalProps) {
+  // Use initialSection as the default value instead of hardcoded "plans-billing"
+  const [activeSection, setActiveSection] = useState(initialSection)
 
   const { logout } = useAuth()
   const navigate = useNavigate()
 
+
+   useEffect(() => {
+    if (isOpen && initialSection) {
+      setActiveSection(initialSection)
+    }
+  }, [isOpen, initialSection])
   const navigationItems = [
     { id: "account", label: "Account", icon: User },
     { id: "plans-billing", label: "Plans & Billing", icon: CreditCard },

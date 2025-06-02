@@ -130,22 +130,21 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
     }
 
     const handlePasteCode = (e: React.ClipboardEvent<HTMLInputElement>) => {
-        e.preventDefault()
-        const paste = e.clipboardData.getData('text').trim()
+    e.preventDefault()
+    const paste = e.clipboardData.getData('text').trim()
 
-        if (/^\d{6}$/.test(paste)) {
-            const digits = paste.split('')
-            setVerificationCode(digits)
-            // Focus the last input after pasting
-            setTimeout(() => {
-                const lastInput = document.getElementById(`code-5`)
-                lastInput?.focus()
-            }, 0)
-            toast.success("Code pasted successfully!")
-        } else {
-            toast.error("Please paste a valid 6-digit code")
-        }
+    if (paste.length === 6) {
+        const chars = paste.split('')
+        setVerificationCode(chars)
+        setTimeout(() => {
+            const lastInput = document.getElementById(`code-5`)
+            lastInput?.focus()
+        }, 0)
+        toast.success("Code pasted successfully!")
+    } else {
+        toast.error("Please paste a valid 6-character code")
     }
+}
 
     const handleResendCode = async () => {
         if (resendTimer > 0 || isResetting) return
@@ -267,7 +266,7 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
                             key={index}
                             id={`code-${index}`}
                             type="text"
-                            inputMode="numeric"
+                            // inputMode="numeric"
                             maxLength={1}
                             value={digit}
                             onChange={(e) => handleVerificationCodeChange(index, e.target.value)}
