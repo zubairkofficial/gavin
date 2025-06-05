@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon } from "lucide-react"
+import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon, HomeIcon } from "lucide-react"
 import type React from "react"
 
 import {
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { AppSidebarHeader } from "./AppSidebarHeader"
 import { useAuth } from "@/context/Auth.context"
+import { NavLink } from "react-router-dom"
 
 export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // const { setOpenMobile } = useSidebar()
@@ -63,7 +64,7 @@ function UserSidebar() {
               <CollapsibleContent>
                 <SidebarMenu>
                   {recentChats.map((chat) => (
-                    <SidebarMenuItem key={chat.title} className=" px-2">
+                    <SidebarMenuItem key={chat.title} className="px-2">
                       <SidebarMenuButton className="gap-2 py-5 relative">
                         <FileText size={18} />
                         <span className="truncate" style={{
@@ -127,6 +128,32 @@ function AdminSidebar() {
                 <span>Admin Dashboard</span>
               </Button>
             </SidebarMenuItem>
+
+            <div className="flex flex-col gap-2 mt-4">
+              <NavLink to="/">
+                <SidebarMenuItem className="px-2">
+                  <SidebarMenuButton className="gap-2 py-5 relative">
+                    <HomeIcon size={18} />
+                  <span className="truncate" style={{
+                    textOverflow: "clip",
+                  }}>Dashboard</span>
+                    <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </NavLink>
+              <NavLink to="/users">
+                <SidebarMenuItem className="px-2">
+                  <SidebarMenuButton className="gap-2 py-5 relative">
+                    <Users2Icon size={18} />
+                  <span className="truncate" style={{
+                    textOverflow: "clip",
+                  }}>Users</span>
+                    <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </NavLink>
+
+            </div>
 
           </SidebarMenu>
         </SidebarGroup>

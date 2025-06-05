@@ -1,4 +1,4 @@
-import { JWTPayload } from '@/common/types';
+import { JWTPayload, UserRole } from '@/common/types';
 import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
@@ -9,6 +9,7 @@ import {
   EmailVerificationInput,
   RequestResetPasswordInput,
   ResetPasswordInput,
+  ToggleUserStatusInput,
   ValidateEmailInput,
   VerifyEmailInput,
 } from './dto/auth.dto';
@@ -18,6 +19,7 @@ import { UpdateUserDTO } from './dto/update.dto';
 import { UserService } from './user.service';
 import { googleUserDTO } from './dto/google-user.dto';
 import { TokenService } from './token.service';
+import { Roles } from './decorators/roles.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -209,4 +211,48 @@ export class AuthController {
     return { message: 'Updated Successfully' };
   }
 
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all users',
+    schema: {
+      type: 'object',
+      properties: {
+        users: { type: 'array', items: { type: 'object' } },
+      },
+    },
+  })
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @Get('/users')
+  async getUsers(
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('isActive') isActive?: string,
+  ) {
+    return this.userService.findAllUsers({
+      search,
+      sortBy,
+      sortOrder,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      isActive: typeof isActive === 'string' ? isActive === 'true' : undefined,
+    });
+  }
+
+
+  @ApiOperation({ summary: 'Toggle user status' })
+  @ApiResponse({
+    status: 200,
+    description: 'User status toggled successfully',
+  })
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @Post('/users/toggle-status')
+  async toggleUserStatus(@Body() input: ToggleUserStatusInput) {
+    return this.userService.toggleUserStatus(input);
+  }
 }

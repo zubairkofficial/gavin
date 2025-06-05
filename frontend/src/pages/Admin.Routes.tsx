@@ -2,6 +2,7 @@ import Home from "@/pages/admin/dashboard/Home";
 import { createRoutesFromElements, redirect, Route } from "react-router-dom";
 import AppLayout from "../layout/AppLayout";
 import OnboardingPage from "./dashboard/onboarding";
+import UsersPage from "./admin/dashboard/users";
 
 export default function AuthenticateRoutes() {
   return createRoutesFromElements(
@@ -20,6 +21,9 @@ export default function AuthenticateRoutes() {
         <Route
           index
           element={<Home />} />
+        <Route
+          path="/users"
+          element={<UsersPage />} />
       </Route>
       <Route
         path="/onboarding"

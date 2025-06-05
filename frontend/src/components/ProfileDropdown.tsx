@@ -7,13 +7,14 @@ import { useAuth } from "@/context/Auth.context"
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { PlansBillingModal } from "../../src/pages/Accounts/desktopPages/plans-biling-model"
+import { getUserInfo } from "@/lib/utils"
 
 export default function ProfileDropdown() {
   const { logout } = useAuth()
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedSection, setSelectedSection] = useState("plans-billing") // Track which section to show
+  const [selectedSection, setSelectedSection] = useState("plans-billing")
   const navigate = useNavigate()
-
+  const user = getUserInfo();
   // Define navigation items with their IDs
   const navigationItems = [
     { id: "account", label: "Account", icon: User },
@@ -23,8 +24,18 @@ export default function ProfileDropdown() {
 
   // Handle dropdown item clicks
   const handleNavItemClick = (sectionId: string) => {
-    setSelectedSection(sectionId) // Set which section to show
-    setIsModalOpen(true) // Open the modal
+    setSelectedSection(sectionId)
+    setIsModalOpen(true)
+  }
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user?.fullName) return "U"
+    return user.fullName
+      .split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
   }
 
   return (
@@ -33,9 +44,9 @@ export default function ProfileDropdown() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer">
-              <Button variant="outline" size="icon" className="rounded-sm border-1 border-gray-800  ">
+              <Button variant="outline" size="icon" className="rounded-sm border-1 border-gray-800">
                 <Avatar>
-                  <AvatarFallback>AS</AvatarFallback>
+                  <AvatarFallback>{getUserInitials()}</AvatarFallback>
                 </Avatar>
               </Button>
               <div>
@@ -45,8 +56,8 @@ export default function ProfileDropdown() {
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-80 p-0 rounded-2xl mt-2 mr-16">
             <div className="px-4 pt-6 pb-3 flex flex-col items-center text-center">
-              <h2 className="text-xl font-semibold mb-1">Alex Smith</h2>
-              <p className="text-gray-500 mb-4">alexsmith@gmail.com</p>
+              <h2 className="text-xl font-semibold mb-1">{user?.fullName || "User"}</h2>
+              <p className="text-gray-500 mb-4">{user?.email || "No email"}</p>
 
               <div className="w-full bg-transparent border rounded-xl p-4 mb-4">
                 <h3 className="font-semibold text-left">Credits Used</h3>
@@ -79,6 +90,7 @@ export default function ProfileDropdown() {
                   className="pt-1 cursor-pointer px-0" 
                   onClick={() => {
                     logout()
+                    navigate('/')
                     navigate(0)
                   }}
                 >

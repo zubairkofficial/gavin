@@ -42,6 +42,7 @@ export function PlansBillingModal({ isOpen, onClose, initialSection = "plans-bil
 
   const handleLogout = () => {
     logout()
+    navigate('/')
     navigate(0)
   }
 
