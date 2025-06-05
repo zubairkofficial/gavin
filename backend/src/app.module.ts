@@ -9,6 +9,7 @@ import { AuthGuard } from './auth/auth.guard';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { SharedModule } from './shared/shared.module';
+import { GovInfoModule } from './govinfo/govinfo.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { SharedModule } from './shared/shared.module';
     CommonModule,
     AuthModule,
     SharedModule,
+    GovInfoModule
   ],
   controllers: [AppController],
   providers: [
