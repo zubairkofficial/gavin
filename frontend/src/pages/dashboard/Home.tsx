@@ -3,7 +3,14 @@ import Chat from "./components/Chat";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+
+
+
+
 export default function Home() {
+
+
+
   const [messages, setMessages] = useState<any>([]);
   const isMobile = useIsMobile()
 

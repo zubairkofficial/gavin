@@ -33,7 +33,7 @@ export default function ProfileDropdown() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer">
-              <Button variant="outline" size="icon" className="rounded-full">
+              <Button variant="outline" size="icon" className="rounded-sm border-1 border-gray-800  ">
                 <Avatar>
                   <AvatarFallback>AS</AvatarFallback>
                 </Avatar>

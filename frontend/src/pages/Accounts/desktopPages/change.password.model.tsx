@@ -1,6 +1,6 @@
 "use client"
 
-import {  useState } from "react"
+import {  useEffect, useState } from "react"
 import {  Eye, EyeOff, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,6 +32,18 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
     // Use your existing useForgotPassword hook
     const { mutateAsync: resetPassword, isPending: isResetting } = useForgotPassword()
     const { mutateAsync: updatePassword, isPending: Resetting } = useNewPassword()
+    const [isSmallScreen, setIsSmallScreen] = useState(false);
+
+
+    useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)"); // sm breakpoint in Tailwind is 640px; md is 768px, so max-width 767px is sm and below
+    const handleResize = () => setIsSmallScreen(mediaQuery.matches);
+
+    handleResize();
+    mediaQuery.addEventListener("change", handleResize);
+
+    return () => mediaQuery.removeEventListener("change", handleResize);
+  }, []);
 
     const handleSendVerificationCode = async () => {
         if (newPassword !== confirmPassword) {
@@ -185,10 +197,10 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
     }
 
     const renderPasswordForm = () => (
-        <div className="space-y-6 p-10">
+        <div className="space-y-6 py-10 md:p-10">
             <div className="space-y-2">
-                <h2 className="text-xl font-semibold text-gray-900">Change Your Password</h2>
-                <p className="text-gray-600">Update your password with verification for added security.</p>
+                <h2 className="text-xl font-semibold text-left text-gray-900">Change Your Password</h2>
+                <p className="text-gray-600 text-left">Update your password with verification for added security.</p>
             </div>
 
             <div className="space-y-4">
@@ -248,19 +260,19 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
     )
 
     const renderVerificationForm = () => (
-        <div className="space-y-6 p-10">
+        <div className="space-y-6 py-10 md:p-10">
             <div className="space-y-2">
-                <h2 className="text-xl font-semibold text-gray-900">Change Your Password</h2>
-                <p className="text-gray-600">Update your password with verification for added security.</p>
+                <h2 className="text-xl font-semibold  text-left text-gray-900">Change Your Password</h2>
+                <p className="text-gray-600 text-left">Update your password with verification for added security.</p>
             </div>
 
             <div className="space-y-4">
-                <h3 className="font-medium text-gray-900">Verification Code</h3>
-                <p className="text-sm text-gray-600">
+                <h3 className="font-medium text-gray-900 text-left">Verification Code</h3>
+                <p className="text-sm text-gray-600 text-left">
                     We've sent a 6-digit verification code to your email. Please enter it below.
                 </p>
 
-                <div className="flex gap-2 justify-center">
+                <div className="flex  justify-center">
                     {verificationCode.map((digit, index) => (
                         <Input
                             key={index}
@@ -299,7 +311,7 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
                     disabled={isVerifying}
                     className="w-full bg-black hover:bg-gray-800 mt-4"
                 >
-                    {isVerifying ? "Verifying..." : "Verify Code"}
+                    {isVerifying ? "Saving..." : "Save Password"}
                 </Button>
 
                 <Button variant="outline" onClick={() => setCurrentStep("form")} className="w-full">
@@ -310,10 +322,10 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
     )
 
     const renderSuccessForm = () => (
-        <div className="space-y-6 text-center p-10">
+        <div className="space-y-6 text-center py-10 md:p-10">
             <div className="space-y-2">
-                <h2 className="text-xl font-semibold text-gray-900">Change Your Password</h2>
-                <p className="text-gray-600">Update your password with verification for added security.</p>
+                <h2 className="text-xl font-semibold text-left text-gray-900">Change Your Password</h2>
+                <p className="text-gray-600 text-left">Update your password with verification for added security.</p>
             </div>
 
             <div className="py-8">
@@ -334,20 +346,24 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="max-w-md">
-                <VisuallyHidden>
-                    <DialogTitle>Change Password</DialogTitle>
-                </VisuallyHidden>
-                <DialogClose asChild>
-                    <Button variant="ghost" size="icon" className="absolute right-4 top-4">
-                    
-                    </Button>
-                </DialogClose>
+      <DialogContent
+        className="w-full max-w-md px-5 md:px-0"
+        style={isSmallScreen ? { maxWidth: 'calc(100vw - 4rem)' } : {}}
+      >
+        <VisuallyHidden>
+          <DialogTitle>Change Password</DialogTitle>
+        </VisuallyHidden>
+        <DialogClose asChild>
+          <Button variant="ghost" size="icon" className="absolute right-4 top-4">
+            {/* Close icon here */}
+          </Button>
+        </DialogClose>
 
-                {currentStep === "form" && renderPasswordForm()}
-                {currentStep === "verification" && renderVerificationForm()}
-                {currentStep === "success" && renderSuccessForm()}
-            </DialogContent>
-        </Dialog>
+        {currentStep === "form" && renderPasswordForm()}
+        {currentStep === "verification" && renderVerificationForm()}
+        {currentStep === "success" && renderSuccessForm()}
+      </DialogContent>
+    </Dialog>
+
     )
 }

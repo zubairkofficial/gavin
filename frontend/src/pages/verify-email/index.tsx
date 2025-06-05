@@ -71,7 +71,7 @@ export default function VerifyEmailPage() {
                   <FormLabel>Code:</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="1234"
+                      placeholder="123456"
                       {...field}
                       maxLength={6}
                       autoComplete="one-time-code"

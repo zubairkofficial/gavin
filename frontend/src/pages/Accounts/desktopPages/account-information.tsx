@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { User } from "lucide-react"
 import { ChangePasswordModal } from "./change.password.model"
-import { ChangeEmailModal } from "./change-email-model"
 // import { AccountSuccessModal } from "./"
 
 interface AccountInformationProps {
@@ -20,7 +19,6 @@ export function AccountInformation({ onSave, onCancel }: AccountInformationProps
   const [email, setEmail] = useState("victor@example.com")
   const [userType, setUserType] = useState("solo-lawyer")
   const [showPasswordModal, setShowPasswordModal] = useState(false)
-  const [showEmailModal, setShowEmailModal] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
 
@@ -136,7 +134,6 @@ export function AccountInformation({ onSave, onCancel }: AccountInformationProps
         </Button>
       </div>
       <ChangePasswordModal isOpen={showPasswordModal} onClose={() => setShowPasswordModal(false)} />
-      <ChangeEmailModal isOpen={showEmailModal} onClose={() => setShowEmailModal(false)} currentEmail={email} />
       {/* <AccountSuccessModal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} /> */}
     </div>
   )

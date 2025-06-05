@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { User, X } from "lucide-react"
 import { ChangePasswordModal } from "../desktopPages/change.password.model"
-import { ChangeEmailModal } from "../desktopPages/change-email-model"
 import { useModel } from "@/context/Model.context"
 
 interface AccountInformationMobileProps {
@@ -20,7 +19,6 @@ export function AccountInformationMobile({ onSave, onCancel }: AccountInformatio
   const [email, setEmail] = useState("victor@example.com")
   const [userType, setUserType] = useState("solo-lawyer")
   const [showPasswordModal, setShowPasswordModal] = useState(false)
-  const [showEmailModal, setShowEmailModal] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   
   const { ModalOpen, setIsModalOpen } = useModel()
@@ -59,7 +57,7 @@ export function AccountInformationMobile({ onSave, onCancel }: AccountInformatio
   }
 
   return (
-    <div className="w-full max-w-[600px] mx-auto px-4 pb-4 font-inter md:hidden">
+    <div className="w-full max-w-[600px] mx-auto px-4 pb-4  font-inter md:hidden">
       {/* Close Button */}
       <div className="w-full flex justify-end mb-2">
         <Button
@@ -82,7 +80,7 @@ export function AccountInformationMobile({ onSave, onCancel }: AccountInformatio
         </p>
       </div>
 
-      <div className="w-full border-1 border-gray-400 my-5"></div>
+      <div className="w-full border-1 border-gray-300 my-5"></div>
 
       {/* Content Area */}
       <div className="space-y-6">
@@ -109,13 +107,7 @@ export function AccountInformationMobile({ onSave, onCancel }: AccountInformatio
               <Label htmlFor="email" className="text-sm font-medium text-gray-900">
                 Email Address
               </Label>
-              <Button
-                variant="link"
-                className="text-blue-600 hover:text-blue-700 p-0 h-auto text-sm"
-                onClick={() => setShowEmailModal(true)}
-              >
-                Change
-              </Button>
+              
             </div>
             <Input
               id="email"
@@ -187,11 +179,7 @@ export function AccountInformationMobile({ onSave, onCancel }: AccountInformatio
         isOpen={showPasswordModal} 
         onClose={() => setShowPasswordModal(false)} 
       />
-      <ChangeEmailModal 
-        isOpen={showEmailModal} 
-        onClose={() => setShowEmailModal(false)} 
-        currentEmail={email} 
-      />
+      
     </div>
   )
 }

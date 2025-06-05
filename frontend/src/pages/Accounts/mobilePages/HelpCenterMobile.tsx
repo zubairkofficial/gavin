@@ -99,7 +99,7 @@ export function HelpCenterMobile() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 text-center mb-2 font-inter">
+        <h1 className="text-2xl font-semibold text-gray-900  mb-2 font-inter">
           Help Center
         </h1>
       </div>
