@@ -234,7 +234,7 @@ const Chat = ({
             WebkitMaskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
           }}
         >
-          <div className="md:max-w-[950px] px-2 md:pl-8 flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px]">
+          <div className="md:max-w-5xl  px-2 md:pl-8 flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px]">
             <div className="w-full space-y-4 pt-6 md:pt-12">{messages.map(renderMessage)}</div>
           </div>
         </div>
@@ -257,10 +257,9 @@ const Chat = ({
           </Button>
         </div>
 
-        {/* Message Input */}
-        <div
+        {/* Message Input */}        <div
           className={cn(
-            "bg-background mx-auto border rounded-md p-2 max-w-[95vw] md:max-w-[635px] lg:max-w-full overflow-y-auto relative flex flex-col",
+            "bg-background mx-auto border rounded-md px-2 max-w-5xl overflow-y-auto relative flex flex-col",
             selectedDocuments.length > 0 ? "h-[180px] md:h-[160px]" : "h-[120px] md:h-[100px]",
           )}
         >

@@ -3,7 +3,7 @@ import { createRoutesFromElements, redirect, Route } from "react-router-dom";
 import AppLayout from "../layout/AppLayout";
 import OnboardingPage from "./dashboard/onboarding";
 import UsersPage from "./admin/dashboard/users";
-
+import UploadDoc from "./admin/dashboard/documents";
 export default function AuthenticateRoutes() {
   return createRoutesFromElements(
     <>
@@ -24,7 +24,10 @@ export default function AuthenticateRoutes() {
         <Route
           path="/users"
           element={<UsersPage />} />
-      </Route>
+        <Route
+          path="/upload-doc"
+          element={<UploadDoc />} />
+        </Route>
       <Route
         path="/onboarding"
         loader={() => {
