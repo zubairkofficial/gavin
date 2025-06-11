@@ -1,9 +1,8 @@
+import BaseEntity from '@/common/entities/BaseEntity';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
-export class Case {
-    @PrimaryGeneratedColumn()
-    id: number;
+export class Case extends BaseEntity{
 
     @Column()
     name: string;

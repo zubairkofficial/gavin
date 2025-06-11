@@ -1,9 +1,8 @@
+import BaseEntity from '@/common/entities/BaseEntity';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
-export class Document {
-    @PrimaryGeneratedColumn()
-    id: number;
+export class Document extends BaseEntity{
 
     @Column()
     title: string;
@@ -13,7 +12,4 @@ export class Document {
 
     @Column()
     content: string;
-
-    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-    createdAt: Date;
 }

@@ -1,9 +1,9 @@
+import BaseEntity from '@/common/entities/BaseEntity';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
-export class Regulation {
-    @PrimaryGeneratedColumn()
-    id: number;
+export class Regulation extends BaseEntity{
+    
 
     @Column()
     jurisdiction: string;

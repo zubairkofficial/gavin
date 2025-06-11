@@ -1,9 +1,8 @@
+import BaseEntity from '@/common/entities/BaseEntity';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
-export class Clause {
-    @PrimaryGeneratedColumn()
-    id: number;
+export class Clause extends BaseEntity{
 
     @Column()
     contract_id: number;

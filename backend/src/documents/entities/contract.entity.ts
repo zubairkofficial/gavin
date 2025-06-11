@@ -1,10 +1,10 @@
+import BaseEntity from '@/common/entities/BaseEntity';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
-export class Contract {
-    @PrimaryGeneratedColumn()
-    id: number;
 
+export class Contract extends BaseEntity {
+    
     @Column()
     type: string;
 
