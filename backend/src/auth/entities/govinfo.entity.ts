@@ -19,4 +19,7 @@ export class GovInfoDocument extends BaseEntity {
 
   @Column({ type: 'jsonb' })
   data: any;
+
+   @Column('text', { array: true, nullable: true, default: '{}' })
+  url: string[]; // Assuming url is an array of strings, adjust as necessary
 }

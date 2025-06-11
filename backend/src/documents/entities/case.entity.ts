@@ -1,0 +1,34 @@
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+
+@Entity()
+export class Case {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    name: string;
+
+    @Column()
+    jurisdiction: string;
+
+    @Column()
+    court: string;
+
+    @Column({ type: 'date' })
+    decision_date: string;
+
+    @Column()
+    citation: string;
+
+    @Column({ type: 'text' })
+    holding_summary: string;
+
+    @Column({ type: 'text' })
+    full_text: string;
+
+    @Column("text", { array: true })
+    tags: string[];
+
+    @Column()
+    source_url: string;
+}

@@ -41,13 +41,12 @@ async function bootstrap() {
     prefix: '/api/v1/uploads/', // URL prefix for accessing the files
   });
 
-  app.setGlobalPrefix('/api/v1');
-
-  app.useGlobalPipes(
+  app.setGlobalPrefix('/api/v1');  app.useGlobalPipes(
     new ValidationPipe({
-      forbidUnknownValues: true,
       transform: true,
       whitelist: true,
+      enableDebugMessages: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 

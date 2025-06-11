@@ -10,6 +10,9 @@ import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { SharedModule } from './shared/shared.module';
 import { GovInfoModule } from './govinfo/govinfo.module';
+import { ChatModule } from './chat/chat.module';
+import { DocumentEntity } from './chat/entities/document.entity';
+import { DocumentsModule } from './documents/documents.module';
 
 @Module({
   imports: [
@@ -41,7 +44,9 @@ import { GovInfoModule } from './govinfo/govinfo.module';
     CommonModule,
     AuthModule,
     SharedModule,
-    GovInfoModule
+    GovInfoModule,
+    ChatModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [
