@@ -158,7 +158,7 @@ function AdminSidebar() {
                     <FileUp size={18} />
                   <span className="truncate" style={{
                     textOverflow: "clip",
-                  }}>upload Documents</span>
+                  }}>Upload Documents</span>
                     <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

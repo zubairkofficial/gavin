@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-
+import { toast } from "sonner";
 interface AttachedDocument {
   id: string;
   name: string;
@@ -68,26 +68,21 @@ const DocumentUploadComponent: React.FC = () => {
     setTypeSelectionOpen(false);
     setUploadDialogOpen(true);
   };
-
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const files = event.target.files;
-    if (files && selectedType) {
-      const remainingSlots = 10 - tempSelectedDocs.length;
-      const filesToAdd = Math.min(files.length, remainingSlots);
+    if (files && files[0] && selectedType) {
+      const file = files[0];
+      const newDoc: AttachedDocument = {
+        id: `${Date.now()}-0`,
+        name: file.name,
+        type: file.type.includes("pdf") ? "PDF" : "Document",
+        category: selectedType.name,
+        size: `${(file.size / 1024).toFixed(1)} KB`,
+        title: "",
+        file: file,
+      };
 
-      const newDocs: AttachedDocument[] = Array.from(files)
-        .slice(0, filesToAdd)
-        .map((file, index) => ({
-          id: `${Date.now()}-${index}`,
-          name: file.name,
-          type: file.type.includes("pdf") ? "PDF" : "Document",
-          category: selectedType.name,
-          size: `${(file.size / 1024).toFixed(1)} KB`,
-          title: "",
-          file: file,
-        }));
-
-      setTempSelectedDocs((prev) => [...prev, ...newDocs]);
+      setTempSelectedDocs([newDoc]);
       
       // Clear the input so user can select the same file again if needed
       if (fileInputRef.current) {
@@ -162,12 +157,12 @@ const DocumentUploadComponent: React.FC = () => {
       setSelectedType(null);
       setUploadDialogOpen(false);
       
-      alert('Documents uploaded successfully!');
+      toast.success('Documents uploaded successfully!');
       
     } catch (error: unknown) {
       console.error('Upload error:', error);
       const errorMessage = error instanceof Error ? error.message : "An error occurred during upload.";
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsUploading(false);
     }
@@ -175,12 +170,12 @@ const DocumentUploadComponent: React.FC = () => {
 
   const confirmUpload = (): void => {
     if (!documentTitle.trim()) {
-      alert('Please enter a document title');
+      toast.error('Please enter a document title');
       return;
     }
     
     if (tempSelectedDocs.length === 0) {
-      alert('Please select at least one document');
+      toast.error('Please select at least one document');
       return;
     }
 
@@ -304,9 +299,8 @@ const DocumentUploadComponent: React.FC = () => {
           <div className="bg-white rounded-lg w-full max-w-md p-6">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h2 className="text-xl font-semibold">Upload {selectedType?.name}</h2>
-                <p className="text-gray-600 text-sm">
-                  Upload your {selectedType?.name.toLowerCase()} (Max 10 files, 10MB each)
+                <h2 className="text-xl font-semibold">Upload {selectedType?.name}</h2>                <p className="text-gray-600 text-sm">
+                  Upload your {selectedType?.name.toLowerCase()} (Max size: 10MB)
                 </p>
               </div>
               <button 
@@ -335,47 +329,43 @@ const DocumentUploadComponent: React.FC = () => {
                   onFocus={() => console.log('Title focused')}
                   onBlur={() => console.log('Title blurred')}
                   placeholder="Enter document title (you can write multiple lines for longer titles)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical min-h-[80px]"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-blue-500 resize-vertical min-h-[80px]"
                   rows={3}
                   required
                   autoComplete="off"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                {/* <p className="text-xs text-gray-500 mt-1">
                   You can write a detailed title or description across multiple lines
-                </p>
-                <p className="text-xs text-blue-500">Debug: Current title length: {documentTitle.length}</p>
+                </p> */}
+                <p className="text-xs text-gray-500">Current title length: {documentTitle.length}</p>
               </div>
 
               <div className="border-2 border-dashed border-gray-300 p-6 rounded text-center">
                 <svg className="mx-auto h-10 w-10 text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p className="text-sm text-gray-600">Drag and drop files here</p>
-                <p className="text-xs text-gray-400 mb-2">Or</p>
-                <input
+                </svg>                <p className="text-sm text-gray-600">Drag and drop a file here</p>
+                <p className="text-xs text-gray-400 mb-2">Or</p><input
                   ref={fileInputRef}
                   type="file"
-                  multiple
                   accept={selectedType?.acceptedFormats.join(",")}
                   onChange={handleFileSelect}
                   className="hidden"
-                  disabled={tempSelectedDocs.length >= 10}
-                />
-                <button
+                  disabled={tempSelectedDocs.length > 0}
+                />                <button
                   onClick={() => fileInputRef.current?.click()}
                   className="px-4 py-2 border rounded hover:bg-gray-50 text-sm transition disabled:opacity-50"
-                  disabled={tempSelectedDocs.length >= 10}
+                  disabled={tempSelectedDocs.length > 0}
                   type="button"
                 >
-                  Browse Files
+                  Browse File
                 </button>
               </div>
 
               {tempSelectedDocs.length > 0 && (
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   <div className="flex justify-between items-center">
-                    <h4 className="text-sm font-medium">Selected Files</h4>
-                    <span className="text-xs text-gray-500">{tempSelectedDocs.length}/10</span>
+                    <h4 className="text-sm font-medium">Selected File</h4>
+                    <span className="text-xs text-gray-500">Selected Document</span>
                   </div>
                   {tempSelectedDocs.map((doc) => (
                     <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-100 rounded">
@@ -416,12 +406,12 @@ const DocumentUploadComponent: React.FC = () => {
                   disabled={tempSelectedDocs.length === 0 || !documentTitle.trim() || isUploading}
                   className={`px-4 py-2 text-white rounded transition ${
                     tempSelectedDocs.length === 0 || !documentTitle.trim() || isUploading
-                      ? "bg-blue-600 opacity-50 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700"
+                      ? "bg-gray-600 opacity-50 cursor-not-allowed"
+                      : "bg-gray-600 hover:bg-gray-700"
                   }`}
                   type="button"
                 >
-                  {isUploading ? 'Uploading...' : `Upload ${tempSelectedDocs.length} file${tempSelectedDocs.length !== 1 ? "s" : ""}`}
+                  {isUploading ? 'Uploading...' : 'Upload Document'}
                 </button>
               </div>
             </div>
