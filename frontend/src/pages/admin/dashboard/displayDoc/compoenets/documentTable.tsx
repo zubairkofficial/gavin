@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/pagination"
 
 interface Contract {
-  id: number
+  id: string
   type: string
   jurisdiction: string
   source: string
@@ -39,6 +39,7 @@ interface Regulation {
   title: string
   section: string
   subject_area: string
+  id: string
 }
 
 interface RegulationsResponse {
@@ -238,9 +239,9 @@ export default function DocumentsTable() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedContracts.map((contract , index) => (
+                      paginatedContracts.map((contract ) => (
                         <TableRow key={contract.id}>
-                          <TableCell className="font-medium">{index + 1}</TableCell>
+                          <TableCell className="font-medium">{contract.id.slice(-4)}</TableCell>
                           <TableCell>{contract.type}</TableCell>
                           <TableCell>{contract.jurisdiction}</TableCell>
                           <TableCell>{contract.source}</TableCell>
@@ -265,6 +266,8 @@ export default function DocumentsTable() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>ID
+                      </TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Jurisdiction</TableHead>
                       <TableHead>Citation</TableHead>
@@ -283,7 +286,9 @@ export default function DocumentsTable() {
                       </TableRow>
                     ) : (
                       paginatedRegulations.map((regulation, index) => (
+                        console.log(`Rendering regulation:`, regulation),
                         <TableRow key={startIndex + index}>
+                          <TableCell className="font-medium">{regulation.id.slice(-4)}</TableCell>
                           <TableCell className="font-medium">{regulation.title}</TableCell>
                           <TableCell>{regulation.jurisdiction}</TableCell>
                           <TableCell>{regulation.citation || "N/A"}</TableCell>

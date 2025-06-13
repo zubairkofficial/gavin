@@ -11,9 +11,8 @@ import {
 import { Clause } from './clause.entity';
 
 @Entity()
-export class Contract {
-  @PrimaryGeneratedColumn()
-  id: number;
+export class Contract extends BaseEntity {
+  
 
   @Column()
   type: string;
@@ -31,12 +30,5 @@ export class Contract {
   @Column()
   source: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
 
-  @UpdateDateColumn()
-  updatedAt: Date;
-
-  @DeleteDateColumn()
-  deletedAt: Date;
 }

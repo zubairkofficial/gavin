@@ -20,6 +20,8 @@ import { ContractSchema, ClauseSchema } from './schemas/contract.schema';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { Public } from '../auth/decorators/public.decorator';
 import { DocumentsService } from './documents.service';
+import { GeminiServiceRegulation } from '../services/gemini.regulation.service';
+import { OpenAIServiceRegulation } from '@/services/openai.regulations.service';
 
 @Controller('/documents')
 
@@ -33,7 +35,9 @@ export class DocumentsController {
     private contractRepository: Repository<Contract>,
     @InjectRepository(Clause)
     private clauseRepository: Repository<Clause>,
-    private geminiService: OpenAIService,
+    private OpenAIService: OpenAIService,
+    private GeminiServiceRegulation: GeminiServiceRegulation,
+    private OpenServiceRegulation: OpenAIServiceRegulation,
   ) {}
 
   @Post('/upload')
@@ -184,24 +188,50 @@ export class DocumentsController {
   }
 
   private async handleRegulation(dto: CreateDocumentDto, fullText: string) {
-    const regulation = new Regulation();
-    regulation.full_text = fullText;
-    regulation.title = dto.title;
-    regulation.jurisdiction = dto.jurisdiction || 'Unknown';
-    regulation.citation = dto.citation || '';
-    regulation.section = dto.section || '';
-    regulation.subject_area = dto.subject_area || '';
-    regulation.summary = dto.summary || '';
-    regulation.source_url = dto.source_url || '';
-    regulation.updated_at = new Date().toISOString();
+    try {
+      // First analyze the regulation using OpenAI service
+      const analysisResults = await this.OpenServiceRegulation.analyzeRegulations(fullText);
 
-    return this.regulationRepository.save(regulation);
+      // If no results or first result is missing, throw error
+      if (!analysisResults || !analysisResults[0]) {
+        throw new BadRequestException('Failed to analyze regulation content');
+      }
+
+      // Get the first analysis result
+      const analysis = analysisResults[0];
+
+      // Create and populate the regulation entity
+      const regulation = new Regulation();
+      regulation.full_text = fullText; // Store original full text
+      regulation.title = dto.title || analysis.title;
+      regulation.jurisdiction = analysis.jurisdiction || dto.jurisdiction || 'Unknown';
+      regulation.citation = analysis.citation || dto.citation || '';
+      regulation.section = analysis.section || dto.section || '';
+      regulation.subject_area = analysis.subject_area || dto.subject_area || '';
+      regulation.summary = analysis.summary || dto.summary || '';
+      regulation.source_url = dto.source_url || '';
+      regulation.updated_at = new Date().toISOString();
+
+      // Save to database
+      const savedRegulation = await this.regulationRepository.save(regulation);
+
+      return {
+        success: true,
+        data: savedRegulation,
+        message: 'Regulation processed and saved successfully'
+      };
+
+    } catch (error) {
+      throw new BadRequestException(
+        `Failed to process regulation: ${error.message}`,
+      );
+    }
   }
 
   private async handleContract(dto: CreateDocumentDto, fullText: string) {
     try {
     
-      const geminiResults = await this.geminiService.analyzeDocumentClauses(
+      const geminiResults = await this.OpenAIService.analyzeDocumentClauses(
         fullText,
         -1,
       );
@@ -243,7 +273,6 @@ export class DocumentsController {
             });
 
             const clause = new Clause();
-            clause.contract_id = savedContract.id;
             clause.clause_type = clauseData.clause_type;
             clause.clause_text = clauseData.clause_text;
             clause.risk_level = clauseData.risk_level;
@@ -330,6 +359,7 @@ export class DocumentsController {
     try {
       const regulations = await this.regulationRepository.find({
         select: {
+          id: true,
           createdAt: true,
           updatedAt: true,
           jurisdiction: true,
@@ -467,7 +497,7 @@ export class DocumentsController {
 //         .replace(/(\r\n|\n|\r){2,}/g, '\n')
 //         .replace(/[\u200B-\u200D\uFEFF]/g, '')
 //         .replace(/[\u00A0\u1680\u180E\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
-//         .replace(/<[^>]*>/g, ' ')
+//         .replace(/<[^>]*>/g, '')
 //         .replace(/[\u2022\u2023\u25E6\u2043]/g, '*')
 //         .replace(/[\u2010\u2011]/g, '-')
 //         .replace(/^\s+|\s+$/gm, '')
@@ -496,18 +526,44 @@ export class DocumentsController {
 //   }
 
 //   private async handleRegulation(dto: CreateDocumentDto, fullText: string) {
-//     const regulation = new Regulation();
-//     regulation.full_text = fullText;
-//     regulation.title = dto.title;
-//     regulation.jurisdiction = dto.jurisdiction || 'Unknown';
-//     regulation.citation = dto.citation || '';
-//     regulation.section = dto.section || '';
-//     regulation.subject_area = dto.subject_area || '';
-//     regulation.summary = dto.summary || '';
-//     regulation.source_url = dto.source_url || '';
-//     regulation.updated_at = new Date().toISOString();
+//     try {
+//       // First analyze the regulation using OpenAI service
+//       const analysisResults = await this.geminiService.analyzeRegulations(fullText);
 
-//     return this.regulationRepository.save(regulation);
+//       // If no results or first result is missing, throw error
+//       if (!analysisResults || !analysisResults[0]) {
+//         throw new BadRequestException('Failed to analyze regulation content');
+//       }
+
+//       // Get the first analysis result
+//       const analysis = analysisResults[0];
+
+//       // Create and populate the regulation entity
+//       const regulation = new Regulation();
+//       regulation.full_text = fullText; // Store original full text
+//       regulation.title = dto.title || analysis.title;
+//       regulation.jurisdiction = analysis.jurisdiction || dto.jurisdiction || 'Unknown';
+//       regulation.citation = analysis.citation || dto.citation || '';
+//       regulation.section = analysis.section || dto.section || '';
+//       regulation.subject_area = analysis.subject_area || dto.subject_area || '';
+//       regulation.summary = analysis.summary || dto.summary || '';
+//       regulation.source_url = dto.source_url || '';
+//       regulation.updated_at = new Date().toISOString();
+
+//       // Save to database
+//       const savedRegulation = await this.regulationRepository.save(regulation);
+
+//       return {
+//         success: true,
+//         data: savedRegulation,
+//         message: 'Regulation processed and saved successfully'
+//       };
+
+//     } catch (error) {
+//       throw new BadRequestException(
+//         `Failed to process regulation: ${error.message}`,
+//       );
+//     }
 //   }
 
 //   private async handleContract(dto: CreateDocumentDto, fullText: string) {
