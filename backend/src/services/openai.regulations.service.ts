@@ -65,7 +65,7 @@ export class OpenAIServiceRegulation {
       const parsedOutput = await this.regulationParser.parse(text);
 
       // Return the regulations array
-      return parsedOutput.regulations;
+      return (parsedOutput as any).regulations;
 
     } catch (error) {
       console.error('OpenAI API Error:', error);

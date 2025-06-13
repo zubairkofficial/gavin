@@ -65,12 +65,12 @@ export class OpenAIService {
       const parsedOutput = await this.parser.parse(text);
 
       // Transform to match your existing return format
-      return parsedOutput.clauses.map(clause => ({
+      return (parsedOutput as any).clauses.map((clause: any) => ({
         contract_id: contractId,
         clause_type: clause.clause_type,
         clause_text: clause.clause_text,
         risk_level: clause.risk_level,
-        jurisdiction: parsedOutput.jurisdiction,
+        jurisdiction: (parsedOutput as any).jurisdiction,
         language_variant: clause.language_variant || '',
         notes: ''
       }));

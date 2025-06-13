@@ -62,7 +62,7 @@ export class GeminiServiceRegulation {
       const parsedOutput = await this.regulationParser.parse(text);
 
       // Return the regulations array
-      return parsedOutput.regulations;
+      return (parsedOutput as any).regulations;
 
     } catch (error) {
       console.error('Google AI API Error:', error);
