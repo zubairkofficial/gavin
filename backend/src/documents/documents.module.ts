@@ -16,7 +16,6 @@ import { OpenAIServiceRegulation } from '@/services/openai.regulations.service';
   controllers: [DocumentsController ],
   providers: [DocumentsService , OpenAIService ,GeminiServiceRegulation , OpenAIServiceRegulation,
   ],
-    exports: [DocumentsService, OpenAIService , GeminiServiceRegulation , OpenAIServiceRegulation],
 })
 export class DocumentsModule {}
 
