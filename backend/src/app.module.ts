@@ -44,7 +44,6 @@ import { DocumentsModule } from './documents/documents.module';
     AuthModule,
     SharedModule,
     GovInfoModule,
-    ChatModule,
     DocumentsModule,
   ],
   controllers: [AppController],
