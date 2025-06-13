@@ -312,8 +312,9 @@ export default function DocumentsTable() {
                     ) : (
                       paginatedRegulations.map((regulation) => (
                         <TableRow key={regulation.id}>
-                          <TableCell className="font-medium">{regulation.id.slice(-4)}</TableCell>
-                          <TableCell className="font-medium">{regulation.title}</TableCell>
+                          <TableCell className="font-medium">{regulation.id.slice(-4)}</TableCell>                          <TableCell className="font-medium" title={regulation.title}>
+                            {regulation.title.length > 25 ? `${regulation.title.slice(0, 25)}...` : regulation.title}
+                          </TableCell>
                           <TableCell>{regulation.jurisdiction}</TableCell>
                           <TableCell>{regulation.citation || "N/A"}</TableCell>
                           <TableCell>{regulation.section || "N/A"}</TableCell>
