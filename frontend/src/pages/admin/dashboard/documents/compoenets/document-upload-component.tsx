@@ -1,3 +1,4 @@
+import API from "@/lib/api";
 import React, { useState, useRef } from "react";
 import { toast } from "sonner";
 interface AttachedDocument {
@@ -119,7 +120,9 @@ const DocumentUploadComponent: React.FC = () => {
           fileName: doc.file.name
         });
 
-        const response = await fetch('http://localhost:8080/api/v1/documents/upload', {
+        const response = await fetch(API.getUri({
+          url: '/documents/upload'
+        }), {
           method: 'POST',
           body: formData,
           headers: {
