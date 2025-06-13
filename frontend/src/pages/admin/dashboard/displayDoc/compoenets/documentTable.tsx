@@ -16,6 +16,10 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { Badge } from "@/components/ui/badge"
+import { EditDocumentModal } from "./edit-documet-model"
+import { Toaster } from "sonner"
+import API from "@/lib/api"
 
 interface Contract {
   id: string
@@ -76,22 +80,24 @@ export default function DocumentsTable() {
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
-  const [totalCount, setTotalCount] = useState(0)
+  // const [totalCount, setTotalCount] = useState(0)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [selectedDocument, setSelectedDocument] = useState<Contract | Regulation | null>(null)
 
   const fetchDocuments = async (type: DocumentType) => {
     setLoading(true)
     setError(null)
 
     try {
-      const url = `http://localhost:8080/api/v1/documents/${type}`
+      const url = `/documents/${type}`
       console.log(`Fetching ${type} from ${url}`)
-      const response = await fetch(url)
+      const response = await API.get(url)
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error(`Failed to fetch ${type}`)
       }
 
-      const responseData = await response.json()
+      const responseData = response.data
       console.log(`Response data for ${type}:`, responseData)
 
       if (type === "contracts") {
@@ -99,10 +105,10 @@ export default function DocumentsTable() {
         const contractsResponse = responseData as ContractsResponse
         if (contractsResponse.success) {
           setContracts(contractsResponse.data)
-          setTotalCount(contractsResponse.count)
+          // setTotalCount(contractsResponse.count)
         } else {
           setContracts([])
-          setTotalCount(0)
+          // setTotalCount(0)
         }
       } else {
         // Handle regulations response format
@@ -151,13 +157,13 @@ export default function DocumentsTable() {
   )
 
   // Sort the filtered data based on date
-  const sortedContracts = [...filteredContracts].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  const sortedContracts = [...filteredContracts].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )
 
-  const sortedRegulations = [...filteredRegulations].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  const sortedRegulations = [...filteredRegulations].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )
 
   // Update pagination calculations to use sorted data
   const totalItems = documentType === "contracts" ? sortedContracts.length : sortedRegulations.length
@@ -179,6 +185,24 @@ export default function DocumentsTable() {
 
   const handleSearchWithReset = () => {
     setCurrentPage(1) // Reset to first page when searching
+    fetchDocuments(documentType)
+  }
+
+  const handleStatusClick = (document: Contract | Regulation) => {
+    setSelectedDocument(document)
+    setIsEditModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsEditModalOpen(false)
+    // We'll keep the selected document until the modal is fully closed
+    // to prevent UI flicker
+    setTimeout(() => {
+      setSelectedDocument(null)
+    }, 300)
+  }
+
+  const handleUpdateSuccess = () => {
     fetchDocuments(documentType)
   }
 
@@ -239,7 +263,7 @@ export default function DocumentsTable() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedContracts.map((contract ) => (
+                      paginatedContracts.map((contract) => (
                         <TableRow key={contract.id}>
                           <TableCell className="font-medium">{contract.id.slice(-4)}</TableCell>
                           <TableCell>{contract.type}</TableCell>
@@ -247,15 +271,17 @@ export default function DocumentsTable() {
                           <TableCell>{contract.source}</TableCell>
                           <TableCell>{formatDate(contract.createdAt)}</TableCell>
                           <TableCell>
-                            {isContractComplete(contract) ? (
-                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                                Ready for Review
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium">
-                                Needs Annotation
-                              </span>
-                            )}
+                            <Badge
+                              variant={isContractComplete(contract) ? "default" : "secondary"}
+                              className={`cursor-pointer hover:opacity-80 ${
+                                isContractComplete(contract)
+                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                  : "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                              }`}
+                              onClick={() => handleStatusClick(contract)}
+                            >
+                              {isContractComplete(contract) ? "Ready for Review" : "Needs Annotation"}
+                            </Badge>
                           </TableCell>
                         </TableRow>
                       ))
@@ -266,8 +292,7 @@ export default function DocumentsTable() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID
-                      </TableHead>
+                      <TableHead>ID</TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Jurisdiction</TableHead>
                       <TableHead>Citation</TableHead>
@@ -280,14 +305,13 @@ export default function DocumentsTable() {
                   <TableBody>
                     {paginatedRegulations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           No regulations found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedRegulations.map((regulation, index) => (
-                        console.log(`Rendering regulation:`, regulation),
-                        <TableRow key={startIndex + index}>
+                      paginatedRegulations.map((regulation) => (
+                        <TableRow key={regulation.id}>
                           <TableCell className="font-medium">{regulation.id.slice(-4)}</TableCell>
                           <TableCell className="font-medium">{regulation.title}</TableCell>
                           <TableCell>{regulation.jurisdiction}</TableCell>
@@ -296,15 +320,17 @@ export default function DocumentsTable() {
                           <TableCell>{regulation.subject_area || "N/A"}</TableCell>
                           <TableCell>{formatDate(regulation.createdAt)}</TableCell>
                           <TableCell>
-                            {isRegulationComplete(regulation) ? (
-                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                                Ready for Review
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium">
-                                Needs Annotation
-                              </span>
-                            )}
+                            <Badge
+                              variant={isRegulationComplete(regulation) ? "default" : "secondary"}
+                              className={`cursor-pointer hover:opacity-80 ${
+                                isRegulationComplete(regulation)
+                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                  : "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                              }`}
+                              onClick={() => handleStatusClick(regulation)}
+                            >
+                              {isRegulationComplete(regulation) ? "Ready for Review" : "Needs Annotation"}
+                            </Badge>
                           </TableCell>
                         </TableRow>
                       ))
@@ -374,6 +400,14 @@ export default function DocumentsTable() {
           )}
         </CardContent>
       </Card>
+      <EditDocumentModal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseModal}
+        documentType={documentType}
+        document={selectedDocument}
+        onUpdate={handleUpdateSuccess}
+      />
+      <Toaster />
     </div>
   )
 }

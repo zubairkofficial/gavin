@@ -6,6 +6,9 @@ import {
   UseInterceptors,
   BadRequestException,
   Get,
+  Param,
+  Put,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -22,6 +25,8 @@ import { Public } from '../auth/decorators/public.decorator';
 import { DocumentsService } from './documents.service';
 import { GeminiServiceRegulation } from '../services/gemini.regulation.service';
 import { OpenAIServiceRegulation } from '@/services/openai.regulations.service';
+import { UpdateContractDto } from './dto/update-contract.dto';
+import { UpdateRegulationDto } from './dto/update-regulation.dto';
 
 @Controller('/documents')
 
@@ -65,15 +70,12 @@ export class DocumentsController {
 
     const tempFilePath = `temp_${Date.now()}_${file.originalname}`;
     try {
-      // Write file with binary encoding
       await fs.promises.writeFile(tempFilePath, file.buffer);
 
-      // Use proper text extraction based on file type
       let fullText = '';
       if (file.mimetype === 'text/plain') {
         fullText = await fs.promises.readFile(tempFilePath, 'utf8');
       } else {
-        // Use appropriate document parser for PDFs/DOCs
         const parsedText = await this.documentsService.parseDocument(
           tempFilePath,
           file.mimetype,
@@ -81,7 +83,7 @@ export class DocumentsController {
         fullText = parsedText;
       }
 
-      // Enhanced validation for parsed text
+    
       if (!fullText || typeof fullText !== 'string') {
         throw new BadRequestException(
           'Document parsing failed: empty or invalid content',
@@ -189,18 +191,12 @@ export class DocumentsController {
 
   private async handleRegulation(dto: CreateDocumentDto, fullText: string) {
     try {
-      // First analyze the regulation using OpenAI service
       const analysisResults = await this.OpenServiceRegulation.analyzeRegulations(fullText);
 
-      // If no results or first result is missing, throw error
       if (!analysisResults || !analysisResults[0]) {
         throw new BadRequestException('Failed to analyze regulation content');
       }
-
-      // Get the first analysis result
       const analysis = analysisResults[0];
-
-      // Create and populate the regulation entity
       const regulation = new Regulation();
       regulation.full_text = fullText; // Store original full text
       regulation.title = dto.title || analysis.title;
@@ -383,302 +379,99 @@ export class DocumentsController {
       );
     }
   }
+
+@Put('contracts/:id')
+async updateContract(
+  @Param('id', ParseUUIDPipe) id: string,
+  @Body() updateContractDto: UpdateContractDto
+) {
+  try {
+    console.log('🛠 Raw Body:', updateContractDto);
+    
+    // Validate request body
+    if (!updateContractDto || Object.keys(updateContractDto).length === 0) {
+      throw new BadRequestException('Update data is required');
+    }
+
+    // Find the existing contract
+    const contract = await this.contractRepository.findOne({ 
+      where: { id } 
+    });
+
+    if (!contract) {
+      throw new BadRequestException('Contract not found');
+    }
+
+    const updates: Partial<Contract> = {};
+    if (updateContractDto.type !== undefined) updates.type = updateContractDto.type;
+    if (updateContractDto.jurisdiction !== undefined) updates.jurisdiction = updateContractDto.jurisdiction;
+    if (updateContractDto.source !== undefined) updates.source = updateContractDto.source;
+    updates.updatedAt = new Date(); 
+
+    Object.assign(contract, updates);
+
+    const updatedContract = await this.contractRepository.save(contract);
+
+    return {
+      success: true,
+      data: updatedContract,
+      message: 'Contract updated successfully'
+    };
+
+  } catch (error) {
+    // Handle specific database errors
+    if (error?.code === '22P02') {
+      throw new BadRequestException('Invalid UUID format');
+    }
+    throw new BadRequestException(`Failed to update contract: ${error.message}`);
+  }
 }
 
+@Put('regulations/:id')
+async updateRegulation(
+  @Param('id', ParseUUIDPipe) id: string,
+  @Body() updateRegulationDto: UpdateRegulationDto
+) {
+  try {
+    console.log('🛠 Raw Body:', updateRegulationDto);
+    
+    // Validate request body
+    if (!updateRegulationDto || Object.keys(updateRegulationDto).length === 0) {
+      throw new BadRequestException('Update data is required');
+    }
 
+    const regulation = await this.regulationRepository.findOne({ 
+      where: { id } 
+    });
 
+    if (!regulation) {
+      throw new BadRequestException('Regulation not found');
+    }
 
-// import {
-//   Controller,
-//   Post,
-//   Body,
-//   UploadedFile,
-//   UseInterceptors,
-//   BadRequestException,
-//   Get,
-// } from '@nestjs/common';
-// import { FileInterceptor } from '@nestjs/platform-express';
-// import { InjectRepository } from '@nestjs/typeorm';
-// import { Repository } from 'typeorm';
-// import * as fs from 'fs';
-// import { z } from 'zod';
-// import { Contract } from './entities/contract.entity';
-// import { Clause } from './entities/clause.entity';
-// import { Regulation } from './entities/regulation.entity';
-// import { OpenAIService } from '../services/openai.service';
-// import { ContractSchema, ClauseSchema } from './schemas/contract.schema';
-// import { CreateDocumentDto } from './dto/create-document.dto';
-// import { Public } from '../auth/decorators/public.decorator';
-// import { DocumentsService } from './documents.service';
-// import { createWorker } from 'tesseract.js';
+    const updates: Partial<Regulation> = {};
+    if (updateRegulationDto.title !== undefined) updates.title = updateRegulationDto.title;
+    if (updateRegulationDto.jurisdiction !== undefined) updates.jurisdiction = updateRegulationDto.jurisdiction;
+    if (updateRegulationDto.citation !== undefined) updates.citation = updateRegulationDto.citation;
+    if (updateRegulationDto.section !== undefined) updates.section = updateRegulationDto.section;
+    if (updateRegulationDto.subject_area !== undefined) updates.subject_area = updateRegulationDto.subject_area;
+    updates.updated_at = new Date().toISOString();
 
-// @Controller('/documents')
-// @Public()
-// export class DocumentsController {
-//   constructor(
-//     private readonly documentsService: DocumentsService,
-//     @InjectRepository(Regulation)
-//     private regulationRepository: Repository<Regulation>,
-//     @InjectRepository(Contract)
-//     private contractRepository: Repository<Contract>,
-//     @InjectRepository(Clause)
-//     private clauseRepository: Repository<Clause>,
-//     private geminiService: OpenAIService,
-//   ) {}
+    Object.assign(regulation, updates);
+    const updatedRegulation = await this.regulationRepository.save(regulation);
 
-//   async performOCR(filePath: string): Promise<string> {
-//     const worker = await createWorker(['eng']);
-//     try {
-//       const {
-//         data: { text },
-//       } = await worker.recognize(filePath);
-//       return text;
-//     } finally {
-//       await worker.terminate();
-//     }
-//   }
+    return {
+      success: true,
+      data: updatedRegulation,
+      message: 'Regulation updated successfully'
+    };
 
-//   @Post('/upload')
-//   @UseInterceptors(FileInterceptor('file'))
-//   async uploadDocument(
-//     @Body() createDocumentDto: CreateDocumentDto,
-//     @UploadedFile() file: any,
-//   ) {
-//     if (!file) {
-//       throw new BadRequestException('File is required');
-//     }
+  } catch (error) {
+    // Handle specific database errors
+    if (error?.code === '22P02') {
+      throw new BadRequestException('Invalid UUID format');
+    }
+    throw new BadRequestException(`Failed to update regulation: ${error.message}`);
+  }
+}
 
-//     const supportedTypes = [
-//       'text/plain',
-//       'application/pdf',
-//       'application/msword',
-//       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-//       'image/png',
-//       'image/jpeg',
-//     ];
-
-//     if (!supportedTypes.includes(file.mimetype)) {
-//       throw new BadRequestException(
-//         `Unsupported file type: ${file.mimetype}. Supported types are: text, pdf, doc/docx, png, jpg`,
-//       );
-//     }
-
-//     const tempFilePath = `temp_${Date.now()}_${file.originalname}`;
-//     try {
-//       await fs.promises.writeFile(tempFilePath, file.buffer);
-
-//       let fullText = '';
-
-//       // 🧠 OCR Handling
-//       if (file.mimetype.startsWith('image/')) {
-//         fullText = await this.performOCR(tempFilePath);
-//       } else if (file.mimetype === 'application/pdf') {
-//         fullText = await this.documentsService.parseDocument(tempFilePath, file.mimetype);
-//         if (!fullText || fullText.length < 20) {
-//           console.log('PDF appears scanned — falling back to OCR');
-//           fullText = await this.performOCR(tempFilePath);
-//         }
-//       } else {
-//         fullText = await this.documentsService.parseDocument(tempFilePath, file.mimetype);
-//       }
-
-//       fullText = fullText.replace(/\0/g, '').trim();
-//       if (!fullText || fullText.length < 10) {
-//         throw new BadRequestException('Could not extract valid text from document');
-//       }
-
-//       // 🧹 Sanitize extracted text
-//       fullText = fullText
-//         .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
-//         .replace(/[\u2018\u2019]/g, "'")
-//         .replace(/[\u201C\u201D]/g, '"')
-//         .replace(/[\u2013\u2014\u2015]/g, '-')
-//         .replace(/\s+/g, ' ')
-//         .replace(/(\r\n|\n|\r){2,}/g, '\n')
-//         .replace(/[\u200B-\u200D\uFEFF]/g, '')
-//         .replace(/[\u00A0\u1680\u180E\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
-//         .replace(/<[^>]*>/g, '')
-//         .replace(/[\u2022\u2023\u25E6\u2043]/g, '*')
-//         .replace(/[\u2010\u2011]/g, '-')
-//         .replace(/^\s+|\s+$/gm, '')
-//         .replace(/\n\s*\n/g, '\n')
-//         .trim()
-//         .normalize('NFKC');
-
-//       if (fullText.length > 100000) {
-//         console.warn(`Text exceeds 100k characters, truncating...`);
-//         fullText = fullText.substring(0, 100000);
-//       }
-
-//       switch (createDocumentDto.type?.toLowerCase()) {
-//         case 'statute/regulation':
-//           return this.handleRegulation(createDocumentDto, fullText);
-//         case 'contract template':
-//           return this.handleContract(createDocumentDto, fullText);
-//         default:
-//           throw new BadRequestException('Unsupported document type');
-//       }
-//     } catch (error) {
-//       this.handleError(error, tempFilePath);
-//     } finally {
-//       this.cleanupTempFile(tempFilePath);
-//     }
-//   }
-
-//   private async handleRegulation(dto: CreateDocumentDto, fullText: string) {
-//     try {
-//       // First analyze the regulation using OpenAI service
-//       const analysisResults = await this.geminiService.analyzeRegulations(fullText);
-
-//       // If no results or first result is missing, throw error
-//       if (!analysisResults || !analysisResults[0]) {
-//         throw new BadRequestException('Failed to analyze regulation content');
-//       }
-
-//       // Get the first analysis result
-//       const analysis = analysisResults[0];
-
-//       // Create and populate the regulation entity
-//       const regulation = new Regulation();
-//       regulation.full_text = fullText; // Store original full text
-//       regulation.title = dto.title || analysis.title;
-//       regulation.jurisdiction = analysis.jurisdiction || dto.jurisdiction || 'Unknown';
-//       regulation.citation = analysis.citation || dto.citation || '';
-//       regulation.section = analysis.section || dto.section || '';
-//       regulation.subject_area = analysis.subject_area || dto.subject_area || '';
-//       regulation.summary = analysis.summary || dto.summary || '';
-//       regulation.source_url = dto.source_url || '';
-//       regulation.updated_at = new Date().toISOString();
-
-//       // Save to database
-//       const savedRegulation = await this.regulationRepository.save(regulation);
-
-//       return {
-//         success: true,
-//         data: savedRegulation,
-//         message: 'Regulation processed and saved successfully'
-//       };
-
-//     } catch (error) {
-//       throw new BadRequestException(
-//         `Failed to process regulation: ${error.message}`,
-//       );
-//     }
-//   }
-
-//   private async handleContract(dto: CreateDocumentDto, fullText: string) {
-//     try {
-//       const geminiResults = await this.geminiService.analyzeDocumentClauses(fullText, -1);
-
-//       const contract = new Contract();
-//       contract.type = dto.type;
-//       contract.jurisdiction =
-//         geminiResults[0]?.jurisdiction || dto.jurisdiction || 'Unknown';
-//       contract.content_html = fullText;
-//       contract.source = dto.source || 'Upload';
-
-//       const contractData = {
-//         jurisdiction: contract.jurisdiction,
-//         clauses: geminiResults,
-//       };
-
-//       try {
-//         ContractSchema.parse(contractData);
-//       } catch (validationError) {
-//         throw new BadRequestException(
-//           `Contract validation failed: ${validationError.message}`,
-//         );
-//       }
-
-//       const savedContract = await this.contractRepository.save(contract);
-
-//       const savedClauses = await Promise.all(
-//         geminiResults.map(async (clauseData) => {
-//           try {
-//             ClauseSchema.parse({
-//               clause_type: clauseData.clause_type,
-//               risk_level: clauseData.risk_level,
-//               clause_text: clauseData.clause_text,
-//               language_variant: clauseData.language_variant || '',
-//             });
-
-//             const clause = new Clause();
-//             clause.contract_id = savedContract.id;
-//             clause.clause_type = clauseData.clause_type;
-//             clause.clause_text = clauseData.clause_text;
-//             clause.risk_level = clauseData.risk_level;
-//             clause.jurisdiction = clauseData.jurisdiction;
-//             clause.language_variant = clauseData.language_variant || '';
-//             clause.notes = '';
-
-//             return await this.clauseRepository.save(clause);
-//           } catch (validationError) {
-//             console.error(`Clause validation failed: ${validationError.message}`);
-//             return null;
-//           }
-//         }),
-//       );
-
-//       const validClauses = savedClauses.filter(Boolean);
-
-//       return {
-//         contract: savedContract,
-//         clauses: validClauses,
-//         message: `Contract saved with ${validClauses.length} valid clauses`,
-//       };
-//     } catch (error) {
-//       throw new BadRequestException(
-//         `Failed to process document: ${error.message}`,
-//       );
-//     }
-//   }
-
-//   private handleError(error: any, tempFilePath: string) {
-//     this.cleanupTempFile(tempFilePath);
-//     throw error;
-//   }
-
-//   private cleanupTempFile(filePath: string) {
-//     if (fs.existsSync(filePath)) {
-//       fs.unlinkSync(filePath);
-//     }
-//   }
-
-//   @Get('/contracts')
-//   async getAllContracts() {
-//     const contracts = await this.contractRepository.find({
-//       select: {
-//         id: true,
-//         type: true,
-//         jurisdiction: true,
-//         source: true,
-//         createdAt: true,
-//       },
-//     });
-//     return {
-//       success: true,
-//       data: contracts,
-//       count: contracts.length,
-//     };
-//   }
-
-//   @Get('/regulations')
-//   async getAllRegulations() {
-//     const regulations = await this.regulationRepository.find({
-//       select: {
-//         createdAt: true,
-//         updatedAt: true,
-//         jurisdiction: true,
-//         citation: true,
-//         title: true,
-//         section: true,
-//         subject_area: true,
-//       },
-//     });
-//     return {
-//       success: true,
-//       data: regulations,
-//       count: regulations.length,
-//     };
-//   }
-// }
+}
