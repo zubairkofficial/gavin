@@ -1,0 +1,374 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Search } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+
+interface Contract {
+  id: number
+  type: string
+  jurisdiction: string
+  source: string
+  createdAt: string
+}
+
+interface ContractsResponse {
+  success: boolean
+  data: Contract[]
+  count: number
+}
+
+interface Regulation {
+  createdAt: string
+  updatedAt: string
+  jurisdiction: string
+  citation: string
+  title: string
+  section: string
+  subject_area: string
+}
+
+interface RegulationsResponse {
+  success: boolean
+  data: Regulation[]
+}
+
+type DocumentType = "contracts" | "regulations"
+
+// Add a function to check if all fields have data for contracts
+const isContractComplete = (contract: Contract): boolean => {
+  return Boolean(contract.id && contract.type && contract.jurisdiction && contract.source && contract.createdAt)
+}
+
+// Add a function to check if all fields have data for regulations
+const isRegulationComplete = (regulation: Regulation): boolean => {
+  return Boolean(
+    regulation.createdAt &&
+      regulation.updatedAt &&
+      regulation.jurisdiction &&
+      regulation.citation &&
+      regulation.title &&
+      regulation.section &&
+      regulation.subject_area,
+  )
+}
+
+export default function DocumentsTable() {
+  const [documentType, setDocumentType] = useState<DocumentType>("contracts")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [contracts, setContracts] = useState<Contract[]>([])
+  const [regulations, setRegulations] = useState<Regulation[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
+  const [totalCount, setTotalCount] = useState(0)
+
+  const fetchDocuments = async (type: DocumentType) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const url = `http://localhost:8080/api/v1/documents/${type}`
+      console.log(`Fetching ${type} from ${url}`)
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${type}`)
+      }
+
+      const responseData = await response.json()
+      console.log(`Response data for ${type}:`, responseData)
+
+      if (type === "contracts") {
+        // Handle contracts response format
+        const contractsResponse = responseData as ContractsResponse
+        if (contractsResponse.success) {
+          setContracts(contractsResponse.data)
+          setTotalCount(contractsResponse.count)
+        } else {
+          setContracts([])
+          setTotalCount(0)
+        }
+      } else {
+        // Handle regulations response format
+        const regulationsResponse = responseData as RegulationsResponse
+        if (regulationsResponse.success) {
+          setRegulations(regulationsResponse.data)
+        } else {
+          setRegulations([])
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching documents:", err)
+      setError(err instanceof Error ? err.message : "An error occurred")
+      if (type === "contracts") {
+        setContracts([])
+      } else {
+        setRegulations([])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchDocuments(documentType)
+  }, [documentType])
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  const filteredContracts = contracts.filter((contract) =>
+    Object.values(contract).some((value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())),
+  )
+
+  const filteredRegulations = regulations.filter((regulation) =>
+    Object.values(regulation).some(
+      (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+    ),
+  )
+
+  // Sort the filtered data based on date
+  const sortedContracts = [...filteredContracts].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const sortedRegulations = [...filteredRegulations].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  // Update pagination calculations to use sorted data
+  const totalItems = documentType === "contracts" ? sortedContracts.length : sortedRegulations.length
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+
+  const paginatedContracts = sortedContracts.slice(startIndex, endIndex)
+  const paginatedRegulations = sortedRegulations.slice(startIndex, endIndex)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handleDocumentTypeChange = (value: DocumentType) => {
+    setDocumentType(value)
+    setCurrentPage(1) // Reset to first page when changing document type
+  }
+
+  const handleSearchWithReset = () => {
+    setCurrentPage(1) // Reset to first page when searching
+    fetchDocuments(documentType)
+  }
+
+  return (
+    <div className="w-full space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Document Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <Select value={documentType} onValueChange={handleDocumentTypeChange}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Select document type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="contracts">Contract Template</SelectItem>
+                <SelectItem value="regulations">Statute/Regulation</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex flex-1 gap-2">
+              <Input
+                placeholder="Search documents..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1"
+              />
+              <Button onClick={handleSearchWithReset} size="icon">
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {error && <div className="text-red-500 mb-4 p-3 bg-red-50 rounded-md">Error: {error}</div>}
+
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : (
+            <div className="border rounded-lg">
+              {documentType === "contracts" ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Jurisdiction</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Created At</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedContracts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          No contracts found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedContracts.map((contract , index) => (
+                        <TableRow key={contract.id}>
+                          <TableCell className="font-medium">{index + 1}</TableCell>
+                          <TableCell>{contract.type}</TableCell>
+                          <TableCell>{contract.jurisdiction}</TableCell>
+                          <TableCell>{contract.source}</TableCell>
+                          <TableCell>{formatDate(contract.createdAt)}</TableCell>
+                          <TableCell>
+                            {isContractComplete(contract) ? (
+                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                Ready for Review
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium">
+                                Needs Annotation
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Jurisdiction</TableHead>
+                      <TableHead>Citation</TableHead>
+                      <TableHead>Section</TableHead>
+                      <TableHead>Subject Area</TableHead>
+                      <TableHead>Created At</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedRegulations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          No regulations found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedRegulations.map((regulation, index) => (
+                        <TableRow key={startIndex + index}>
+                          <TableCell className="font-medium">{regulation.title}</TableCell>
+                          <TableCell>{regulation.jurisdiction}</TableCell>
+                          <TableCell>{regulation.citation || "N/A"}</TableCell>
+                          <TableCell>{regulation.section || "N/A"}</TableCell>
+                          <TableCell>{regulation.subject_area || "N/A"}</TableCell>
+                          <TableCell>{formatDate(regulation.createdAt)}</TableCell>
+                          <TableCell>
+                            {isRegulationComplete(regulation) ? (
+                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                Ready for Review
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium">
+                                Needs Annotation
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          )}
+          {totalItems > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} results
+              </div>
+
+              {totalPages > 1 && (
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNumber
+                      if (totalPages <= 5) {
+                        pageNumber = i + 1
+                      } else if (currentPage <= 3) {
+                        pageNumber = i + 1
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNumber = totalPages - 4 + i
+                      } else {
+                        pageNumber = currentPage - 2 + i
+                      }
+
+                      return (
+                        <PaginationItem key={pageNumber}>
+                          <PaginationLink
+                            onClick={() => handlePageChange(pageNumber)}
+                            isActive={currentPage === pageNumber}
+                            className="cursor-pointer"
+                          >
+                            {pageNumber}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )
+                    })}
+
+                    {totalPages > 5 && currentPage < totalPages - 2 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

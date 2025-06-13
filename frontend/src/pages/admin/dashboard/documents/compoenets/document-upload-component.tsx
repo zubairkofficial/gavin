@@ -48,13 +48,12 @@ interface OverlayProps {
 }
 
 const Overlay: React.FC<OverlayProps> = ({ children }) => (
-  <div className="fixed inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div className="fixed inset-0 bg-white/70 flex items-center justify-center z-50 p-4 ">
     {children}
   </div>
 );
 
 const DocumentUploadComponent: React.FC = () => {
-  const [selectedDocuments, setSelectedDocuments] = useState<AttachedDocument[]>([]);
   const [typeSelectionOpen, setTypeSelectionOpen] = useState<boolean>(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState<boolean>(false);
   const [selectedType, setSelectedType] = useState<DocumentType | null>(null);
@@ -90,12 +89,7 @@ const DocumentUploadComponent: React.FC = () => {
       }
     }
   };
-
-  const removeDocument = (id: string): void => {
-    setTempSelectedDocs((prev) => prev.filter(doc => doc.id !== id));
-  };
-
-  const uploadToBackend = async (documents: AttachedDocument[]): Promise<void> => {
+  const uploadToBackend= async (documents: AttachedDocument[]): Promise<void> => {
     if (!selectedType || !documentTitle.trim() || documents.length === 0) {
       return;
     }
@@ -103,7 +97,6 @@ const DocumentUploadComponent: React.FC = () => {
     setIsUploading(true);
     
     try {
-      // Upload each file separately or handle multiple files as needed
       for (const doc of documents) {
         if (!doc.file) {
           throw new Error(`File object missing for document: ${doc.name}`);
@@ -111,13 +104,11 @@ const DocumentUploadComponent: React.FC = () => {
 
         const formData = new FormData();
         
-        // Validate file size (10MB limit)
         const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
         if (doc.file.size > MAX_FILE_SIZE) {
           throw new Error(`File exceeding 10MB: ${doc.file.name}`);
         }
 
-        // Add file and metadata according to backend requirements
         formData.append('file', doc.file);
         formData.append('title', documentTitle.trim());
         formData.append('type', selectedType.id);
@@ -140,16 +131,6 @@ const DocumentUploadComponent: React.FC = () => {
           throw new Error(`Upload failed for ${doc.file.name}: ${response.statusText}`);
         }
       }
-
-      // Success - update the selected documents
-      setSelectedDocuments((prev) => [
-        ...prev,
-        ...tempSelectedDocs.map(doc => ({
-          ...doc,
-          // Remove the file object from the displayed documents to save memory
-          file: undefined,
-        }))
-      ]);
       
       // Clear temporary state
       setTempSelectedDocs([]);
@@ -189,12 +170,8 @@ const DocumentUploadComponent: React.FC = () => {
     setUploadDialogOpen(false);
   };
 
-  const removeSelectedDocument = (id: string): void => {
-    setSelectedDocuments((prev) => prev.filter(doc => doc.id !== id));
-  };
-
   return (
-    <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
+    <div className="w-full max-w-4xl mx-auto p-6 space-y-6  ">
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold">Document Upload Center</h1>
         <p className="text-gray-600">Select document type first, then upload your files for analysis</p>
@@ -215,41 +192,9 @@ const DocumentUploadComponent: React.FC = () => {
         </button>
       </div>
 
-      {selectedDocuments.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Uploaded Documents</h3>
-          <div className="grid gap-3">
-            {selectedDocuments.map((doc) => (
-              <div key={doc.id} className="border rounded-lg p-4 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <svg className="text-blue-500 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <div>
-                    <p className="font-medium">{doc.title}</p>
-                    <p className="text-sm text-gray-500">
-                      {doc.name} • {doc.category} • {doc.type} • {doc.size}
-                    </p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => removeSelectedDocument(doc.id)} 
-                  className="hover:bg-gray-100 p-1 rounded"
-                  type="button"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {typeSelectionOpen && (
         <Overlay>
-          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 border-gray-200 border-1 rounded-lg shadow-sm">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h2 className="text-xl font-semibold">Select Document Type</h2>
@@ -296,7 +241,7 @@ const DocumentUploadComponent: React.FC = () => {
 
       {uploadDialogOpen && (
         <Overlay>
-          <div className="bg-white rounded-lg w-full max-w-md p-6">
+          <div className="bg-white rounded-lg w-full max-w-md p-6 border-gray-200 border-1 rounded-lg shadow-sm">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h2 className="text-xl font-semibold">Upload {selectedType?.name}</h2>                <p className="text-gray-600 text-sm">
@@ -334,24 +279,24 @@ const DocumentUploadComponent: React.FC = () => {
                   required
                   autoComplete="off"
                 />
-                {/* <p className="text-xs text-gray-500 mt-1">
-                  You can write a detailed title or description across multiple lines
-                </p> */}
                 <p className="text-xs text-gray-500">Current title length: {documentTitle.length}</p>
               </div>
 
               <div className="border-2 border-dashed border-gray-300 p-6 rounded text-center">
                 <svg className="mx-auto h-10 w-10 text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>                <p className="text-sm text-gray-600">Drag and drop a file here</p>
-                <p className="text-xs text-gray-400 mb-2">Or</p><input
+                </svg>
+                <p className="text-sm text-gray-600">Drag and drop a file here</p>
+                <p className="text-xs text-gray-400 mb-2">Or</p>
+                <input
                   ref={fileInputRef}
                   type="file"
                   accept={selectedType?.acceptedFormats.join(",")}
                   onChange={handleFileSelect}
                   className="hidden"
                   disabled={tempSelectedDocs.length > 0}
-                />                <button
+                />
+                <button
                   onClick={() => fileInputRef.current?.click()}
                   className="px-4 py-2 border rounded hover:bg-gray-50 text-sm transition disabled:opacity-50"
                   disabled={tempSelectedDocs.length > 0}
@@ -362,31 +307,30 @@ const DocumentUploadComponent: React.FC = () => {
               </div>
 
               {tempSelectedDocs.length > 0 && (
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-sm font-medium">Selected File</h4>
-                    <span className="text-xs text-gray-500">Selected Document</span>
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-sm font-medium text-gray-700">Selected Document</h4>
+                    <button
+                      onClick={() => setTempSelectedDocs([])}
+                      className="text-gray-400 hover:text-gray-600"
+                      type="button"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
                   {tempSelectedDocs.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-100 rounded">
-                      <div className="flex items-center gap-2">
-                        <svg className="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div key={doc.id} className="flex items-center justify-between bg-white p-3 rounded-md shadow-sm">
+                      <div className="flex items-center space-x-3">
+                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         <div>
-                          <p className="text-sm">{doc.name}</p>
+                          <p className="text-sm font-medium text-gray-700">{doc.name}</p>
                           <p className="text-xs text-gray-500">{doc.type} • {doc.size}</p>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => removeDocument(doc.id)} 
-                        className="hover:bg-gray-200 p-1 rounded"
-                        type="button"
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
                     </div>
                   ))}
                 </div>

@@ -4,6 +4,7 @@ import AppLayout from "../layout/AppLayout";
 import OnboardingPage from "./dashboard/onboarding";
 import UsersPage from "./admin/dashboard/users";
 import UploadDoc from "./admin/dashboard/documents";
+import DocTable from "./admin/dashboard/displayDoc/index";
 export default function AuthenticateRoutes() {
   return createRoutesFromElements(
     <>
@@ -27,6 +28,9 @@ export default function AuthenticateRoutes() {
         <Route
           path="/upload-doc"
           element={<UploadDoc />} />
+        <Route
+          path="/all-docs"
+          element={<DocTable />} />
         </Route>
       <Route
         path="/onboarding"

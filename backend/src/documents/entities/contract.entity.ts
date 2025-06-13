@@ -1,22 +1,42 @@
 import BaseEntity from '@/common/entities/BaseEntity';
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
+} from 'typeorm';
+import { Clause } from './clause.entity';
 
 @Entity()
+export class Contract {
+  @PrimaryGeneratedColumn()
+  id: number;
 
-export class Contract extends BaseEntity {
-    
-    @Column()
-    type: string;
+  @Column()
+  type: string;
 
-    @Column()
-    jurisdiction: string;
+  @Column()
+  jurisdiction: string;
 
-    @Column()
-    version_label: string;
 
-    @Column({ type: 'text' })
-    content_html: string;
+  @Column({ type: 'text' })
+  content_html: string;
 
-    @Column()
-    source: string;
+  @OneToMany(() => Clause, (clause) => clause.contract)
+  clauses: Clause[];
+
+  @Column()
+  source: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @DeleteDateColumn()
+  deletedAt: Date;
 }
