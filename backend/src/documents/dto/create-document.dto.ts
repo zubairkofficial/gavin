@@ -13,6 +13,10 @@ export class CreateDocumentDto {
     @IsString()
     content?: string;
 
+    @IsOptional()
+    @IsString()
+    userId?: string;
+
     // Fields for regulation
     @IsOptional()
     @IsString()

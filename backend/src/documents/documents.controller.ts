@@ -13,6 +13,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import * as fs from 'fs';
 import { z } from 'zod';
 import { Contract } from './entities/contract.entity';
@@ -21,12 +22,14 @@ import { Regulation } from './entities/regulation.entity';
 import { OpenAIService } from '../services/openai.service';
 import { ContractSchema, ClauseSchema } from './schemas/contract.schema';
 import { CreateDocumentDto } from './dto/create-document.dto';
+import { UpdateContractDto } from './dto/update-contract.dto';
+import { UpdateRegulationDto } from './dto/update-regulation.dto';
+import { SearchDocumentsDto } from './dto/search-documents.dto';
 import { Public } from '../auth/decorators/public.decorator';
 import { DocumentsService } from './documents.service';
 import { GeminiServiceRegulation } from '../services/gemini.regulation.service';
 import { OpenAIServiceRegulation } from '@/services/openai.regulations.service';
-import { UpdateContractDto } from './dto/update-contract.dto';
-import { UpdateRegulationDto } from './dto/update-regulation.dto';
+import { EmbeddingService } from './services/embedding.service';
 
 @Controller('/documents')
 
@@ -43,6 +46,7 @@ export class DocumentsController {
     private OpenAIService: OpenAIService,
     private GeminiServiceRegulation: GeminiServiceRegulation,
     private OpenServiceRegulation: OpenAIServiceRegulation,
+    private embeddingService: EmbeddingService,
   ) {}
 
   @Post('/upload')
@@ -211,10 +215,37 @@ export class DocumentsController {
       // Save to database
       const savedRegulation = await this.regulationRepository.save(regulation);
 
+      // Create embeddings for the regulation with only document ID in metadata
+      await this.embeddingService.processDocument({
+        documentId: savedRegulation.id,
+        userId: dto.userId || 'system',
+        content: fullText,
+        documentType: 'regulation',
+        jurisdiction: savedRegulation.jurisdiction,
+        additionalMetadata: {
+          document_id: savedRegulation.id
+        }
+      });
+
       return {
         success: true,
-        data: savedRegulation,
-        message: 'Regulation processed and saved successfully'
+        status: 'completed',
+        data: {
+          id: savedRegulation.id,
+          title: savedRegulation.title,
+          jurisdiction: savedRegulation.jurisdiction,
+          documentType: 'regulation',
+          processingDetails: {
+            textLength: fullText.length,
+            analyzed: true,
+            embedded: true,
+            citation: savedRegulation.citation,
+            section: savedRegulation.section,
+            subject_area: savedRegulation.subject_area,
+            processed_at: new Date().toISOString()
+          }
+        },
+        message: 'Regulation successfully processed, analyzed, and embedded'
       };
 
     } catch (error) {
@@ -226,21 +257,14 @@ export class DocumentsController {
 
   private async handleContract(dto: CreateDocumentDto, fullText: string) {
     try {
-    
-      const geminiResults = await this.OpenAIService.analyzeDocumentClauses(
-        fullText,
-        -1,
-      );
-
+      const geminiResults = await this.OpenAIService.analyzeDocumentClauses(fullText, -1);
 
       const contract = new Contract();
       contract.type = dto.type;
-      contract.jurisdiction =
-        geminiResults[0]?.jurisdiction || dto.jurisdiction || 'Unknown';
+      contract.jurisdiction = geminiResults[0]?.jurisdiction || dto.jurisdiction || 'Unknown';
       contract.content_html = fullText;
       contract.source = dto.source || 'Upload';
 
-     
       const contractData = {
         jurisdiction: contract.jurisdiction,
         clauses: geminiResults,
@@ -254,10 +278,9 @@ export class DocumentsController {
         );
       }
 
-
       const savedContract = await this.contractRepository.save(contract);
 
-   
+      // Process clauses
       const savedClauses = await Promise.all(
         geminiResults.map(async (clauseData) => {
           try {
@@ -265,7 +288,7 @@ export class DocumentsController {
               clause_type: clauseData.clause_type,
               risk_level: clauseData.risk_level,
               clause_text: clauseData.clause_text,
-              language_variant: clauseData.language_variant || '', 
+              language_variant: clauseData.language_variant || '',
             });
 
             const clause = new Clause();
@@ -273,14 +296,27 @@ export class DocumentsController {
             clause.clause_text = clauseData.clause_text;
             clause.risk_level = clauseData.risk_level;
             clause.jurisdiction = clauseData.jurisdiction;
-            clause.language_variant = clauseData.language_variant || ''; 
+            clause.language_variant = clauseData.language_variant || '';
             clause.notes = '';
+            clause.contract_id = Number(savedContract.id);
 
-            return await this.clauseRepository.save(clause);
+            const savedClause = await this.clauseRepository.save(clause);
+            
+            // Create embeddings for the clause with only document ID
+            await this.embeddingService.processDocument({
+              documentId: savedClause.id,
+              userId: dto.userId || 'system',
+              content: clauseData.clause_text,
+              documentType: 'contract_clause',
+              jurisdiction: clause.jurisdiction,
+              additionalMetadata: {
+                document_id: savedClause.id
+              }
+            });
+
+            return savedClause;
           } catch (validationError) {
-            console.error(
-              `Clause validation failed: ${validationError.message}`,
-            );
+            console.error(`Clause validation failed: ${validationError.message}`);
             return null;
           }
         }),
@@ -288,12 +324,44 @@ export class DocumentsController {
 
       const validClauses = savedClauses.filter((clause) => clause !== null);
 
-    
+      // Create embeddings for the full contract with only document ID
+      await this.embeddingService.processDocument({
+        documentId: savedContract.id,
+        userId: dto.userId || 'system',
+        content: fullText,
+        documentType: 'contract',
+        jurisdiction: savedContract.jurisdiction,
+        additionalMetadata: {
+          document_id: savedContract.id
+        }
+      });
+
       return {
-        contract: savedContract,
-        clauses: validClauses,
-        message: `Contract saved with ${validClauses.length} valid clauses`,
+        success: true,
+        status: 'completed',
+        data: {
+          id: savedContract.id,
+          type: savedContract.type,
+          jurisdiction: savedContract.jurisdiction,
+          documentType: 'contract',
+          processingDetails: {
+            textLength: fullText.length,
+            totalClauses: validClauses.length,
+            validClauses: validClauses.length,
+            analyzed: true,
+            embedded: true,
+            processed_at: new Date().toISOString()
+          },
+          clauses: validClauses.map(clause => ({
+            id: clause.id,
+            type: clause.clause_type,
+            risk_level: clause.risk_level,
+            jurisdiction: clause.jurisdiction
+          }))
+        },
+        message: `Contract successfully processed with ${validClauses.length} clauses analyzed and embedded`
       };
+
     } catch (error) {
       throw new BadRequestException(
         `Failed to process document: ${error.message}`,
@@ -473,5 +541,41 @@ async updateRegulation(
     throw new BadRequestException(`Failed to update regulation: ${error.message}`);
   }
 }
+  // @Post('/search')
+  // @ApiOperation({ summary: 'Search for similar documents using semantic search' })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'Returns similar documents based on the search query'
+  // })
+  // async searchSimilarDocuments(@Body() searchDto: SearchDocumentsDto) {
+  //   try {
+  //     const {
+  //       query,
+  //       userId,
+  //       documentType,
+  //       jurisdiction,
+  //       limit = 5
+  //     } = searchDto;
 
+  //     const similarDocuments = await this.embeddingService.searchSimilarContent(
+  //       query,
+  //       {
+  //         userId,
+  //         documentType,
+  //         jurisdiction
+  //       },
+  //       limit
+  //     );
+
+  //     return {
+  //       success: true,
+  //       data: similarDocuments,
+  //       count: similarDocuments.length
+  //     };
+  //   } catch (error) {
+  //     throw new BadRequestException(
+  //       `Failed to search similar documents: ${error.message}`
+  //     );
+  //   }
+  // }
 }

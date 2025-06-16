@@ -96,6 +96,24 @@ const DocumentUploadComponent: React.FC = () => {
     }
 
     setIsUploading(true);
+    let toastTimer: NodeJS.Timeout | null = null;
+    let messageCount = 0;
+    
+    const messages = [
+      "We are doing our work... please wait",
+      "Processing your documents... this may take a moment",
+      "Hang tight! Your documents are being prepared for analysis",
+      "Thanks for your patience. It's almost done...",
+      "Just a little bit more... your documents are being processed",
+    ];
+
+    // Start the timer for showing messages
+    toastTimer = setInterval(() => {
+      if (messageCount < messages.length) {
+        toast.success(messages[messageCount]);
+        messageCount++;
+      }
+    }, 10000);
     
     try {
       for (const doc of documents) {
@@ -148,6 +166,10 @@ const DocumentUploadComponent: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : "An error occurred during upload.";
       toast.error(errorMessage);
     } finally {
+      // Clear the timer when upload is done
+      if (toastTimer) {
+        clearInterval(toastTimer);
+      }
       setIsUploading(false);
     }
   };

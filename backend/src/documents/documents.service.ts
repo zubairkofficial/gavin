@@ -4,8 +4,8 @@ import { Repository } from 'typeorm';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { Document } from './entities/document.entity';
 import * as fs from 'fs';
-import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import { DocxLoader } from "@langchain/community/document_loaders/fs/docx"
+import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
+import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
 
 @Injectable()
 export class DocumentsService {

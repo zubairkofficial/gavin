@@ -10,11 +10,17 @@ import {GeminiServiceRegulation} from '../services/gemini.regulation.service';
 import { ClauseSchema, ContractSchema } from './schemas/contract.schema';
 import { Clause } from './entities/clause.entity';
 import { OpenAIServiceRegulation } from '@/services/openai.regulations.service';
+import { DocumentEmbedding } from './entities/embedding.entity';
+import { EmbeddingService } from './services/embedding.service';
 
-@Module({
-  imports: [TypeOrmModule.forFeature([Document, Regulation, Contract , Clause])],
-  controllers: [DocumentsController ],
-  providers: [DocumentsService , OpenAIService ,GeminiServiceRegulation , OpenAIServiceRegulation,
+@Module({  imports: [TypeOrmModule.forFeature([Document, Regulation, Contract, Clause, DocumentEmbedding])],
+  controllers: [DocumentsController],
+  providers: [
+    DocumentsService,
+    GeminiServiceRegulation,
+    OpenAIServiceRegulation,
+    OpenAIService,
+    EmbeddingService,
   ],
 })
 export class DocumentsModule {}
