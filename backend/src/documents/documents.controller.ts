@@ -27,7 +27,6 @@ import { UpdateContractDto } from './dto/update-contract.dto';
 import { UpdateRegulationDto } from './dto/update-regulation.dto';
 import { Public } from '../auth/decorators/public.decorator';
 import { DocumentsService } from './documents.service';
-import { GeminiServiceRegulation } from '../services/gemini.regulation.service';
 import { OpenAIServiceRegulation } from '@/services/openai.regulations.service';
 import { EmbeddingService } from './services/embedding.service';
 import { OpenAICaseService } from '@/services/openai.case.service';
@@ -47,7 +46,6 @@ export class DocumentsController {
     @InjectRepository(Case)
     private caseRepository: Repository<Case>,
     private OpenAIService: OpenAIService,
-    private GeminiServiceRegulation: GeminiServiceRegulation,
     private OpenServiceRegulation: OpenAIServiceRegulation,
     private OpenAICaseService: OpenAICaseService,
     private embeddingService: EmbeddingService,

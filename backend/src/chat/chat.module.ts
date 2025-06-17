@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ChatController } from './chat.controller';
-import { ChatService } from './chat.service';
 import { Message } from './entities/message.entity';
 import openaiConfig from '../config/gemini.config';
 
@@ -12,7 +11,7 @@ import openaiConfig from '../config/gemini.config';
     ConfigModule.forFeature(openaiConfig),
   ],
   controllers: [ChatController],
-  providers: [ChatService],
+  providers: [],
   exports: [],
 })
 export class ChatModule {}

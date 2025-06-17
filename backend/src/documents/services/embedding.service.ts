@@ -1,9 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { DocumentEmbedding } from '../entities/document.embedding.entity';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
-import { MemoryVectorStore } from 'langchain/vectorstores/memory';
 import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Document } from '@langchain/core/documents';
@@ -15,8 +11,6 @@ export class EmbeddingService implements OnModuleInit {
   private textSplitter: RecursiveCharacterTextSplitter;
 
   constructor(
-    @InjectRepository(DocumentEmbedding)
-    private embeddingRepository: Repository<DocumentEmbedding>
   ) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -92,7 +86,7 @@ export class EmbeddingService implements OnModuleInit {
     documentType?: string;
     jurisdiction?: string;
     additionalMetadata?: Record<string, any>;
-  }): Promise<DocumentEmbedding[]> {
+  }): Promise<{ processedChunks: number; documentId: string }> {
     const { 
       documentId, 
       userId, 
@@ -102,81 +96,160 @@ export class EmbeddingService implements OnModuleInit {
       additionalMetadata = {} 
     } = params;
 
-    // Delete any existing embeddings for this document
-    await this.embeddingRepository
-      .createQueryBuilder()
-      .delete()
-      .where(`metadata->>'document_id' = :documentId`, { documentId })
-      .execute();
-
     try {
+      // Ensure vector store is initialized
+      const vectorStore = await this.ensureVectorStore();
+
+      // Delete any existing embeddings for this document from vector store
+      await vectorStore.delete({ 
+        filter: { document_id: documentId } 
+      });
+
       // Split text into chunks
       const texts = await this.textSplitter.splitText(content);
 
-      // Create LangChain documents with metadata
+      // Create LangChain documents with comprehensive metadata
       const documents = texts.map((text, index) => {
         return new Document({
           pageContent: text,          metadata: {
             document_id: documentId,
-            processed_at: new Date().toISOString()
+            user_id: userId,
+            document_type: documentType,
+            jurisdiction: jurisdiction,
+            chunk_index: index,
+            total_chunks: texts.length,
+            processed_at: new Date().toISOString(),
+            content_length: text.length,
+            ...additionalMetadata
           }
         });
       });
 
-      // Ensure vector store is initialized
-      const vectorStore = await this.ensureVectorStore();
+      // Add all documents to vector store in batches
+      const batchSize = 50;
+      let processedCount = 0;
 
-      // Process documents in batches to avoid memory issues
-      const batchSize = 10;
       for (let i = 0; i < documents.length; i += batchSize) {
         const batch = documents.slice(i, i + batchSize);
-        const embeddings = await this.embeddings.embedDocuments(
-          batch.map(doc => doc.pageContent)
-        );
-
-        // Add vectors to store with proper formatting        await vectorStore.addVectors(
-          embeddings.map(emb => emb.map(val => parseFloat(val.toString()))),
-          batch
-      
+        
+        await vectorStore.addDocuments(batch);
+        
+        processedCount += batch.length;
+        console.log(`Processed ${processedCount}/${documents.length} chunks for document ${documentId}`);
       }
 
-      // Save to our repository
-      const savedEmbeddings = await Promise.all(
-        documents.map(async (doc, index) => {
-          const embedding = new DocumentEmbedding();
-          embedding.content = doc.pageContent;
-          embedding.metadata = doc.metadata;
+      console.log(`Successfully processed document ${documentId} with ${documents.length} chunks`);
           
-          // Get embedding vector from OpenAI and ensure proper number formatting
-          const [embeddingVector] = await this.embeddings.embedDocuments([doc.pageContent]);
-          embedding.embedding = embeddingVector.map(val => parseFloat(val.toString()));
-          
-          return this.embeddingRepository.save(embedding);
-        })
-      );
-
-      return savedEmbeddings;
+      return {
+        processedChunks: documents.length,
+        documentId
+      };
 
     } catch (error) {
-      console.error('Error processing document:', error);
-      throw error;
+      console.error(`Error processing document ${documentId}:`, error);
+      throw new Error(`Failed to process document ${documentId}: ${error.message}`);
     }
   }
 
   /**
    * Search for similar documents
    */
-  async search(query: string, limit: number = 5): Promise<DocumentEmbedding[]> {
-    const vectorStore = await this.ensureVectorStore();
-    const results = await vectorStore.similaritySearch(query, limit);
+  async search(
+    query: string, 
+    options: {
+      limit?: number;
+      filter?: Record<string, any>;
+      threshold?: number;
+    } = {}
+  ): Promise<Array<{
+    content: string;
+    metadata: Record<string, any>;
+    score?: number;
+  }>> {
+    const { limit = 5, filter, threshold } = options;
     
-    return results.map(result => {
-      const embedding = new DocumentEmbedding();
-      embedding.content = result.pageContent;      embedding.metadata = {
-        document_id: result.metadata?.document_id || '',
-        processed_at: result.metadata?.processed_at || new Date().toISOString()
-      };
-      return embedding;
-    });
+    try {
+    const vectorStore = await this.ensureVectorStore();
+      
+      // Use similarity search with score if threshold is provided
+      const results = threshold 
+        ? await vectorStore.similaritySearchWithScore(query, limit, filter)
+        : await vectorStore.similaritySearch(query, limit, filter);
+
+      // Filter by threshold if provided and format results
+      const formattedResults = results
+        .filter(result => {
+          if (threshold && Array.isArray(result) && result.length > 1) {
+            return result[1] >= threshold; // result[1] is the score
+          }
+          return true;
+        })
+        .map(result => {
+          const [doc, score] = Array.isArray(result) ? result : [result, undefined];
+          return {
+            content: doc.pageContent,
+            metadata: doc.metadata || {},
+            ...(score !== undefined && { score })
+          };
+        });
+
+      return formattedResults;
+
+    } catch (error) {
+      console.error('Error searching documents:', error);
+      throw new Error(`Search failed: ${error.message}`);
+    }
   }
+
+  /**
+   * Delete all embeddings for a specific document
+   */
+  async deleteDocument(documentId: string): Promise<void> {
+    try {
+      const vectorStore = await this.ensureVectorStore();
+      await vectorStore.delete({ 
+        filter: { document_id: documentId } 
+      });
+      
+      console.log(`Successfully deleted embeddings for document ${documentId}`);
+    } catch (error) {
+      console.error(`Error deleting document ${documentId}:`, error);
+      throw new Error(`Failed to delete document ${documentId}: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get document statistics
+   */
+  async getDocumentStats(documentId?: string): Promise<{
+    totalDocuments: number;
+    totalChunks: number;
+    documentId?: string;
+  }> {
+    try {
+      const vectorStore = await this.ensureVectorStore();
+      
+      // This is a simplified implementation - actual implementation depends on PGVectorStore capabilities
+      // You might need to implement this using direct SQL queries if PGVectorStore doesn't support counting
+      
+      if (documentId) {
+        const results = await vectorStore.similaritySearch('', 1000, { document_id: documentId });
+        return {
+          totalDocuments: 1,
+          totalChunks: results.length,
+          documentId
+        };
+      }
+      
+      // For overall stats, you might need to query the database directly
+      return {
+        totalDocuments: 0, // Implement based on your needs
+        totalChunks: 0
+      };
+      
+    } catch (error) {
+      console.error('Error getting document stats:', error);
+      throw new Error(`Failed to get document stats: ${error.message}`);
+  }
+}
 }

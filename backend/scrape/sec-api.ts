@@ -1,9 +1,4 @@
-import { DataSource } from "typeorm";
-import { config } from "dotenv";
 import axios from "axios";
-
-// Load environment variables
-config();
 
 // Create SEC API axios instance
 const secApi = axios.create({
@@ -14,18 +9,7 @@ const secApi = axios.create({
     }
 });
 
-const AppDataSource = new DataSource({
-    type: "postgres",
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT || "5432"),
-    username: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    entities: ["src/entities/**/*.ts"],
-    synchronize: false,
-});
-
-async function scrapeSecAPI() {
+export async function scrapeSecAPI() {
     const contractTypes = [
         {
             contractType: "Offer Letter",
@@ -102,25 +86,3 @@ async function scrapeSecAPI() {
         console.error("Error fetching SEC API data:", error);
     }
 }
-
-
-async function main() {
-    try {
-        await AppDataSource.initialize();
-        console.log("Database connection established");
-        
-        console.log("Seeding completed successfully");
-    } catch (error) {
-        console.error("Error during seeding:", error);
-        throw error;
-    } finally {
-        await AppDataSource.destroy();
-    }
-}
-
-main()
-    .then(() => process.exit(0))
-    .catch((error) => {
-        console.error(error);
-        process.exit(1);
-    });
