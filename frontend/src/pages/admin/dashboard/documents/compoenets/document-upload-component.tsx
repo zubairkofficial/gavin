@@ -403,7 +403,7 @@ const DocumentUploadComponent = () => {
           {selectedType && renderJurisdictionSelect()}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Upload Documents ({selectedType?.acceptedFormats.join(", ")})
             </label>
             <div className="border-2 border-dashed border-gray-300 p-6 rounded text-center">
@@ -440,7 +440,7 @@ const DocumentUploadComponent = () => {
                     className="text-gray-400 hover:text-gray-600"
                     type="button"
                   >
-                    <X className="w-4 h-4" />
+                    Clear All
                   </button>
                 </div>
                 
