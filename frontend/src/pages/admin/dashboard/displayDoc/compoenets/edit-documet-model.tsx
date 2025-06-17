@@ -36,19 +36,33 @@ interface Regulation {
   subject_area: string
 }
 
-type DocumentType = "contracts" | "regulations"
+interface Case {
+  id: string
+  createdAt: string
+  updatedAt: string
+  type: string
+  jurisdiction: string
+  title: string
+  fileName: string
+  court: string
+  citation: string
+  holding_summary: string
+  decision_date: string
+}
+
+type DocumentType = "contracts" | "regulations" | "cases"
 
 interface EditDocumentModalProps {
   isOpen: boolean
   onClose: () => void
   documentType: DocumentType
-  document: Contract | Regulation | null
+  document: Contract | Regulation | Case | null
   onUpdate: () => void
 }
 
 export function EditDocumentModal({ isOpen, onClose, documentType, document, onUpdate }: EditDocumentModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState<Partial<Contract | Regulation>>({})
+  const [formData, setFormData] = useState<Partial<Contract | Regulation | Case>>({})
 
   // Update form data when document changes or modal opens
   useEffect(() => {
@@ -98,6 +112,19 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
 
   if (!document) return null
 
+  const getDocumentTypeName = () => {
+    switch (documentType) {
+      case "contracts":
+        return "Contract"
+      case "regulations":
+        return "Regulation"
+      case "cases":
+        return "Case"
+      default:
+        return "Document"
+    }
+  }
+
   return (
     <Dialog
       open={isOpen}
@@ -107,9 +134,9 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
     >
       <DialogContent className="sm:max-w-[425px] p-6">
         <DialogHeader>
-          <DialogTitle>Edit {documentType === "contracts" ? "Contract" : "Regulation"}</DialogTitle>
+          <DialogTitle>Edit {getDocumentTypeName()}</DialogTitle>
           <DialogDescription>
-            Update the fields below to modify this {documentType === "contracts" ? "contract" : "regulation"}.
+            Update the fields below to modify this {getDocumentTypeName().toLowerCase()}.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -127,6 +154,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                     value={(formData as Contract).type || ""}
                     onChange={handleInputChange}
                     className="col-span-3"
+                    disabled
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -154,7 +182,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                   />
                 </div>
               </>
-            ) : (
+            ) : documentType === "regulations" ? (
               // Regulation fields
               <>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -213,6 +241,95 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                     id="subject_area"
                     name="subject_area"
                     value={(formData as Regulation).subject_area || ""}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+              </>
+            ) : (
+              // Case fields
+              <>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="title" className="text-right">
+                    Title
+                  </Label>
+                  <Input
+                    id="title"
+                    name="title"
+                    value={(formData as Case).title || ""}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="type" className="text-right">
+                    Type
+                  </Label>
+                  <Input
+                    id="type"
+                    name="type"
+                    value={(formData as Case).type || ""}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="jurisdiction" className="text-right">
+                    Jurisdiction
+                  </Label>
+                  <Input
+                    id="jurisdiction"
+                    name="jurisdiction"
+                    value={(formData as Case).jurisdiction || ""}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="court" className="text-right">
+                    Court
+                  </Label>
+                  <Input
+                    id="court"
+                    name="court"
+                    value={(formData as Case).court || ""}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="citation" className="text-right">
+                    Citation
+                  </Label>
+                  <Input
+                    id="citation"
+                    name="citation"
+                    value={(formData as Case).citation || ""}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="holding_summary" className="text-right">
+                    Holding Summary
+                  </Label>
+                  <Input
+                    id="holding_summary"
+                    name="holding_summary"
+                    value={(formData as Case).holding_summary || ""}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="decision_date" className="text-right">
+                    Decision Date
+                  </Label>
+                  <Input
+                    id="decision_date"
+                    name="decision_date"
+                    type="date"
+                    value={(formData as Case).decision_date ? (formData as Case).decision_date.split('T')[0] : ""}
                     onChange={handleInputChange}
                     className="col-span-3"
                   />

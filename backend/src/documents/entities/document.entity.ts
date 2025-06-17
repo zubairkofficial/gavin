@@ -8,6 +8,9 @@ export class Document extends BaseEntity{
     title: string;
 
     @Column()
+    fileName: string;
+
+    @Column()
     type: string;
 
     @Column()

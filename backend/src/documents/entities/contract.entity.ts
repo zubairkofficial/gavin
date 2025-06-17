@@ -9,6 +9,7 @@ import {
   DeleteDateColumn,
 } from 'typeorm';
 import { Clause } from './clause.entity';
+import { IS_OPTIONAL, IsOptional } from 'class-validator';
 
 @Entity()
 export class Contract extends BaseEntity {
@@ -16,6 +17,10 @@ export class Contract extends BaseEntity {
 
   @Column()
   type: string;
+
+  @IsOptional()
+  @Column()
+  fileName : string;
 
   @Column()
   jurisdiction: string;

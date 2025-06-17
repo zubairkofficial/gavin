@@ -8,6 +8,9 @@ export class Clause extends BaseEntity {
   contract_id: number;
 
   @Column()
+  fileName: string;
+
+  @Column()
   clause_type: string;
 
   @Column()

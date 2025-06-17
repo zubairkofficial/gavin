@@ -1,12 +1,18 @@
 import { IsNotEmpty, IsString, IsOptional, IsArray } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateDocumentDto {
     @IsNotEmpty()
     @IsString()
-    title: string;
+    title: string; 
 
     @IsNotEmpty()
     @IsString()
+    fileName: string; 
+
+      @IsNotEmpty()
+    @IsString()
+    @Transform(({ value }) => value.toLowerCase())
     type: string;
 
     @IsOptional()
@@ -54,4 +60,5 @@ export class CreateDocumentDto {
     @IsOptional()
     @IsString()
     source?: string;
+
 }

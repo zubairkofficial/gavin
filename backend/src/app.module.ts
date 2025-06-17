@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { SharedModule } from './shared/shared.module';
 import { DocumentsModule } from './documents/documents.module';
+import { JurisdictionsModule } from './jurisdictions/jurisdictions.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { DocumentsModule } from './documents/documents.module';
     AuthModule,
     SharedModule,
     DocumentsModule,
+    JurisdictionsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon,FileUp, HomeIcon } from "lucide-react"
+import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon,FileUp, HomeIcon, Scale } from "lucide-react"
 import type React from "react"
 
 import {
@@ -148,6 +148,17 @@ function AdminSidebar() {
                   <span className="truncate" style={{
                     textOverflow: "clip",
                   }}>Users</span>
+                    <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </NavLink>
+              <NavLink to="/jurisdictions">
+                <SidebarMenuItem className="px-2">
+                  <SidebarMenuButton className="gap-2 py-5 relative">
+                    <Scale size={18} />
+                  <span className="truncate" style={{
+                    textOverflow: "clip",
+                  }}>jurisdictions</span>
                     <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

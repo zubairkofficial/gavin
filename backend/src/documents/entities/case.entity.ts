@@ -5,10 +5,16 @@ import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 export class Case extends BaseEntity{
 
     @Column()
-    name: string;
+    fileName: string;
+
+    @Column()
+    title: string;
 
     @Column()
     jurisdiction: string;
+
+    @Column()
+    type: string;
 
     @Column()
     court: string;
@@ -30,4 +36,7 @@ export class Case extends BaseEntity{
 
     @Column()
     source_url: string;
+
+    @Column({ nullable: true })
+    filename: string;
 }

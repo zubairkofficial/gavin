@@ -19,20 +19,21 @@ import { z } from 'zod';
 import { Contract } from './entities/contract.entity';
 import { Clause } from './entities/clause.entity';
 import { Regulation } from './entities/regulation.entity';
+import { Case } from './entities/case.entity';
 import { OpenAIService } from '../services/openai.service';
 import { ContractSchema, ClauseSchema } from './schemas/contract.schema';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateContractDto } from './dto/update-contract.dto';
 import { UpdateRegulationDto } from './dto/update-regulation.dto';
-import { SearchDocumentsDto } from './dto/search-documents.dto';
 import { Public } from '../auth/decorators/public.decorator';
 import { DocumentsService } from './documents.service';
 import { GeminiServiceRegulation } from '../services/gemini.regulation.service';
 import { OpenAIServiceRegulation } from '@/services/openai.regulations.service';
 import { EmbeddingService } from './services/embedding.service';
+import { OpenAICaseService } from '@/services/openai.case.service';
+import { UpdateCaseDto } from './dto/update-Case.dto';
 
 @Controller('/documents')
-
 @Public()
 export class DocumentsController {
   constructor(
@@ -43,9 +44,12 @@ export class DocumentsController {
     private contractRepository: Repository<Contract>,
     @InjectRepository(Clause)
     private clauseRepository: Repository<Clause>,
+    @InjectRepository(Case)
+    private caseRepository: Repository<Case>,
     private OpenAIService: OpenAIService,
     private GeminiServiceRegulation: GeminiServiceRegulation,
     private OpenServiceRegulation: OpenAIServiceRegulation,
+    private OpenAICaseService: OpenAICaseService,
     private embeddingService: EmbeddingService,
   ) {}
 
@@ -176,15 +180,23 @@ export class DocumentsController {
         fullText = fullText.substring(0, 100000);
       }
 
+      console.log('Document upload request:', { type: createDocumentDto.type, title: createDocumentDto.title  , jurisdiction: createDocumentDto.jurisdiction  , name: createDocumentDto.fileName });
+
       switch (createDocumentDto.type?.toLowerCase()) {
-        case 'statute/regulation':
+        case 'regulation':
           return this.handleRegulation(createDocumentDto, fullText);
 
-        case 'contract template':
+        case 'contract':
           return this.handleContract(createDocumentDto, fullText);
 
+        case 'case':
+        case 'cases':  // Adding support for plural form
+          console.log('Handling case document upload');
+          return this.handleCase(createDocumentDto, fullText);
+
         default:
-          throw new BadRequestException('Document type not recognized');
+          console.log('Unrecognized document type:', createDocumentDto.type);
+          throw new BadRequestException(`Document type not recognized: ${createDocumentDto.type}`);
       }
     } catch (error) {
       this.handleError(error, tempFilePath);
@@ -204,7 +216,8 @@ export class DocumentsController {
       const regulation = new Regulation();
       regulation.full_text = fullText; // Store original full text
       regulation.title = dto.title || analysis.title;
-      regulation.jurisdiction = analysis.jurisdiction || dto.jurisdiction || 'Unknown';
+      regulation.type = dto.type ;
+      regulation.jurisdiction =  dto.jurisdiction || 'Unknown';
       regulation.citation = analysis.citation || dto.citation || '';
       regulation.section = analysis.section || dto.section || '';
       regulation.subject_area = analysis.subject_area || dto.subject_area || '';
@@ -221,7 +234,7 @@ export class DocumentsController {
         userId: dto.userId || 'system',
         content: fullText,
         documentType: 'regulation',
-        jurisdiction: savedRegulation.jurisdiction,
+        jurisdiction: dto.jurisdiction,
         additionalMetadata: {
           document_id: savedRegulation.id
         }
@@ -233,7 +246,7 @@ export class DocumentsController {
         data: {
           id: savedRegulation.id,
           title: savedRegulation.title,
-          jurisdiction: savedRegulation.jurisdiction,
+          jurisdiction: dto.jurisdiction,
           documentType: 'regulation',
           processingDetails: {
             textLength: fullText.length,
@@ -261,7 +274,8 @@ export class DocumentsController {
 
       const contract = new Contract();
       contract.type = dto.type;
-      contract.jurisdiction = geminiResults[0]?.jurisdiction || dto.jurisdiction || 'Unknown';
+      contract.fileName= dto.fileName || 'Untitled Contract';
+      contract.jurisdiction = dto.jurisdiction || 'Unknown';
       contract.content_html = fullText;
       contract.source = dto.source || 'Upload';
 
@@ -295,22 +309,28 @@ export class DocumentsController {
             clause.clause_type = clauseData.clause_type;
             clause.clause_text = clauseData.clause_text;
             clause.risk_level = clauseData.risk_level;
-            clause.jurisdiction = clauseData.jurisdiction;
+            clause.jurisdiction = dto.jurisdiction || '';
             clause.language_variant = clauseData.language_variant || '';
             clause.notes = '';
             clause.contract_id = Number(savedContract.id);
 
             const savedClause = await this.clauseRepository.save(clause);
             
-            // Create embeddings for the clause with only document ID
+            // Create embeddings for the clause
             await this.embeddingService.processDocument({
               documentId: savedClause.id,
               userId: dto.userId || 'system',
               content: clauseData.clause_text,
               documentType: 'contract_clause',
-              jurisdiction: clause.jurisdiction,
+              jurisdiction: dto.jurisdiction,
               additionalMetadata: {
-                document_id: savedClause.id
+                document_id: savedClause.id,
+                clause_id: savedClause.id,
+                clause_type: clause.clause_type,
+                risk_level: clause.risk_level,
+                language_variant: clause.language_variant,
+                parent_contract_id: savedContract.id,
+                processed_date: new Date().toISOString()
               }
             });
 
@@ -324,7 +344,7 @@ export class DocumentsController {
 
       const validClauses = savedClauses.filter((clause) => clause !== null);
 
-      // Create embeddings for the full contract with only document ID
+      // Create embeddings for the full contract
       await this.embeddingService.processDocument({
         documentId: savedContract.id,
         userId: dto.userId || 'system',
@@ -332,7 +352,11 @@ export class DocumentsController {
         documentType: 'contract',
         jurisdiction: savedContract.jurisdiction,
         additionalMetadata: {
-          document_id: savedContract.id
+          document_id: savedContract.id,
+          contract_type: savedContract.type,
+          source: savedContract.source,
+          total_clauses: validClauses.length,
+          processed_date: new Date().toISOString()
         }
       });
 
@@ -369,6 +393,85 @@ export class DocumentsController {
     }
   }
 
+  private async handleCase(dto: CreateDocumentDto, fullText: string) {
+    try {
+      console.log('Starting case analysis...');
+      const analysisResults = await this.OpenAICaseService.analyzeCaseDocument(fullText);
+
+      if (!analysisResults || !analysisResults.case_info) {
+        console.error('Analysis failed - no results:', analysisResults);
+        throw new BadRequestException('Failed to analyze case content');
+      }
+
+      console.log('Analysis results:', analysisResults);
+      const analysis = analysisResults.case_info;
+      
+      const caseEntity = new Case();
+      caseEntity.full_text = fullText;
+      caseEntity.title = dto.title ;
+      caseEntity.type = dto.type || 'case' ;
+      caseEntity.fileName = dto.fileName || '';
+      caseEntity.court = analysis.court;
+      caseEntity.jurisdiction = dto.jurisdiction || ''; // Extract jurisdiction from court
+      caseEntity.decision_date = analysis.decision_date;
+      caseEntity.citation = analysis.citation;
+      caseEntity.holding_summary = analysis.holding_summary;
+      caseEntity.tags = Array.isArray(analysis.tags) ? analysis.tags : [];
+      caseEntity.source_url = dto.source_url || '';
+      // caseEntity.title = dto.title || analysis.citation;
+      
+      console.log('Case entity before save:', caseEntity);
+
+      // Save to database
+      const savedCase = await this.caseRepository.save(caseEntity);
+      console.log('Case saved successfully:', savedCase);
+
+      // Create embeddings for the case
+      await this.embeddingService.processDocument({
+        documentId: savedCase.id,
+        userId: dto.userId || 'system',
+        content: fullText,
+        documentType: 'case',
+        jurisdiction: savedCase.court,
+        additionalMetadata: {
+          document_id: savedCase.id,
+          citation: savedCase.citation,
+          court: savedCase.court
+        }
+      });
+
+      return {
+        success: true,
+        status: 'completed',
+        data: {
+          id: savedCase.id,
+          name: savedCase.title,
+          court: savedCase.court,
+          jurisdiction: savedCase.jurisdiction,
+          documentType: 'case',
+          processingDetails: {
+            textLength: fullText.length,
+            analyzed: true,
+            embedded: true,
+            citation: savedCase.citation,
+            decision_date: savedCase.decision_date,
+            processed_at: new Date().toISOString()
+          }
+        },
+        message: 'Case successfully processed, analyzed, and embedded'
+      };
+
+    } catch (error) {
+      console.error('Error in handleCase:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Failed to process case: ${error.message}`,
+      );
+    }
+  }
+
   private handleValidationError(error: any) {
     if (error instanceof z.ZodError) {
       throw new BadRequestException(
@@ -398,6 +501,7 @@ export class DocumentsController {
         select: {
           id: true,
           type: true,
+          fileName: true,
           jurisdiction: true,
           source: true,
           createdAt: true,
@@ -418,6 +522,38 @@ export class DocumentsController {
     }
   }
 
+  @Get('/cases')
+  async getAllCases() {
+    try {
+      const cases = await this.caseRepository.find({
+        select: {
+          id: true,
+          title: true,
+          fileName: true,
+          jurisdiction: true,
+          type: true,
+          court: true,
+          citation: true,
+          holding_summary: true,
+          decision_date: true,
+          createdAt: true,
+        },
+        order: {
+        createdAt: 'DESC', 
+      },
+      });
+      return {
+        success: true,
+        data: cases,
+        count: cases.length,
+      };
+    } catch (error) {
+      throw new BadRequestException(
+        `Failed to fetch contracts: ${error.message}`,
+      );
+    }
+  }
+
   @Get('/regulations')
   async getAllRegulations() {
     try {
@@ -426,6 +562,7 @@ export class DocumentsController {
           id: true,
           createdAt: true,
           updatedAt: true,
+          type: true,
           jurisdiction: true,
           citation: true,
           title: true,
@@ -495,6 +632,56 @@ async updateContract(
   }
 }
 
+@Put('cases/:id')
+async updateCase(
+  @Param('id', ParseUUIDPipe) id: string,
+  @Body() updateCaseDto: UpdateCaseDto
+) {
+  try {
+    console.log('🛠 Raw Body:', updateCaseDto);
+    
+    // Validate request body
+    if (!updateCaseDto || Object.keys(updateCaseDto).length === 0) {
+      throw new BadRequestException('Update data is required');
+    }
+
+    // Find the existing contract
+    const Case = await this.caseRepository.findOne({ 
+      where: { id } 
+    });
+
+    if (!Case) {
+      throw new BadRequestException('Contract not found');
+    }
+
+    const updates: Partial<Case> = {};
+    if (updateCaseDto.title !== undefined) updates.title = updateCaseDto.title;
+    if (updateCaseDto.jurisdiction !== undefined) updates.jurisdiction = updateCaseDto.jurisdiction;
+    if (updateCaseDto.court !== undefined) updates.court = updateCaseDto.court;
+    if (updateCaseDto.citation !== undefined) updates.citation = updateCaseDto.citation;
+    if (updateCaseDto.holding_summary !== undefined) updates.holding_summary = updateCaseDto.holding_summary;
+    if (updateCaseDto.decision_date !== undefined) updates.decision_date = updateCaseDto.decision_date;
+    updates.updatedAt = new Date(); 
+
+    Object.assign(Case, updates);
+
+    const updatedCase = await this.caseRepository.save(Case);
+
+    return {
+      success: true,
+      data: updatedCase,
+      message: 'Case updated successfully'
+    };
+
+  } catch (error) {
+    // Handle specific database errors
+    if (error?.code === '22P02') {
+      throw new BadRequestException('Invalid UUID format');
+    }
+    throw new BadRequestException(`Failed to update contract: ${error.message}`);
+  }
+}
+
 @Put('regulations/:id')
 async updateRegulation(
   @Param('id', ParseUUIDPipe) id: string,
@@ -541,41 +728,4 @@ async updateRegulation(
     throw new BadRequestException(`Failed to update regulation: ${error.message}`);
   }
 }
-  // @Post('/search')
-  // @ApiOperation({ summary: 'Search for similar documents using semantic search' })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: 'Returns similar documents based on the search query'
-  // })
-  // async searchSimilarDocuments(@Body() searchDto: SearchDocumentsDto) {
-  //   try {
-  //     const {
-  //       query,
-  //       userId,
-  //       documentType,
-  //       jurisdiction,
-  //       limit = 5
-  //     } = searchDto;
-
-  //     const similarDocuments = await this.embeddingService.searchSimilarContent(
-  //       query,
-  //       {
-  //         userId,
-  //         documentType,
-  //         jurisdiction
-  //       },
-  //       limit
-  //     );
-
-  //     return {
-  //       success: true,
-  //       data: similarDocuments,
-  //       count: similarDocuments.length
-  //     };
-  //   } catch (error) {
-  //     throw new BadRequestException(
-  //       `Failed to search similar documents: ${error.message}`
-  //     );
-  //   }
-  // }
 }

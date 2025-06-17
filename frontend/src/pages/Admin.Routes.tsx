@@ -5,6 +5,7 @@ import OnboardingPage from "./dashboard/onboarding";
 import UsersPage from "./admin/dashboard/users";
 import UploadDoc from "./admin/dashboard/documents";
 import DocTable from "./admin/dashboard/displayDoc/index";
+import JurisdictionsPage from "./admin/dashboard/jurisdictions";
 export default function AuthenticateRoutes() {
   return createRoutesFromElements(
     <>
@@ -28,6 +29,9 @@ export default function AuthenticateRoutes() {
         <Route
           path="/upload-doc"
           element={<UploadDoc />} />
+        <Route
+          path="/jurisdictions"
+          element={<JurisdictionsPage />} />
         <Route
           path="/all-docs"
           element={<DocTable />} />

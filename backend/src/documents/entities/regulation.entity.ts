@@ -9,6 +9,9 @@ export class Regulation extends BaseEntity{
     jurisdiction: string;
 
     @Column()
+    type: string;
+
+    @Column()
     citation: string;
 
     @Column()
