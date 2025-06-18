@@ -18,7 +18,8 @@ export class Contract extends BaseEntity {
   @Column()
   type: string;
 
-  @Column()
+  
+  @Column( { nullable: true })
   title: string;
 
   @IsOptional()
