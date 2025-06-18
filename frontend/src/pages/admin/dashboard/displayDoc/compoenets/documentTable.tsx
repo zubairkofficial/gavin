@@ -277,10 +277,7 @@ export default function DocumentsTable() {
     setCurrentPage(1); // Reset to first page when changing document type
   };
 
-  const handleSearchWithReset = () => {
-    setCurrentPage(1); // Reset to first page when searching
-    fetchDocuments(documentType);
-  };
+
 
   const handleStatusClick = (document: Contract | Regulation | Statute) => {
     setSelectedDocument(document);
@@ -329,9 +326,6 @@ export default function DocumentsTable() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1"
               />
-              <Button onClick={handleSearchWithReset} size="icon">
-                <Search className="h-4 w-4" />
-              </Button>
             </div>
           </div>
 
@@ -355,7 +349,7 @@ export default function DocumentsTable() {
                       <TableHead>Jurisdiction</TableHead>
                       <TableHead>Source</TableHead>
                       <TableHead>Created At</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -409,7 +403,7 @@ export default function DocumentsTable() {
                       <TableHead>Section</TableHead>
                       <TableHead>Subject Area</TableHead>
                       <TableHead>Created At</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -472,7 +466,7 @@ export default function DocumentsTable() {
                       <TableHead>Citation</TableHead>
                       <TableHead>Decision Date</TableHead>
                       <TableHead>Created At</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

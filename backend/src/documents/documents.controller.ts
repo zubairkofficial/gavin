@@ -588,7 +588,7 @@ async updateContract(
     }
 
     const updates: Partial<Contract> = {};
-    if (updateContractDto.type !== undefined) updates.type = updateContractDto.type;
+    if (updateContractDto.title !== undefined) updates.title = updateContractDto.title;
     if (updateContractDto.jurisdiction !== undefined) updates.jurisdiction = updateContractDto.jurisdiction;
     if (updateContractDto.source !== undefined) updates.source = updateContractDto.source;
     updates.updatedAt = new Date(); 

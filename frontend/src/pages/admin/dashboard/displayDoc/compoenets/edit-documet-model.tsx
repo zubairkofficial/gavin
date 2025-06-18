@@ -19,7 +19,7 @@ import API from "@/lib/api"
 
 interface Contract {
   id: string
-  type: string
+  title: string
   jurisdiction: string
   source: string
   createdAt: string
@@ -145,16 +145,15 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
               // Contract fields
               <>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="type" className="text-right">
-                    Type
+                  <Label htmlFor="title" className="text-right">
+                    Title
                   </Label>
                   <Input
-                    id="type"
-                    name="type"
-                    value={(formData as Contract).type || ""}
+                    id="title"
+                    name="title"
+                    value={(formData as Contract).title || ""}
                     onChange={handleInputChange}
                     className="col-span-3"
-                    disabled
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -261,18 +260,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                     className="col-span-3"
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="type" className="text-right">
-                    Type
-                  </Label>
-                  <Input
-                    id="type"
-                    name="type"
-                    value={(formData as Statute).type || ""}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                  />
-                </div>
+                
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="jurisdiction" className="text-right">
                     Jurisdiction
