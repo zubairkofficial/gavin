@@ -40,8 +40,18 @@ const documentTypes: DocumentType[] = [
     name: "Contracts",
     description: "Employment contracts, NDAs, service agreements",
     icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <svg
+        className="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
       </svg>
     ),
     acceptedFormats: [".pdf", ".doc", ".docx", ".txt"],
@@ -51,23 +61,44 @@ const documentTypes: DocumentType[] = [
     name: "Regulations",
     description: "Articles of incorporation, bylaws, board resolutions",
     icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      <svg
+        className="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+        />
       </svg>
     ),
     acceptedFormats: [".pdf", ".doc", ".docx", ".txt"],
   },
   {
-  id: "Statute",
-  name: "Statutes",
-  description: "Legislative acts, laws, regulations, codes, and statutory texts",
-  icon: (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-2-2h-2" />
-    </svg>
-  ),
-  acceptedFormats: [".pdf", ".doc", ".docx", ".txt", ".rtf"],
-},
+    id: "Statute",
+    name: "Statutes",
+    description:
+      "Legislative acts, laws, regulations, codes, and statutory texts",
+    icon: (
+      <svg
+        className="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-2-2h-2"
+        />
+      </svg>
+    ),
+    acceptedFormats: [".pdf", ".doc", ".docx", ".txt", ".rtf"],
+  },
 ];
 
 interface Jurisdiction {
@@ -90,11 +121,14 @@ const DocumentUploadComponent = () => {
   const [typeSelectionOpen, setTypeSelectionOpen] = useState<boolean>(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState<boolean>(false);
   const [selectedType, setSelectedType] = useState<DocumentType | null>(null);
-  const [tempSelectedDocs, setTempSelectedDocs] = useState<AttachedDocument[]>([]);
+  const [tempSelectedDocs, setTempSelectedDocs] = useState<AttachedDocument[]>(
+    []
+  );
   const [documentTitle, setDocumentTitle] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [jurisdictions, setJurisdictions] = useState<Jurisdiction[]>([]);
-  const [selectedJurisdiction, setSelectedJurisdiction] = useState<Jurisdiction | null>(null);
+  const [selectedJurisdiction, setSelectedJurisdiction] =
+    useState<Jurisdiction | null>(null);
   const [jurisdictionOpen, setJurisdictionOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -118,11 +152,13 @@ const DocumentUploadComponent = () => {
     setUploadDialogOpen(true);
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleFileSelect = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ): void => {
     const files = event.target.files;
     if (files && selectedType) {
       const newDocs: AttachedDocument[] = [];
-      
+
       Array.from(files).forEach((file, index) => {
         const newDoc: AttachedDocument = {
           id: `${Date.now()}-${index}`,
@@ -136,8 +172,8 @@ const DocumentUploadComponent = () => {
         newDocs.push(newDoc);
       });
 
-      setTempSelectedDocs(prev => [...prev, ...newDocs]);
-      
+      setTempSelectedDocs((prev) => [...prev, ...newDocs]);
+
       // Clear the input so user can select more files
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -146,7 +182,7 @@ const DocumentUploadComponent = () => {
   };
 
   const removeDocument = (docId: string): void => {
-    setTempSelectedDocs(prev => prev.filter(doc => doc.id !== docId));
+    setTempSelectedDocs((prev) => prev.filter((doc) => doc.id !== docId));
   };
 
   // Helper function to start timer for progress messages
@@ -174,9 +210,18 @@ const DocumentUploadComponent = () => {
     return [timer, clearTimer];
   };
 
-  const uploadToBackend = async (documents: AttachedDocument[]): Promise<void> => {
-    if (!selectedType || !documentTitle.trim() || documents.length === 0 || !selectedJurisdiction) {
-      toast.error("Please fill in all required fields and select a jurisdiction");
+  const uploadToBackend = async (
+    documents: AttachedDocument[]
+  ): Promise<void> => {
+    if (
+      !selectedType ||
+      !documentTitle.trim() ||
+      documents.length === 0 ||
+      !selectedJurisdiction
+    ) {
+      toast.error(
+        "Please fill in all required fields and select a jurisdiction"
+      );
       return;
     }
 
@@ -190,43 +235,43 @@ const DocumentUploadComponent = () => {
 
       for (let i = 0; i < documents.length; i++) {
         const doc = documents[i];
-        
+
         if (!doc.file) {
           throw new Error(`File object missing for document: ${doc.name}`);
         }
 
         const formData = new FormData();
-        
+
         const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
         if (doc.file.size > MAX_FILE_SIZE) {
           throw new Error(`File exceeding 10MB: ${doc.file.name}`);
         }
-        
-        formData.append('file', doc.file);
-        formData.append('title', documentTitle.trim());
-        formData.append('fileName', doc.file.name.trim());
-        formData.append('type', selectedType.id);
-        formData.append('jurisdiction', selectedJurisdiction.jurisdiction);
-        
-        console.log('Sending to backend:', {
+
+        formData.append("file", doc.file);
+        formData.append("title", documentTitle.trim());
+        formData.append("fileName", doc.file.name.trim());
+        formData.append("type", selectedType.id);
+        formData.append("jurisdiction", selectedJurisdiction.jurisdiction);
+
+        console.log("Sending to backend:", {
           title: documentTitle.trim(),
           type: selectedType.id,
           fileName: doc.file.name,
-          jurisdiction: selectedJurisdiction.jurisdiction
+          jurisdiction: selectedJurisdiction.jurisdiction,
         });
 
-        const response = await fetch(API.getUri({
-          url: '/documents/upload'
-        }), {
-          method: 'POST',
-          body: formData,
+        // For uploading documents with formData
+        const response = await API.post("/documents/upload", formData, {
           headers: {
-            'Accept': 'application/json',
-          }
+            "Content-Type": "multipart/form-data", // Important for file uploads
+            Accept: "application/json",
+          },
         });
 
-        if (!response.ok) {
-          throw new Error(`Upload failed for ${doc.file.name}: ${response.statusText}`);
+        if (response.status < 200 || response.status >= 300) {
+          throw new Error(
+            `Upload failed for ${doc.file.name}: ${response.statusText}`
+          );
         }
 
         // Clear current timer
@@ -242,21 +287,25 @@ const DocumentUploadComponent = () => {
           [currentTimer, clearCurrentTimer] = startProgressTimer();
         }
       }
-      
+
       // Clear temporary state
       setTempSelectedDocs([]);
       setDocumentTitle("");
       setSelectedType(null);
       setUploadDialogOpen(false);
-      
+
       // Final success message
       if (documents.length > 1) {
-        toast.success(`🎉 All ${documents.length} documents uploaded successfully!`);
+        toast.success(
+          `🎉 All ${documents.length} documents uploaded successfully!`
+        );
       }
-      
     } catch (error: unknown) {
-      console.error('Upload error:', error);
-      const errorMessage = error instanceof Error ? error.message : "An error occurred during upload.";
+      console.error("Upload error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "An error occurred during upload.";
       toast.error(errorMessage);
     } finally {
       // Clear the timer when upload is done or failed
@@ -322,14 +371,14 @@ const DocumentUploadComponent = () => {
               </div>
             </button>
           </PopoverTrigger>
-          <PopoverContent 
-            className="w-[var(--radix-popover-trigger-width)] p-0" 
+          <PopoverContent
+            className="w-[var(--radix-popover-trigger-width)] p-0"
             align="start"
             sideOffset={4}
           >
             <Command className="max-h-[300px] overflow-auto rounded-md border border-gray-200 bg-white shadow-md">
-              <CommandInput 
-                placeholder="Search jurisdiction..." 
+              <CommandInput
+                placeholder="Search jurisdiction..."
                 className="h-10 px-3 border-b text-sm"
               />
               <CommandEmpty className="py-2 px-3 text-sm text-gray-500">
@@ -350,7 +399,9 @@ const DocumentUploadComponent = () => {
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4 text-blue-600",
-                          selectedJurisdiction?.id === jurisdiction.id ? "opacity-100" : "opacity-0"
+                          selectedJurisdiction?.id === jurisdiction.id
+                            ? "opacity-100"
+                            : "opacity-0"
                         )}
                       />
                       <span>{jurisdiction.jurisdiction}</span>
@@ -379,15 +430,28 @@ const DocumentUploadComponent = () => {
             }}
             className="text-gray-500 hover:text-gray-700"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="title"
+              className="block text-sm font-medium text-gray-700"
+            >
               Document Title
             </label>
             <input
@@ -407,8 +471,18 @@ const DocumentUploadComponent = () => {
               Upload Documents ({selectedType?.acceptedFormats.join(", ")})
             </label>
             <div className="border-2 border-dashed border-gray-300 p-6 rounded text-center">
-              <svg className="mx-auto h-10 w-10 text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                className="mx-auto h-10 w-10 text-gray-500 mb-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
               <p className="text-sm text-gray-600">Drag and drop files here</p>
               <p className="text-xs text-gray-400 mb-2">Or</p>
@@ -443,18 +517,35 @@ const DocumentUploadComponent = () => {
                     Clear All
                   </button>
                 </div>
-                
+
                 {/* Scrollable container - shows 1 document by default, rest in scroll */}
                 <div className="max-h-22 overflow-y-auto space-y-2">
                   {tempSelectedDocs.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between bg-white p-3 rounded-md shadow-sm">
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between bg-white p-3 rounded-md shadow-sm"
+                    >
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <svg
+                          className="w-5 h-5 text-blue-500 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
                         </svg>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-700 truncate">{doc.name}</p>
-                          <p className="text-xs text-gray-500">{doc.type} • {doc.size}</p>
+                          <p className="text-sm font-medium text-gray-700 truncate">
+                            {doc.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {doc.type} • {doc.size}
+                          </p>
                         </div>
                       </div>
                       <button
@@ -467,10 +558,11 @@ const DocumentUploadComponent = () => {
                     </div>
                   ))}
                 </div>
-                
+
                 {tempSelectedDocs.length > 1 && (
                   <p className="text-xs text-gray-500 mt-2 text-center">
-                    Scroll to see all {tempSelectedDocs.length} selected documents
+                    Scroll to see all {tempSelectedDocs.length} selected
+                    documents
                   </p>
                 )}
               </div>
@@ -489,21 +581,47 @@ const DocumentUploadComponent = () => {
           </button>
           <button
             onClick={handleUpload}
-            disabled={tempSelectedDocs.length === 0 || !documentTitle.trim() || isUploading}
+            disabled={
+              tempSelectedDocs.length === 0 ||
+              !documentTitle.trim() ||
+              isUploading
+            }
             className={`px-4 py-2 text-white rounded transition flex items-center gap-2 ${
-              tempSelectedDocs.length === 0 || !documentTitle.trim() || isUploading
+              tempSelectedDocs.length === 0 ||
+              !documentTitle.trim() ||
+              isUploading
                 ? "bg-gray-600 opacity-50 cursor-not-allowed"
                 : "bg-gray-600 hover:bg-gray-700"
             }`}
             type="button"
           >
             {isUploading && (
-              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
             )}
-            {isUploading ? 'Uploading...' : `Upload ${tempSelectedDocs.length} Document${tempSelectedDocs.length > 1 ? 's' : ''}`}
+            {isUploading
+              ? "Uploading..."
+              : `Upload ${tempSelectedDocs.length} Document${
+                  tempSelectedDocs.length > 1 ? "s" : ""
+                }`}
           </button>
         </div>
       </div>
@@ -514,7 +632,9 @@ const DocumentUploadComponent = () => {
     <div className="w-full max-w-4xl mx-auto p-6 space-y-6  ">
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold">Document Upload Center</h1>
-        <p className="text-gray-600">Select document type first, then upload your files for analysis</p>
+        <p className="text-gray-600">
+          Select document type first, then upload your files for analysis
+        </p>
       </div>
 
       <div className="flex justify-center">
@@ -522,8 +642,18 @@ const DocumentUploadComponent = () => {
           onClick={() => setTypeSelectionOpen(true)}
           className="flex items-center gap-2 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+            />
           </svg>
           <div className="text-left">
             <span className="font-medium">Upload Documents</span>
@@ -538,15 +668,27 @@ const DocumentUploadComponent = () => {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h2 className="text-xl font-semibold">Select Document Type</h2>
-                <p className="text-gray-600">Choose the category that best describes your documents</p>
+                <p className="text-gray-600">
+                  Choose the category that best describes your documents
+                </p>
               </div>
-              <button 
-                onClick={() => setTypeSelectionOpen(false)} 
+              <button
+                onClick={() => setTypeSelectionOpen(false)}
                 className="p-1 hover:bg-gray-100 rounded"
                 type="button"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -559,7 +701,7 @@ const DocumentUploadComponent = () => {
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.key === "Enter" || e.key === " ") {
                       handleTypeSelection(type);
                     }
                   }}
@@ -568,8 +710,12 @@ const DocumentUploadComponent = () => {
                     <div className="text-blue-600">{type.icon}</div>
                     <div>
                       <h4 className="font-medium">{type.name}</h4>
-                      <p className="text-sm text-gray-600">{type.description}</p>
-                      <p className="text-xs text-gray-500 mt-1">Accepts: {type.acceptedFormats.join(", ")}</p>
+                      <p className="text-sm text-gray-600">
+                        {type.description}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Accepts: {type.acceptedFormats.join(", ")}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -579,11 +725,7 @@ const DocumentUploadComponent = () => {
         </Overlay>
       )}
 
-      {uploadDialogOpen && (
-        <Overlay>
-          {renderUploadDialog()}
-        </Overlay>
-      )}
+      {uploadDialogOpen && <Overlay>{renderUploadDialog()}</Overlay>}
     </div>
   );
 };
