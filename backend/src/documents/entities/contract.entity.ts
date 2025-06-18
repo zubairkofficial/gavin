@@ -18,6 +18,9 @@ export class Contract extends BaseEntity {
   @Column()
   type: string;
 
+  @Column()
+  title: string;
+
   @IsOptional()
   @Column()
   fileName : string;

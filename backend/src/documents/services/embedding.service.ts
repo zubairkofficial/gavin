@@ -81,18 +81,12 @@ export class EmbeddingService implements OnModuleInit {
    */
   async processDocument(params: {
     documentId: string;
-    userId: string;
     content: string;
-    documentType?: string;
-    jurisdiction?: string;
     additionalMetadata?: Record<string, any>;
   }): Promise<{ processedChunks: number; documentId: string }> {
     const { 
       documentId, 
-      userId, 
-      content, 
-      documentType = 'unknown',
-      jurisdiction = 'unknown',
+      content,
       additionalMetadata = {} 
     } = params;
 
@@ -113,11 +107,6 @@ export class EmbeddingService implements OnModuleInit {
         return new Document({
           pageContent: text,          metadata: {
             document_id: documentId,
-            user_id: userId,
-            document_type: documentType,
-            jurisdiction: jurisdiction,
-            chunk_index: index,
-            total_chunks: texts.length,
             processed_at: new Date().toISOString(),
             content_length: text.length,
             ...additionalMetadata

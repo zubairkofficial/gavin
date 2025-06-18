@@ -36,7 +36,7 @@ interface Regulation {
   subject_area: string
 }
 
-interface Case {
+interface Statute {
   id: string
   createdAt: string
   updatedAt: string
@@ -50,19 +50,19 @@ interface Case {
   decision_date: string
 }
 
-type DocumentType = "contracts" | "regulations" | "cases"
+type DocumentType = "contracts" | "regulations" | "statutes"
 
 interface EditDocumentModalProps {
   isOpen: boolean
   onClose: () => void
   documentType: DocumentType
-  document: Contract | Regulation | Case | null
+  document: Contract | Regulation | Statute | null
   onUpdate: () => void
 }
 
 export function EditDocumentModal({ isOpen, onClose, documentType, document, onUpdate }: EditDocumentModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState<Partial<Contract | Regulation | Case>>({})
+  const [formData, setFormData] = useState<Partial<Contract | Regulation | Statute>>({})
 
   // Update form data when document changes or modal opens
   useEffect(() => {
@@ -118,8 +118,8 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
         return "Contract"
       case "regulations":
         return "Regulation"
-      case "cases":
-        return "Case"
+      case "statutes":
+        return "Statute"
       default:
         return "Document"
     }
@@ -247,7 +247,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                 </div>
               </>
             ) : (
-              // Case fields
+              // Statute fields
               <>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="title" className="text-right">
@@ -256,7 +256,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                   <Input
                     id="title"
                     name="title"
-                    value={(formData as Case).title || ""}
+                    value={(formData as Statute).title || ""}
                     onChange={handleInputChange}
                     className="col-span-3"
                   />
@@ -268,7 +268,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                   <Input
                     id="type"
                     name="type"
-                    value={(formData as Case).type || ""}
+                    value={(formData as Statute).type || ""}
                     onChange={handleInputChange}
                     className="col-span-3"
                   />
@@ -280,7 +280,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                   <Input
                     id="jurisdiction"
                     name="jurisdiction"
-                    value={(formData as Case).jurisdiction || ""}
+                    value={(formData as Statute).jurisdiction || ""}
                     onChange={handleInputChange}
                     className="col-span-3"
                   />
@@ -292,7 +292,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                   <Input
                     id="court"
                     name="court"
-                    value={(formData as Case).court || ""}
+                    value={(formData as Statute).court || ""}
                     onChange={handleInputChange}
                     className="col-span-3"
                   />
@@ -304,7 +304,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                   <Input
                     id="citation"
                     name="citation"
-                    value={(formData as Case).citation || ""}
+                    value={(formData as Statute).citation || ""}
                     onChange={handleInputChange}
                     className="col-span-3"
                   />
@@ -316,7 +316,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                   <Input
                     id="holding_summary"
                     name="holding_summary"
-                    value={(formData as Case).holding_summary || ""}
+                    value={(formData as Statute).holding_summary || ""}
                     onChange={handleInputChange}
                     className="col-span-3"
                   />
@@ -329,7 +329,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                     id="decision_date"
                     name="decision_date"
                     type="date"
-                    value={(formData as Case).decision_date ? (formData as Case).decision_date.split('T')[0] : ""}
+                    value={(formData as Statute).decision_date ? (formData as Statute).decision_date.split("T")[0] : ""}
                     onChange={handleInputChange}
                     className="col-span-3"
                   />

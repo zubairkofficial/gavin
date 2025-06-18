@@ -2,7 +2,7 @@ import BaseEntity from '@/common/entities/BaseEntity';
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
-export class Case extends BaseEntity{
+export class Statute extends BaseEntity{
 
     @Column()
     fileName: string;

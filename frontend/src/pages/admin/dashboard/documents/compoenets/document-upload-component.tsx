@@ -58,16 +58,16 @@ const documentTypes: DocumentType[] = [
     acceptedFormats: [".pdf", ".doc", ".docx", ".txt"],
   },
   {
-    id: "Case",
-    name: "Cases",
-    description: "Court rulings, legal briefs, pleadings, case summaries",
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
-      </svg>
-    ),
-    acceptedFormats: [".pdf", ".doc", ".docx", ".txt"],
-  },
+  id: "Statute",
+  name: "Statutes",
+  description: "Legislative acts, laws, regulations, codes, and statutory texts",
+  icon: (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-2-2h-2" />
+    </svg>
+  ),
+  acceptedFormats: [".pdf", ".doc", ".docx", ".txt", ".rtf"],
+},
 ];
 
 interface Jurisdiction {

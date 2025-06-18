@@ -19,21 +19,19 @@ import { z } from 'zod';
 import { Contract } from './entities/contract.entity';
 import { Clause } from './entities/clause.entity';
 import { Regulation } from './entities/regulation.entity';
-import { Case } from './entities/case.entity';
+import { Statute } from './entities/statute.entity';
 import { OpenAIService } from '../services/openai.service';
 import { ContractSchema, ClauseSchema } from './schemas/contract.schema';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateContractDto } from './dto/update-contract.dto';
 import { UpdateRegulationDto } from './dto/update-regulation.dto';
-import { Public } from '../auth/decorators/public.decorator';
 import { DocumentsService } from './documents.service';
 import { OpenAIServiceRegulation } from '@/services/openai.regulations.service';
 import { EmbeddingService } from './services/embedding.service';
-import { OpenAICaseService } from '@/services/openai.case.service';
-import { UpdateCaseDto } from './dto/update-Case.dto';
+import { OpenAIStatuteService } from '@/services/openai.statute.service';
+import { UpdateStatuteDto } from './dto/update-Case.dto';
 
 @Controller('/documents')
-@Public()
 export class DocumentsController {
   constructor(
     private readonly documentsService: DocumentsService,
@@ -43,11 +41,11 @@ export class DocumentsController {
     private contractRepository: Repository<Contract>,
     @InjectRepository(Clause)
     private clauseRepository: Repository<Clause>,
-    @InjectRepository(Case)
-    private caseRepository: Repository<Case>,
+    @InjectRepository(Statute)
+    private statuteRepository: Repository<Statute>,
     private OpenAIService: OpenAIService,
     private OpenServiceRegulation: OpenAIServiceRegulation,
-    private OpenAICaseService: OpenAICaseService,
+    private OpenAICaseService: OpenAIStatuteService,
     private embeddingService: EmbeddingService,
   ) {}
 
@@ -187,10 +185,10 @@ export class DocumentsController {
         case 'contract':
           return this.handleContract(createDocumentDto, fullText);
 
-        case 'case':
-        case 'cases':  // Adding support for plural form
+        case 'statute':
+        case 'Statutes':  // Adding support for plural form
           console.log('Handling case document upload');
-          return this.handleCase(createDocumentDto, fullText);
+          return this.handleStatute(createDocumentDto, fullText);
 
         default:
           console.log('Unrecognized document type:', createDocumentDto.type);
@@ -229,10 +227,7 @@ export class DocumentsController {
       // Create embeddings for the regulation with only document ID in metadata
       await this.embeddingService.processDocument({
         documentId: savedRegulation.id,
-        userId: dto.userId || 'system',
         content: fullText,
-        documentType: 'regulation',
-        jurisdiction: dto.jurisdiction,
         additionalMetadata: {
           document_id: savedRegulation.id
         }
@@ -272,6 +267,7 @@ export class DocumentsController {
 
       const contract = new Contract();
       contract.type = dto.type;
+      contract.title = dto.title;
       contract.fileName= dto.fileName || 'Untitled Contract';
       contract.jurisdiction = dto.jurisdiction || 'Unknown';
       contract.content_html = fullText;
@@ -317,16 +313,11 @@ export class DocumentsController {
             // Create embeddings for the clause
             await this.embeddingService.processDocument({
               documentId: savedClause.id,
-              userId: dto.userId || 'system',
               content: clauseData.clause_text,
-              documentType: 'contract_clause',
-              jurisdiction: dto.jurisdiction,
               additionalMetadata: {
                 document_id: savedClause.id,
                 clause_id: savedClause.id,
                 clause_type: clause.clause_type,
-                risk_level: clause.risk_level,
-                language_variant: clause.language_variant,
                 parent_contract_id: savedContract.id,
                 processed_date: new Date().toISOString()
               }
@@ -345,15 +336,9 @@ export class DocumentsController {
       // Create embeddings for the full contract
       await this.embeddingService.processDocument({
         documentId: savedContract.id,
-        userId: dto.userId || 'system',
         content: fullText,
-        documentType: 'contract',
-        jurisdiction: savedContract.jurisdiction,
         additionalMetadata: {
           document_id: savedContract.id,
-          contract_type: savedContract.type,
-          source: savedContract.source,
-          total_clauses: validClauses.length,
           processed_date: new Date().toISOString()
         }
       });
@@ -391,50 +376,46 @@ export class DocumentsController {
     }
   }
 
-  private async handleCase(dto: CreateDocumentDto, fullText: string) {
+  private async handleStatute(dto: CreateDocumentDto, fullText: string) {
     try {
       console.log('Starting case analysis...');
-      const analysisResults = await this.OpenAICaseService.analyzeCaseDocument(fullText);
+      const analysisResults = await this.OpenAICaseService.analyzeStatuteDocument(fullText);
 
-      if (!analysisResults || !analysisResults.case_info) {
+      if (!analysisResults || !analysisResults.statute_info) {
         console.error('Analysis failed - no results:', analysisResults);
         throw new BadRequestException('Failed to analyze case content');
       }
 
       console.log('Analysis results:', analysisResults);
-      const analysis = analysisResults.case_info;
+      const analysis = analysisResults.statute_info;
       
-      const caseEntity = new Case();
-      caseEntity.full_text = fullText;
-      caseEntity.title = dto.title ;
-      caseEntity.type = dto.type || 'case' ;
-      caseEntity.fileName = dto.fileName || '';
-      caseEntity.court = analysis.court;
-      caseEntity.jurisdiction = dto.jurisdiction || ''; // Extract jurisdiction from court
-      caseEntity.decision_date = analysis.decision_date;
-      caseEntity.citation = analysis.citation;
-      caseEntity.holding_summary = analysis.holding_summary;
-      caseEntity.tags = Array.isArray(analysis.tags) ? analysis.tags : [];
-      caseEntity.source_url = dto.source_url || '';
+      const StatuteEntity = new Statute();
+      StatuteEntity.full_text = fullText;
+      StatuteEntity.title = dto.title ;
+      StatuteEntity.type = dto.type || 'case' ;
+      StatuteEntity.fileName = dto.fileName || '';
+      StatuteEntity.court = analysis.court;
+      StatuteEntity.jurisdiction = dto.jurisdiction || ''; // Extract jurisdiction from court
+      StatuteEntity.decision_date = analysis.decision_date;
+      StatuteEntity.citation = analysis.citation;
+      StatuteEntity.holding_summary = analysis.holding_summary;
+      StatuteEntity.tags = Array.isArray(analysis.tags) ? analysis.tags : [];
+      StatuteEntity.source_url = dto.source_url || '';
       // caseEntity.title = dto.title || analysis.citation;
       
-      console.log('Case entity before save:', caseEntity);
+      console.log('Case entity before save:', StatuteEntity);
 
       // Save to database
-      const savedCase = await this.caseRepository.save(caseEntity);
-      console.log('Case saved successfully:', savedCase);
+      const savedStatute = await this.statuteRepository.save(StatuteEntity);
+      console.log('Case saved successfully:', savedStatute);
 
       // Create embeddings for the case
       await this.embeddingService.processDocument({
-        documentId: savedCase.id,
-        userId: dto.userId || 'system',
+        documentId: savedStatute.id,
         content: fullText,
-        documentType: 'case',
-        jurisdiction: savedCase.court,
-        additionalMetadata: {
-          document_id: savedCase.id,
-          citation: savedCase.citation,
-          court: savedCase.court
+        additionalMetadata: {  
+          document_id: savedStatute.id,
+          processed_at: new Date().toISOString()
         }
       });
 
@@ -442,30 +423,30 @@ export class DocumentsController {
         success: true,
         status: 'completed',
         data: {
-          id: savedCase.id,
-          name: savedCase.title,
-          court: savedCase.court,
-          jurisdiction: savedCase.jurisdiction,
-          documentType: 'case',
+          id: savedStatute.id,
+          name: savedStatute.title,
+          court: savedStatute.court,
+          jurisdiction: savedStatute.jurisdiction,
+          documentType: 'statute',
           processingDetails: {
             textLength: fullText.length,
             analyzed: true,
             embedded: true,
-            citation: savedCase.citation,
-            decision_date: savedCase.decision_date,
+            citation: savedStatute.citation,
+            decision_date: savedStatute.decision_date,
             processed_at: new Date().toISOString()
           }
         },
-        message: 'Case successfully processed, analyzed, and embedded'
+        message: 'statute successfully processed, analyzed, and embedded'
       };
 
     } catch (error) {
-      console.error('Error in handleCase:', error);
+      console.error('Error in handleStatute:', error);
       if (error instanceof BadRequestException) {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to process case: ${error.message}`,
+        `Failed to process statute: ${error.message}`,
       );
     }
   }
@@ -499,6 +480,7 @@ export class DocumentsController {
         select: {
           id: true,
           type: true,
+          title: true,
           fileName: true,
           jurisdiction: true,
           source: true,
@@ -520,10 +502,10 @@ export class DocumentsController {
     }
   }
 
-  @Get('/cases')
-  async getAllCases() {
+  @Get('/statutes')
+  async getAllStatute() {
     try {
-      const cases = await this.caseRepository.find({
+      const statute = await this.statuteRepository.find({
         select: {
           id: true,
           title: true,
@@ -542,8 +524,8 @@ export class DocumentsController {
       });
       return {
         success: true,
-        data: cases,
-        count: cases.length,
+        data: statute,
+        count: statute.length,
       };
     } catch (error) {
       throw new BadRequestException(
@@ -630,45 +612,45 @@ async updateContract(
   }
 }
 
-@Put('cases/:id')
-async updateCase(
+@Put('statutes/:id')
+async Statute(
   @Param('id', ParseUUIDPipe) id: string,
-  @Body() updateCaseDto: UpdateCaseDto
+  @Body() UpdateStatuteDto: UpdateStatuteDto
 ) {
   try {
-    console.log('🛠 Raw Body:', updateCaseDto);
+    console.log('🛠 Raw Body:', UpdateStatuteDto);
     
     // Validate request body
-    if (!updateCaseDto || Object.keys(updateCaseDto).length === 0) {
+    if (!UpdateStatuteDto || Object.keys(UpdateStatuteDto).length === 0) {
       throw new BadRequestException('Update data is required');
     }
 
     // Find the existing contract
-    const Case = await this.caseRepository.findOne({ 
+    const Statute = await this.statuteRepository.findOne({ 
       where: { id } 
     });
 
-    if (!Case) {
-      throw new BadRequestException('Contract not found');
+    if (!Statute) {
+      throw new BadRequestException('Statute not found');
     }
 
-    const updates: Partial<Case> = {};
-    if (updateCaseDto.title !== undefined) updates.title = updateCaseDto.title;
-    if (updateCaseDto.jurisdiction !== undefined) updates.jurisdiction = updateCaseDto.jurisdiction;
-    if (updateCaseDto.court !== undefined) updates.court = updateCaseDto.court;
-    if (updateCaseDto.citation !== undefined) updates.citation = updateCaseDto.citation;
-    if (updateCaseDto.holding_summary !== undefined) updates.holding_summary = updateCaseDto.holding_summary;
-    if (updateCaseDto.decision_date !== undefined) updates.decision_date = updateCaseDto.decision_date;
+    const updates: Partial<Statute> = {};
+    if (UpdateStatuteDto.title !== undefined) updates.title = UpdateStatuteDto.title;
+    if (UpdateStatuteDto.jurisdiction !== undefined) updates.jurisdiction = UpdateStatuteDto.jurisdiction;
+    if (UpdateStatuteDto.court !== undefined) updates.court = UpdateStatuteDto.court;
+    if (UpdateStatuteDto.citation !== undefined) updates.citation = UpdateStatuteDto.citation;
+    if (UpdateStatuteDto.holding_summary !== undefined) updates.holding_summary = UpdateStatuteDto.holding_summary;
+    if (UpdateStatuteDto.decision_date !== undefined) updates.decision_date = UpdateStatuteDto.decision_date;
     updates.updatedAt = new Date(); 
 
-    Object.assign(Case, updates);
+    Object.assign(Statute, updates);
 
-    const updatedCase = await this.caseRepository.save(Case);
+    const updatedStatute = await this.statuteRepository.save(Statute);
 
     return {
       success: true,
-      data: updatedCase,
-      message: 'Case updated successfully'
+      data: updatedStatute,
+      message: 'Statute updated successfully'
     };
 
   } catch (error) {
@@ -676,7 +658,7 @@ async updateCase(
     if (error?.code === '22P02') {
       throw new BadRequestException('Invalid UUID format');
     }
-    throw new BadRequestException(`Failed to update contract: ${error.message}`);
+    throw new BadRequestException(`Failed to update Statute: ${error.message}`);
   }
 }
 

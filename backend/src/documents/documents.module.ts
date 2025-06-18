@@ -7,18 +7,18 @@ import { Regulation } from './entities/regulation.entity';
 import { Contract } from './entities/contract.entity';
 import { OpenAIService } from '../services/openai.service';
 import { Clause } from './entities/clause.entity';
-import { Case } from './entities/case.entity';
+import { Statute } from './entities/statute.entity';
 import { OpenAIServiceRegulation } from '@/services/openai.regulations.service';
 import { EmbeddingService } from './services/embedding.service';
-import { OpenAICaseService } from '@/services/openai.case.service';
+import { OpenAIStatuteService } from '@/services/openai.statute.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Document, Regulation, Contract, Clause, Case])],
+  imports: [TypeOrmModule.forFeature([Document, Regulation, Contract, Clause, Statute])],
   controllers: [DocumentsController],
   providers: [
     DocumentsService,
     OpenAIServiceRegulation,
-    OpenAICaseService,
+    OpenAIStatuteService,
     OpenAIService,
     EmbeddingService,
   ],

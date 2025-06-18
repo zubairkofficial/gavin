@@ -3,9 +3,7 @@ import { JurisdictionsService } from './jurisdictions.service';
 import { CreateJurisdictionDto } from './dto/create-jurisdiction.dto';
 import { UpdateJurisdictionDto } from './dto/update-jurisdiction.dto';
 import { Jurisdiction } from './entities/jurisdiction.entity';
-import { Public } from '@/auth/decorators/public.decorator';
 
-@Public()
 @Controller('jurisdictions')
 export class JurisdictionsController {
   constructor(private readonly jurisdictionsService: JurisdictionsService) {}
