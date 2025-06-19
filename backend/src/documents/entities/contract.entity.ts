@@ -18,6 +18,9 @@ export class Contract extends BaseEntity {
   @Column()
   type: string;
 
+  @Column({nullable: true})
+    userId: string;
+
   
   @Column( { nullable: true })
   title: string;

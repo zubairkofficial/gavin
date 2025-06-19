@@ -381,6 +381,7 @@ export default function DocumentsTable() {
                             <Button
                               variant="outline"
                               size="sm"
+                              className="hover:bg-gray-300"
                               onClick={() => handleStatusClick(contract)}
                             >
                               <Pencil className="h-4 w-4" />
@@ -444,6 +445,7 @@ export default function DocumentsTable() {
                             <Button
                               variant="outline"
                               size="sm"
+                              className="hover:bg-gray-300"
                                 onClick={() => handleStatusClick(regulation)}
                             >
                               <Pencil className="h-4 w-4" />
@@ -507,6 +509,7 @@ export default function DocumentsTable() {
                            <Button
                               variant="outline"
                               size="sm"
+                              className="hover:bg-gray-300"
                                 onClick={() => handleStatusClick(statute)}
                             >
                               <Pencil className="h-4 w-4" />

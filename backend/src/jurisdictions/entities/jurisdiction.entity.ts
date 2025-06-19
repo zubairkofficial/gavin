@@ -5,4 +5,7 @@ import { Column, Entity } from "typeorm";
 export class Jurisdiction extends BaseEntity {
     @Column()
     jurisdiction: string;
+
+    @Column({ nullable: true })
+    userId: string;
 }

@@ -11,6 +11,9 @@ export class Regulation extends BaseEntity{
     @Column()
     type: string;
 
+    @Column({nullable: true})
+    userId: string;
+
     @Column()
     citation: string;
 

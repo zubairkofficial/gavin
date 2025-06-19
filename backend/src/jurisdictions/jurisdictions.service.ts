@@ -12,14 +12,19 @@ export class JurisdictionsService {
     private jurisdictionRepository: Repository<Jurisdiction>,
   ) {}
 
-  async create(createJurisdictionDto: CreateJurisdictionDto): Promise<Jurisdiction> {
+  async create(createJurisdictionDto: CreateJurisdictionDto , userId : string): Promise<Jurisdiction> {
     const jurisdiction = new Jurisdiction();
     jurisdiction.jurisdiction = createJurisdictionDto.jurisdiction;
+    jurisdiction.userId = userId; // Set the userId from the request
     return await this.jurisdictionRepository.save(jurisdiction);
   }
 
-  async findAll(): Promise<Jurisdiction[]> {
-    return await this.jurisdictionRepository.find();
+  async findAll(userId : string): Promise<Jurisdiction[]> {
+    const data = await this.jurisdictionRepository.find(
+     { where: {userId},
+      order: { createdAt: 'DESC' }}
+     );
+    return data
   }
 
   async findOne(id: string): Promise<Jurisdiction> {

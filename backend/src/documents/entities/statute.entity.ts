@@ -28,6 +28,9 @@ export class Statute extends BaseEntity{
     @Column({ type: 'text' })
     holding_summary: string;
 
+    @Column({nullable: true})
+    userId: string;
+    
     @Column({ type: 'text' })
     full_text: string;
 

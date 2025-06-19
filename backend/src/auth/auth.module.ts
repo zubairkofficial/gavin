@@ -20,9 +20,8 @@ import { UserService } from './user.service';
       inject: [ConfigService],
     }),
     TypeOrmModule.forFeature([User, AuthToken]),
-  ],
-  controllers: [AuthController],
+  ],  controllers: [AuthController],
   providers: [AuthService, UserService, TokenService],
-  exports: [TokenService],
+  exports: [TokenService, JwtModule, AuthService],
 })
 export class AuthModule {}

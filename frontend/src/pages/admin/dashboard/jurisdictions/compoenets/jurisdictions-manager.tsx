@@ -206,7 +206,7 @@ export default function JurisdictionsManager() {
 
       {/* Search and Add Button */}
       <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 ">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder="Search jurisdictions..."
@@ -216,9 +216,9 @@ export default function JurisdictionsManager() {
           />
         </div>
 
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} >
+          <DialogTrigger asChild >
+            <Button className="h-12">
               <Plus className="h-4 w-4 mr-2 " />
               Add Jurisdiction
             </Button>
@@ -311,6 +311,7 @@ export default function JurisdictionsManager() {
                           <Button
                             variant="outline"
                             size="sm"
+                            className="hover:bg-gray-300"
                             onClick={() => {
                               setEditingJurisdiction(jurisdiction)
                               setIsEditingDialogOpen(true)
@@ -320,7 +321,7 @@ export default function JurisdictionsManager() {
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" disabled={deletingId === jurisdiction.id}>
+                              <Button variant="outline" size="sm" className="hover:bg-gray-300" disabled={deletingId === jurisdiction.id}>
                                 {deletingId === jurisdiction.id ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (

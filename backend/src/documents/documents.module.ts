@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DocumentsService } from './documents.service';
 import { DocumentsController } from './documents.controller';
 import { Document } from './entities/document.entity';
@@ -11,9 +13,22 @@ import { Statute } from './entities/statute.entity';
 import { OpenAIServiceRegulation } from '@/services/openai.regulations.service';
 import { EmbeddingService } from './services/embedding.service';
 import { OpenAIStatuteService } from '@/services/openai.statute.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Document, Regulation, Contract, Clause, Statute])],
+  imports: [
+    TypeOrmModule.forFeature([Document, Regulation, Contract, Clause, Statute]),
+    AuthModule,
+    ConfigModule.forRoot(),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || 'defaultSecret',
+        signOptions: { expiresIn: '1d' },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
   controllers: [DocumentsController],
   providers: [
     DocumentsService,

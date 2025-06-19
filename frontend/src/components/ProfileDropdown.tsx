@@ -40,7 +40,7 @@ export default function ProfileDropdown() {
 
   return (
     <>
-      <div className="flex justify-center p-4">
+      <div className="flex justify-end md:justify-center p-4  ">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer">

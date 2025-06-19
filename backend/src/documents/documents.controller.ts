@@ -9,11 +9,13 @@ import {
   Param,
   Put,
   ParseUUIDPipe,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { AuthGuard } from '../auth/auth.guard';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import * as fs from 'fs';
 import { z } from 'zod';
 import { Contract } from './entities/contract.entity';
@@ -32,6 +34,7 @@ import { OpenAIStatuteService } from '@/services/openai.statute.service';
 import { UpdateStatuteDto } from './dto/update-Case.dto';
 
 @Controller('/documents')
+@UseGuards(AuthGuard)
 export class DocumentsController {
   constructor(
     private readonly documentsService: DocumentsService,
@@ -50,11 +53,12 @@ export class DocumentsController {
   ) {}
 
   @Post('/upload')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadDocument(
+  @UseInterceptors(FileInterceptor('file'))  async uploadDocument(
     @Body() createDocumentDto: CreateDocumentDto,
     @UploadedFile() file: any,
+    @Request() req: any,
   ) {
+
     if (!file) {
       throw new BadRequestException('File is required');
     }
@@ -176,19 +180,19 @@ export class DocumentsController {
         fullText = fullText.substring(0, 100000);
       }
 
-      console.log('Document upload request:', { type: createDocumentDto.type, title: createDocumentDto.title  , jurisdiction: createDocumentDto.jurisdiction  , name: createDocumentDto.fileName });
-
-      switch (createDocumentDto.type?.toLowerCase()) {
+      console.log('Document upload request:', { type: createDocumentDto.type, title: createDocumentDto.title  , jurisdiction: createDocumentDto.jurisdiction  , name: createDocumentDto.fileName });      switch (createDocumentDto.type?.toLowerCase()) {
         case 'regulation':
-          return this.handleRegulation(createDocumentDto, fullText);
+          console.log('📄 Processing regulation for user:', req.user?.id);
+          return this.handleRegulation(createDocumentDto, fullText ,  req.user?.id);
 
         case 'contract':
-          return this.handleContract(createDocumentDto, fullText);
+          console.log('📄 Processing contract for user:', req.user?.id);
+          return this.handleContract(createDocumentDto, fullText , req.user?.id);
 
         case 'statute':
         case 'Statutes':  // Adding support for plural form
-          console.log('Handling case document upload');
-          return this.handleStatute(createDocumentDto, fullText);
+          console.log('📄 Processing statute for user:', req.user?.id , req.user?.id);
+          return this.handleStatute(createDocumentDto, fullText , req.user?.id);
 
         default:
           console.log('Unrecognized document type:', createDocumentDto.type);
@@ -201,7 +205,7 @@ export class DocumentsController {
     }
   }
 
-  private async handleRegulation(dto: CreateDocumentDto, fullText: string) {
+  private async handleRegulation(dto: CreateDocumentDto, fullText: string , userId: string) {
     try {
       const analysisResults = await this.OpenServiceRegulation.analyzeRegulations(fullText);
 
@@ -212,6 +216,7 @@ export class DocumentsController {
       const regulation = new Regulation();
       regulation.full_text = fullText; // Store original full text
       regulation.title = dto.title || analysis.title;
+      regulation.userId = userId; // Store user ID
       regulation.type = dto.type ;
       regulation.jurisdiction =  dto.jurisdiction || 'Unknown';
       regulation.citation = analysis.citation || dto.citation || '';
@@ -261,13 +266,14 @@ export class DocumentsController {
     }
   }
 
-  private async handleContract(dto: CreateDocumentDto, fullText: string) {
+  private async handleContract(dto: CreateDocumentDto, fullText: string , userId: string) {
     try {
       const geminiResults = await this.OpenAIService.analyzeDocumentClauses(fullText, -1);
 
       const contract = new Contract();
       contract.type = dto.type;
       contract.title = dto.title;
+      contract.userId = userId;
       contract.fileName= dto.fileName || 'Untitled Contract';
       contract.jurisdiction = dto.jurisdiction || 'Unknown';
       contract.content_html = fullText;
@@ -311,17 +317,17 @@ export class DocumentsController {
             const savedClause = await this.clauseRepository.save(clause);
             
             // Create embeddings for the clause
-            await this.embeddingService.processDocument({
-              documentId: savedClause.id,
-              content: clauseData.clause_text,
-              additionalMetadata: {
-                document_id: savedClause.id,
-                clause_id: savedClause.id,
-                clause_type: clause.clause_type,
-                parent_contract_id: savedContract.id,
-                processed_date: new Date().toISOString()
-              }
-            });
+            // await this.embeddingService.processDocument({
+            //   documentId: savedClause.id,
+            //   content: clauseData.clause_text,
+            //   additionalMetadata: {
+            //     document_id: savedClause.id,
+            //     clause_id: savedClause.id,
+            //     clause_type: clause.clause_type,
+            //     parent_contract_id: savedContract.id,
+            //     processed_date: new Date().toISOString()
+            //   }
+            // });
 
             return savedClause;
           } catch (validationError) {
@@ -376,7 +382,7 @@ export class DocumentsController {
     }
   }
 
-  private async handleStatute(dto: CreateDocumentDto, fullText: string) {
+  private async handleStatute(dto: CreateDocumentDto, fullText: string , userId: string) {
     try {
       console.log('Starting case analysis...');
       const analysisResults = await this.OpenAICaseService.analyzeStatuteDocument(fullText);
@@ -392,8 +398,9 @@ export class DocumentsController {
       const StatuteEntity = new Statute();
       StatuteEntity.full_text = fullText;
       StatuteEntity.title = dto.title ;
+      StatuteEntity.userId = userId ;
       StatuteEntity.type = dto.type || 'case' ;
-      StatuteEntity.fileName = dto.fileName || '';
+      StatuteEntity.fileName = dto.fileName;
       StatuteEntity.court = analysis.court;
       StatuteEntity.jurisdiction = dto.jurisdiction || ''; // Extract jurisdiction from court
       StatuteEntity.decision_date = analysis.decision_date;
@@ -451,17 +458,6 @@ export class DocumentsController {
     }
   }
 
-  private handleValidationError(error: any) {
-    if (error instanceof z.ZodError) {
-      throw new BadRequestException(
-        `Validation error: ${error.errors.map((e) => e.message).join(', ')}`,
-      );
-    }
-    throw new BadRequestException(
-      `Failed to process document: ${error.message}`,
-    );
-  }
-
   private cleanupTempFile(filePath: string) {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -472,9 +468,9 @@ export class DocumentsController {
     this.cleanupTempFile(tempFilePath);
     throw error;
   }
-
   @Get('/contracts')
-  async getAllContracts() {
+  async getAllContracts(@Request() req: any) {
+    console.log('📋 Getting contracts for user:', req.user?.id);
     try {
       const contracts = await this.contractRepository.find({
         select: {
@@ -501,9 +497,9 @@ export class DocumentsController {
       );
     }
   }
-
   @Get('/statutes')
-  async getAllStatute() {
+  async getAllStatute(@Request() req: any) {
+    console.log('📋 Getting statutes for user:', req.user?.id);
     try {
       const statute = await this.statuteRepository.find({
         select: {
@@ -533,9 +529,9 @@ export class DocumentsController {
       );
     }
   }
-
   @Get('/regulations')
-  async getAllRegulations() {
+  async getAllRegulations(@Request() req: any) {
+    console.log('📋 Getting regulations for user:', req.user?.id);
     try {
       const regulations = await this.regulationRepository.find({
         select: {
