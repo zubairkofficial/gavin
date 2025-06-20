@@ -17,6 +17,12 @@ export class Regulation extends BaseEntity{
     @Column()
     citation: string;
 
+    @Column({nullable: true})
+    filePath: string;
+
+    @Column({nullable: true})
+    fileName: string;
+
     @Column()
     title: string;
 
@@ -30,7 +36,7 @@ export class Regulation extends BaseEntity{
     summary: string;
 
     @Column({ type: 'text' })
-    full_text: string;
+    content_html: string;
 
     @Column()
     source_url: string;

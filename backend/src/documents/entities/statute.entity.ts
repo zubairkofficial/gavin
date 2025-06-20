@@ -19,6 +19,9 @@ export class Statute extends BaseEntity{
     @Column()
     court: string;
 
+    @Column({nullable: true})
+    filePath: string;
+
     @Column({ type: 'date' })
     decision_date: string;
 
@@ -32,7 +35,7 @@ export class Statute extends BaseEntity{
     userId: string;
     
     @Column({ type: 'text' })
-    full_text: string;
+    content_html: string;
 
     @Column("text", { array: true })
     tags: string[];

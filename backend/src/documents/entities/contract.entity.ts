@@ -21,6 +21,8 @@ export class Contract extends BaseEntity {
   @Column({nullable: true})
     userId: string;
 
+    @Column({nullable: true})
+    filePath: string;
   
   @Column( { nullable: true })
   title: string;

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
+import { cn, getUserInfo } from "@/lib/utils"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { useAuth } from "@/context/Auth.context"
 import { useNavigate } from "react-router-dom"
@@ -24,7 +24,7 @@ interface PlansBillingModalProps {
 export function PlansBillingModal({ isOpen, onClose, initialSection = "plans-billing" }: PlansBillingModalProps) {
   // Use initialSection as the default value instead of hardcoded "plans-billing"
   const [activeSection, setActiveSection] = useState(initialSection)
-
+  const user = getUserInfo();
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -36,7 +36,9 @@ export function PlansBillingModal({ isOpen, onClose, initialSection = "plans-bil
   }, [isOpen, initialSection])
   const navigationItems = [
     { id: "account", label: "Account", icon: User },
-    { id: "plans-billing", label: "Plans & Billing", icon: CreditCard },
+   ...(user?.role === 'admin' ? [
+   
+  ] : [ { id: "plans-billing", label: "Plans & Billing", icon: CreditCard }]),
     { id: "help-center", label: "Help Center", icon: HelpCircle },
   ]
 

@@ -2,7 +2,7 @@ import puppeteer, { Page } from 'puppeteer';
 import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
-import pdfParse from 'pdf-parse';
+import * as pdfParse from 'pdf-parse';
 
 interface DelawareCodeData {
   title: string;
@@ -140,7 +140,7 @@ async function scrapeTitleLinks(page: Page): Promise<Array<{ title: string; titl
   return titles;
 }
 
-async function main() {
+export async function runDelawareCodeScraper() {
   const browser = await puppeteer.launch({
     headless: false, // Set to true for production
     defaultViewport: null,
@@ -148,6 +148,8 @@ async function main() {
   });
 
   try {
+
+    const results: string[] = [];
     const page = await browser.newPage();
     
     // Set user agent and other headers
@@ -194,7 +196,10 @@ async function main() {
           downloadDate: new Date().toISOString()
         };
         
-        await saveData(codeData);
+        const Data = `Title: ${codeData.title}\n Title= Number: ${codeData.titleNumber}\n  content: ${codeData.content}`; 
+        results.push(Data);
+        console.log(`data in array :` , results.length)
+        // await saveData(codeData);
         
         console.log(`✅ Successfully processed: ${title.title} (${parsedData.pages} pages)`);
         
@@ -229,6 +234,3 @@ async function main() {
     await browser.close();
   }
 }
-
-// Run the scraper
-main().catch(console.error);

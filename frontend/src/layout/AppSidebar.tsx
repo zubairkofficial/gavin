@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon,FileUp, HomeIcon, Scale } from "lucide-react"
+import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon,FileUp, HomeIcon, Scale, BookOpen } from "lucide-react"
 import type React from "react"
 
 import {
@@ -177,10 +177,10 @@ function AdminSidebar() {
               <NavLink to="/all-docs">
                 <SidebarMenuItem className="px-2">
                   <SidebarMenuButton className="gap-2 py-5 relative">
-                    <FileUp size={18} />
+                    <BookOpen size={18} />
                   <span className="truncate" style={{
                     textOverflow: "clip",
-                  }}>Documents</span>
+                  }}>Knowledge Base</span>
                     <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

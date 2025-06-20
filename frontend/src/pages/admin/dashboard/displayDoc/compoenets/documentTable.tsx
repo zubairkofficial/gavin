@@ -1,7 +1,8 @@
 "use client";
 
+import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
-import { Pencil, Search } from "lucide-react";
+import { Pencil, Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,10 +30,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Badge } from "@/components/ui/badge";
-import { EditDocumentModal } from "./edit-documet-model";
-import { Toaster } from "sonner";
 import API from "@/lib/api";
+import { toast } from "sonner";
 
 interface Contract {
   id: string;
@@ -42,6 +41,7 @@ interface Contract {
   jurisdiction: string;
   source: string;
   createdAt: string;
+  status?: boolean;
 }
 
 interface ContractsResponse {
@@ -60,6 +60,8 @@ interface Regulation {
   section: string;
   subject_area: string;
   id: string;
+  fileName?: string; // Added fileName for regulations
+  status?: boolean;
 }
 
 interface Statute {
@@ -74,6 +76,7 @@ interface Statute {
   holding_summary: string;
   decision_date: string;
   id: string;
+  status?: boolean;
 }
 
 interface RegulationsResponse {
@@ -88,46 +91,6 @@ interface StatutesResponse {
 
 type DocumentType = "contracts" | "regulations" | "statutes";
 
-// Add a function to check if all fields have data for contracts
-const isContractComplete = (contract: Contract): boolean => {
-  return Boolean(
-    contract.id &&
-      contract.type &&
-      contract.jurisdiction &&
-      contract.source &&
-      contract.createdAt
-  );
-};
-
-// Add a function to check if all fields have data for regulations
-const isRegulationComplete = (regulation: Regulation): boolean => {
-  return Boolean(
-    regulation.createdAt &&
-      regulation.updatedAt &&
-      regulation.jurisdiction &&
-      regulation.citation &&
-      regulation.title &&
-      regulation.section &&
-      regulation.subject_area
-  );
-};
-
-// Add a function to check if all fields have data for statutes
-const isStatuteComplete = (statute: Statute): boolean => {
-  return Boolean(
-    statute.createdAt &&
-      statute.updatedAt &&
-      statute.type &&
-      statute.jurisdiction &&
-      statute.title &&
-      statute.fileName &&
-      statute.court &&
-      statute.citation &&
-      statute.holding_summary &&
-      statute.decision_date
-  );
-};
-
 export default function DocumentsTable() {
   const [documentType, setDocumentType] = useState<DocumentType>("contracts");
   const [searchTerm, setSearchTerm] = useState("");
@@ -138,11 +101,6 @@ export default function DocumentsTable() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  // const [totalCount, setTotalCount] = useState(0)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<
-    Contract | Regulation | Statute | null
-  >(null);
 
   const fetchDocuments = async (type: DocumentType) => {
     setLoading(true);
@@ -161,17 +119,13 @@ export default function DocumentsTable() {
       console.log(`Response data for ${type}:`, responseData);
 
       if (type === "contracts") {
-        // Handle contracts response format
         const contractsResponse = responseData as ContractsResponse;
         if (contractsResponse.success) {
           setContracts(contractsResponse.data);
-          // setTotalCount(contractsResponse.count)
         } else {
           setContracts([]);
-          // setTotalCount(0)
         }
       } else if (type === "regulations") {
-        // Handle regulations response format
         const regulationsResponse = responseData as RegulationsResponse;
         if (regulationsResponse.success) {
           setRegulations(regulationsResponse.data);
@@ -179,7 +133,6 @@ export default function DocumentsTable() {
           setRegulations([]);
         }
       } else if (type === "statutes") {
-        // Handle statutes response format
         const statutesResponse = responseData as StatutesResponse;
         if (statutesResponse.success) {
           setStatutes(statutesResponse.data);
@@ -258,8 +211,8 @@ export default function DocumentsTable() {
     documentType === "contracts"
       ? sortedContracts.length
       : documentType === "regulations"
-      ? sortedRegulations.length
-      : sortedStatutes.length;
+        ? sortedRegulations.length
+        : sortedStatutes.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -277,31 +230,92 @@ export default function DocumentsTable() {
     setCurrentPage(1); // Reset to first page when changing document type
   };
 
+  const handleStatusToggle = async (documentId: string, currentStatus: boolean) => {
+    try {
+      // Use the correct endpoint - PUT /metadata/:documentId
+      const response = await API.put(`documents/metadata/${documentId}`, {
+        status: !currentStatus
+      });
 
+      if (response.data.success) {
+        toast.success("Status updated successfully");
 
-  const handleStatusClick = (document: Contract | Regulation | Statute) => {
-    setSelectedDocument(document);
-    setIsEditModalOpen(true);
+        // Update local state immediately for better UX
+        const newStatus = !currentStatus;
+
+        if (documentType === "contracts") {
+          setContracts(prevContracts =>
+            prevContracts.map(contract =>
+              contract.id === documentId
+                ? { ...contract, status: newStatus }
+                : contract
+            )
+          );
+        } else if (documentType === "regulations") {
+          setRegulations(prevRegulations =>
+            prevRegulations.map(regulation =>
+              regulation.id === documentId
+                ? { ...regulation, status: newStatus }
+                : regulation
+            )
+          );
+        } else if (documentType === "statutes") {
+          setStatutes(prevStatutes =>
+            prevStatutes.map(statute =>
+              statute.id === documentId
+                ? { ...statute, status: newStatus }
+                : statute
+            )
+          );
+        }
+
+        // Optionally, you can still refresh the data in the background
+        // fetchDocuments(documentType);
+      } else {
+        throw new Error("Failed to update status");
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error("Failed to update status");
+    }
   };
 
-  const handleCloseModal = () => {
-    setIsEditModalOpen(false);
-    // We'll keep the selected document until the modal is fully closed
-    // to prevent UI flicker
-    setTimeout(() => {
-      setSelectedDocument(null);
-    }, 300);
+  const handleEditClick = (document: Contract | Regulation | Statute) => {
+    // Handle edit button click if needed
+    console.log('Edit document:', document);
   };
 
-  const handleUpdateSuccess = () => {
-    fetchDocuments(documentType);
+  const handleViewClick = (document: Contract | Regulation | Statute) => {
+    console.log('View document:', document);
+    
+    // Get the fileName from the document
+    let fileName = '';
+    
+    if ('fileName' in document && document.fileName) {
+      fileName = document.fileName;
+    } else {
+      // Fallback: create a filename from title or id if fileName is not available
+      const title = document.title || document.id;
+      fileName = `${title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    }
+    
+    // Construct the static file URL
+    const fileUrl = `http://localhost:8080/static/files/${fileName}`;
+    
+    // Open the document in a new window/tab
+    window.open(fileUrl, '_blank');
+  };
+
+  // Helper function to get document status
+  const getDocumentStatus = (document: Contract | Regulation | Statute): boolean => {
+    return document.status || false;
   };
 
   return (
     <div className="w-full space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Document Management</CardTitle>
+          <CardTitle>Knowledge Base</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -349,24 +363,22 @@ export default function DocumentsTable() {
                       <TableHead>Jurisdiction</TableHead>
                       <TableHead>Source</TableHead>
                       <TableHead>Created At</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedContracts.length === 0 ? (
                       <TableRow>
-                        <TableCell
-                          colSpan={7}
-                          className="text-center py-8 text-muted-foreground"
-                        >
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           No contracts found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedContracts.map((contract) => (
+                      paginatedContracts.map((contract, index) => (
                         <TableRow key={contract.id}>
                           <TableCell className="font-medium">
-                            {contract.id.slice(-4)}
+                            {index + 1 + startIndex}
                           </TableCell>
                           <TableCell className="font-medium">
                             {contract.title}
@@ -378,14 +390,31 @@ export default function DocumentsTable() {
                             {formatDate(contract.createdAt)}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="hover:bg-gray-300"
-                              onClick={() => handleStatusClick(contract)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                            <Switch
+                              checked={getDocumentStatus(contract)}
+                              onCheckedChange={() => handleStatusToggle(contract.id, getDocumentStatus(contract))}
+                              className="data-[state=checked]:bg-primary"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 border-1 border-blue-400 hover:bg-blue-100"
+                                onClick={() => handleViewClick(contract)}
+                              >
+                                <Eye className="h-4 w-4 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className="h-10 w-10 border-1 border-gray-400 hover:bg-gray-400"
+                                size="icon"
+                                onClick={() => handleEditClick(contract)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -398,12 +427,10 @@ export default function DocumentsTable() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Title</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Jurisdiction</TableHead>
                       <TableHead>Citation</TableHead>
-                      <TableHead>Section</TableHead>
-                      <TableHead>Subject Area</TableHead>
+                      <TableHead>Jurisdiction</TableHead>
                       <TableHead>Created At</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -411,45 +438,52 @@ export default function DocumentsTable() {
                     {paginatedRegulations.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={9}
+                          colSpan={7}
                           className="text-center py-8 text-muted-foreground"
                         >
                           No regulations found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedRegulations.map((regulation) => (
+                      paginatedRegulations.map((regulation, index) => (
                         <TableRow key={regulation.id}>
                           <TableCell className="font-medium">
-                            {regulation.id.slice(-4)}
+                            {index + 1 + startIndex}
                           </TableCell>
-                          <TableCell
-                            className="font-medium"
-                            title={regulation.title}
-                          >
-                            {regulation.title.length > 25
-                              ? `${regulation.title.slice(0, 25)}...`
-                              : regulation.title}
+                          <TableCell className="font-medium">
+                            {regulation.title}
                           </TableCell>
-                          <TableCell>{regulation.type}</TableCell>
+                          <TableCell>{regulation.citation}</TableCell>
                           <TableCell>{regulation.jurisdiction}</TableCell>
-                          <TableCell>{regulation.citation || "N/A"}</TableCell>
-                          <TableCell>{regulation.section || "N/A"}</TableCell>
-                          <TableCell>
-                            {regulation.subject_area || "N/A"}
-                          </TableCell>
                           <TableCell>
                             {formatDate(regulation.createdAt)}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="hover:bg-gray-300"
-                                onClick={() => handleStatusClick(regulation)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                            <Switch
+                              checked={getDocumentStatus(regulation)}
+                              onCheckedChange={() => handleStatusToggle(regulation.id, getDocumentStatus(regulation))}
+                              className="data-[state=checked]:bg-primary"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 border-1 border-blue-400 hover:bg-blue-100"
+                                onClick={() => handleViewClick(regulation)}
+                              >
+                                <Eye className="h-4 w-4 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 border-1 border-gray-400 hover:bg-gray-400"
+                                onClick={() => handleEditClick(regulation)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -462,12 +496,10 @@ export default function DocumentsTable() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Title</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Jurisdiction</TableHead>
-                      <TableHead>Court</TableHead>
                       <TableHead>Citation</TableHead>
-                      <TableHead>Decision Date</TableHead>
+                      <TableHead>Jurisdiction</TableHead>
                       <TableHead>Created At</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -475,45 +507,52 @@ export default function DocumentsTable() {
                     {paginatedStatutes.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={9}
+                          colSpan={7}
                           className="text-center py-8 text-muted-foreground"
                         >
                           No statutes found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedStatutes.map((statute) => (
+                      paginatedStatutes.map((statute, index) => (
                         <TableRow key={statute.id}>
                           <TableCell className="font-medium">
-                            {statute.id.slice(-4)}
+                            {index + 1 + startIndex}
                           </TableCell>
-                          <TableCell
-                            className="font-medium"
-                            title={statute.title}
-                          >
-                            {statute.title.length > 25
-                              ? `${statute.title.slice(0, 25)}...`
-                              : statute.title}
+                          <TableCell className="font-medium">
+                            {statute.title}
                           </TableCell>
-                          <TableCell>{statute.type}</TableCell>
+                          <TableCell>{statute.citation}</TableCell>
                           <TableCell>{statute.jurisdiction}</TableCell>
-                          <TableCell>{statute.court || "N/A"}</TableCell>
-                          <TableCell>{statute.citation || "N/A"}</TableCell>
                           <TableCell>
-                            {statute.decision_date
-                              ? formatDate(statute.decision_date)
-                              : "N/A"}
+                            {formatDate(statute.createdAt)}
                           </TableCell>
-                          <TableCell>{formatDate(statute.createdAt)}</TableCell>
                           <TableCell>
-                           <Button
-                              variant="outline"
-                              size="sm"
-                              className="hover:bg-gray-300"
-                                onClick={() => handleStatusClick(statute)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                            <Switch
+                              checked={getDocumentStatus(statute)}
+                              onCheckedChange={() => handleStatusToggle(statute.id, getDocumentStatus(statute))}
+                              className="data-[state=checked]:bg-primary"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 border-1 border-blue-400 hover:bg-blue-100"
+                                onClick={() => handleViewClick(statute)}
+                              >
+                                <Eye className="h-4 w-4 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 border-1 border-gray-400 hover:bg-gray-400"
+                                onClick={() => handleEditClick(statute)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -598,14 +637,6 @@ export default function DocumentsTable() {
           )}
         </CardContent>
       </Card>
-      <EditDocumentModal
-        isOpen={isEditModalOpen}
-        onClose={handleCloseModal}
-        documentType={documentType}
-        document={selectedDocument}
-        onUpdate={handleUpdateSuccess}
-      />
-      <Toaster />
     </div>
   );
 }

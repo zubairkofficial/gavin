@@ -293,65 +293,71 @@ export default function JurisdictionsManager() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  getCurrentJurisdictions().map((jurisdiction) => (
-                    <TableRow key={jurisdiction.id}>
-                      <TableCell className="font-medium">{jurisdiction.id}</TableCell>
-                      <TableCell className="font-medium">{jurisdiction.jurisdiction}</TableCell>
-                      <TableCell>
-                        {new Date(jurisdiction.createdAt).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="hover:bg-gray-300"
-                            onClick={() => {
-                              setEditingJurisdiction(jurisdiction)
-                              setIsEditingDialogOpen(true)
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="hover:bg-gray-300" disabled={deletingId === jurisdiction.id}>
-                                {deletingId === jurisdiction.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="p-6">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently delete the jurisdiction "{jurisdiction.jurisdiction}". This action
-                                  cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteJurisdiction(jurisdiction.id)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  getCurrentJurisdictions().map((jurisdiction, index) => {
+                    // Calculate the absolute index based on current page
+                    const startIndex = (currentPage - 1) * itemsPerPage
+                    const absoluteIndex = startIndex + index + 1
+
+                    return (
+                      <TableRow key={jurisdiction.id}>
+                        <TableCell className="font-medium">{absoluteIndex}</TableCell>
+                        <TableCell className="font-medium">{jurisdiction.jurisdiction}</TableCell>
+                        <TableCell>
+                          {new Date(jurisdiction.createdAt).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="hover:bg-gray-300"
+                              onClick={() => {
+                                setEditingJurisdiction(jurisdiction)
+                                setIsEditingDialogOpen(true)
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="hover:bg-gray-300" disabled={deletingId === jurisdiction.id}>
+                                  {deletingId === jurisdiction.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="p-6">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete the jurisdiction "{jurisdiction.jurisdiction}". This action
+                                    cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteJurisdiction(jurisdiction.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 )}
               </TableBody>
             </Table>

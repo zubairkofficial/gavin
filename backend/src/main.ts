@@ -37,8 +37,11 @@ async function bootstrap() {
   app.use(helmet());
   app.use(compression());
 
-  app.useStaticAssets(path.join(__dirname, '..', 'uploads'), {
-    prefix: '/api/v1/uploads/', // URL prefix for accessing the files
+  const uploadPath = path.join(__dirname, '..','..','uploads')
+  logger.log(`Upload path: ${uploadPath}`);
+  // logger.log(`Serving static files from ${uploadPath}`);
+  app.useStaticAssets(uploadPath, {
+    prefix: '/static/files/', // URL prefix for accessing the files
   });
 
   app.setGlobalPrefix('/api/v1');  app.useGlobalPipes(
@@ -62,7 +65,7 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 3000);
 
   logger.log(`Application is listening on port ${port}`);
-  logger.log(`Swagger docs live on ${process.env.HOST}:${port}/api`);
+  logger.log(`Swagger docs live on ${process.env.HOST}:${port || 3000}/docs`);
 }
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 bootstrap();

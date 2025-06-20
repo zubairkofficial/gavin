@@ -7,11 +7,12 @@ import { AlignLeft, PlusIcon, ZapIcon } from "lucide-react";
 
 export default function AppHeader() {
   const { toggleSidebar } = useSidebar()
-  const {user} = useAuth()
+  const { user } = useAuth()
+
   return (
     <div className="md:flex bg-background md:sticky top-0 items-center md:justify-end px-4 h-22 z-20 gap-4 md:border-b">
-      {user.role !== "admin" && (
-        <div className="md:flex hidden  items-center gap-4">
+      {user && user.role !== "admin" && (
+        <div className="md:flex hidden items-center gap-4">
           <p className="text-sm">Credit plan: 100/90</p>
 
           <Button className="hover:bg-transparent bg-orange py-2 h-[unset] hover:text-orange hover:shadow-none">

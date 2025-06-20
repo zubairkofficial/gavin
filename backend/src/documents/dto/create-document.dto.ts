@@ -10,6 +10,10 @@ export class CreateDocumentDto {
     @IsString()
     fileName: string; 
 
+     @IsOptional()
+    @IsString()
+    filePath: string;
+
       @IsNotEmpty()
     @IsString()
     @Transform(({ value }) => value.toLowerCase())

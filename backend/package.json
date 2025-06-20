@@ -22,8 +22,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "ts-node seeder.ts",
-    "scrape": "ts-node ./scrape/scraper.ts",
-    "newyork": "ts-node ./scrape/newyork.ts"
+    "scrape": "ts-node ./scrape/states/florida.ts",
+    "newyork": "ts-node ./scrape/states/california.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -38,6 +38,8 @@
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^11.1.3",
+    "@nestjs/schedule": "^6.0.0",
+    "@nestjs/serve-static": "^5.0.3",
     "@nestjs/swagger": "^11.1.4",
     "@nestjs/typeorm": "^11.0.0",
     "axios": "^1.10.0",
@@ -62,8 +64,10 @@
     "puppeteer": "^24.10.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "simple-git": "^3.28.0",
     "tesseract.js": "^6.0.1",
-    "typeorm": "^0.3.22"
+    "typeorm": "^0.3.22",
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",

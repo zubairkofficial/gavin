@@ -1,19 +1,15 @@
 import puppeteer, { Page } from 'puppeteer';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as cheerio from 'cheerio';
 
 interface SectionData {
-  code: string;
   codeName: string;
   articleNumber: string;
   articleName: string;
-  articleDescription: string;
-  articleUrl: string;
   sectionNumber: string;
   sectionTitle: string;
-  sectionLocation: string;
   sectionContent: string;
-  sectionUrl: string;
 }
 
 const SELECTED_CODES = {
@@ -37,7 +33,11 @@ async function saveSection(sectionData: SectionData) {
   // Read existing sections if file exists
   if (fs.existsSync(JSON_FILE_PATH)) {
     const fileContent = fs.readFileSync(JSON_FILE_PATH, 'utf-8');
-    sections = JSON.parse(fileContent);
+    if (fileContent.trim().length > 0) {
+      sections = JSON.parse(fileContent);
+    } else {
+      sections = [];
+    }
   }
   
   // Add new section
@@ -47,7 +47,17 @@ async function saveSection(sectionData: SectionData) {
   fs.writeFileSync(JSON_FILE_PATH, JSON.stringify(sections, null, 2));
 }
 
-(async () => {
+function parseSectionContent(html: string): string {
+  const $ = cheerio.load(html);
+  let text = $.root().text().replace(/\n{2,}/g, '\n').trim();
+  // Remove all special characters except basic punctuation and spaces
+  text = text.replace(/[^a-zA-Z0-9.,;:'"()\[\]\-–—\s]/g, '');
+  // Optionally, collapse multiple spaces
+  text = text.replace(/\s{2,}/g, ' ');
+  return text;
+}
+
+export async function runNewYorkCodeScraper() {
   const browser = await puppeteer.launch({
     headless: false,
     defaultViewport: null,
@@ -56,6 +66,8 @@ async function saveSection(sectionData: SectionData) {
   
   try {
     const page = await browser.newPage();
+
+    const results: string[] = [];
 
     // For each selected code
     for (const [codeName, codeAbbr] of Object.entries(SELECTED_CODES)) {
@@ -164,7 +176,6 @@ async function saveSection(sectionData: SectionData) {
                       const content = contentContainer?.innerHTML?.trim() || '';
                       
                       return {
-                        headline,
                         shortTitle,
                         location,
                         content
@@ -176,22 +187,29 @@ async function saveSection(sectionData: SectionData) {
                       const sectionNumberMatch = section.sectionName.match(/SECTION\s+(.+)/i);
                       const sectionNumber = sectionNumberMatch ? sectionNumberMatch[1] : section.sectionName;
 
-                      // Save the section data
-                      await saveSection({
-                        code: codeAbbr,
-                        codeName: codeName,
-                        articleNumber: articleNumber,
-                        articleName: article.articleName,
-                        articleDescription: article.articleDescription,
-                        articleUrl: article.url,
-                        sectionNumber: sectionNumber,
-                        sectionTitle: sectionDetails.shortTitle,
-                        sectionLocation: sectionDetails.location,
-                        sectionContent: sectionDetails.content,
-                        sectionUrl: section.url
-                      });
+                      // Parse the HTML content to plain text
+                      const parsedContent = parseSectionContent(sectionDetails.content);
 
-                      console.log(`Saved: ${sectionDetails.headline} - ${sectionDetails.shortTitle}`);
+
+                      const data  = `codename : ${codeName}, articleNumber: ${articleNumber}, articleName: ${article.articleName}, sectionNumber: ${sectionNumber}, sectionTitle: ${sectionDetails.shortTitle}, sectionContent: ${parsedContent}`;
+                      results.push(data);
+                      console.log(`data in array :` , results.length)
+                      // Save the section data
+                      // await saveSection({
+                        
+                      //   codeName: codeName,
+                      //   articleNumber: articleNumber,
+                      //   articleName: article.articleName,
+                        
+                       
+                      //   sectionNumber: sectionNumber,
+                      //   sectionTitle: sectionDetails.shortTitle,
+                        
+                      //   sectionContent: parsedContent, // Use parsed content here
+                       
+                      // });
+
+                      console.log(`Saved:   ${sectionDetails.shortTitle}`);
                     }
 
                   } catch (sectionError) {
@@ -234,6 +252,7 @@ async function saveSection(sectionData: SectionData) {
     }
 
     console.log('\nFinished processing all selected codes');
+    console.log('\nFinished processing ' , results);
     
     // Read and display final count
     if (fs.existsSync(JSON_FILE_PATH)) {
@@ -250,4 +269,4 @@ async function saveSection(sectionData: SectionData) {
     await new Promise(resolve => setTimeout(resolve, 5000));
     await browser.close();
   }
-})();
+}

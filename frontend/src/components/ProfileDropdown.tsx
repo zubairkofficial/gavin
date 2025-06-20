@@ -18,7 +18,9 @@ export default function ProfileDropdown() {
   // Define navigation items with their IDs
   const navigationItems = [
     { id: "account", label: "Account", icon: User },
-    { id: "plans-billing", label: "Plans & Billing", icon: CreditCard },
+    ...(user?.role === 'admin' ? [
+   
+  ] : [ { id: "plans-billing", label: "Plans & Billing", icon: CreditCard }]),
     { id: "help-center", label: "Help Center", icon: BookOpenText },
   ]
 
