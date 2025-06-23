@@ -140,7 +140,7 @@ async function scrapeTitleLinks(page: Page): Promise<Array<{ title: string; titl
   return titles;
 }
 
-export async function runDelawareCodeScraper() {
+export async function* runDelawareCodeScraper(): AsyncGenerator<DelawareCodeData> {
   const browser = await puppeteer.launch({
     headless: false, // Set to true for production
     defaultViewport: null,
@@ -148,44 +148,27 @@ export async function runDelawareCodeScraper() {
   });
 
   try {
-
-    const results: string[] = [];
     const page = await browser.newPage();
-    
-    // Set user agent and other headers
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-    
     console.log('Navigating to Delaware Code website...');
     await page.goto(BASE_URL, {
       waitUntil: 'networkidle0',
       timeout: 30000
     });
-
-    // Wait for the page to load completely
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Extract all title links
     const titles = await scrapeTitleLinks(page);
-
     console.log(`\n=== Starting to process ${titles.length} titles ===\n`);
 
-    // Process each title
     for (let i = 0; i < titles.length; i++) {
       const title = titles[i];
       console.log(`\n--- Processing ${i + 1}/${titles.length}: ${title.title} ---`);
-      
       try {
-        // Create a safe filename for the PDF
         const safeFilename = `${title.titleNumber}_${title.title.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}.pdf`;
-        
-        // Download the PDF
         const pdfBuffer = await downloadPDF(title.pdfUrl, safeFilename);
-        
-        // Parse the PDF
         console.log('Parsing PDF content...');
         const parsedData = await parsePDF(pdfBuffer);
-        
-        // Save the data
+
         const codeData: DelawareCodeData = {
           title: title.title,
           titleNumber: title.titleNumber,
@@ -195,37 +178,18 @@ export async function runDelawareCodeScraper() {
           pages: parsedData.pages,
           downloadDate: new Date().toISOString()
         };
-        
-        const Data = `Title: ${codeData.title}\n Title= Number: ${codeData.titleNumber}\n  content: ${codeData.content}`; 
-        results.push(Data);
-        console.log(`data in array :` , results.length)
-        // await saveData(codeData);
-        
+
         console.log(`✅ Successfully processed: ${title.title} (${parsedData.pages} pages)`);
-        
-        // Add delay between downloads to be respectful
+        yield codeData;
+
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
       } catch (error) {
         console.error(`❌ Error processing ${title.title}:`, error);
-        
-        // Continue with next title even if current one fails
         continue;
       }
     }
 
     console.log('\n=== Scraping completed ===');
-    
-    // Display summary
-    if (fs.existsSync(JSON_FILE_PATH)) {
-      const finalContent = fs.readFileSync(JSON_FILE_PATH, 'utf-8');
-      const finalData = JSON.parse(finalContent);
-      console.log(`\n📊 Summary:`);
-      console.log(`Total titles processed: ${finalData.length}`);
-      console.log(`Total pages extracted: ${finalData.reduce((sum: number, item: DelawareCodeData) => sum + item.pages, 0)}`);
-      console.log(`Data saved to: ${JSON_FILE_PATH}`);
-      console.log(`PDFs saved to: ${PDF_DOWNLOAD_DIR}`);
-    }
 
   } catch (error) {
     console.error('Main execution error:', error);

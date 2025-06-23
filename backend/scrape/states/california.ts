@@ -8,7 +8,7 @@ export interface ExtractedContent {
     content: string;
 }
 
-export async function scrapeCaliforniaCodes(): Promise<ExtractedContent[]> {
+export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent> {
     try {
         console.log("Database connection established");
         const browser = await puppeteer.launch({
@@ -67,7 +67,6 @@ export async function scrapeCaliforniaCodes(): Promise<ExtractedContent[]> {
         console.log(`Found ${links.length} links to process`);
         await browser.close();
         console.log("Starting content extraction from links...");
-        const extractedContent: ExtractedContent[] = [];
         for (let i = 0; i < links.length; i++) {
             const link = links[i];
             console.log(`Processing link ${i + 1}/${links.length}: ${link}`);
@@ -81,7 +80,7 @@ export async function scrapeCaliforniaCodes(): Promise<ExtractedContent[]> {
                 const $ = cheerio.load(response.data);
                 const content = $('#codeLawSectionNoHead').text().trim();
                 if (content) {
-                    extractedContent.push({ url: link, content });
+                    yield { url: link, content };
                 } else {
                     console.warn(`No content found for link: ${link}`);
                 }
@@ -89,11 +88,8 @@ export async function scrapeCaliforniaCodes(): Promise<ExtractedContent[]> {
                 console.error(`Error processing link ${link}:`, error);
             }
         }
-        console.log(`Extracted content from ${extractedContent.length} links`);
-        return extractedContent;
+        console.log(`Finished extracting content from all links`);
     } catch (error) {
         console.error("Error during scraping:", error);
-        // Optionally rethrow or just return empty array
-        return [];
     }
 }

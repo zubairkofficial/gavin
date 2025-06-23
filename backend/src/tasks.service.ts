@@ -1,104 +1,104 @@
-// import { Injectable, Logger } from '@nestjs/common';
-// import { Cron, CronExpression } from '@nestjs/schedule';
-// import * as fs from 'fs';
-// import * as path from 'path';
-// import * as simpleGit from 'simple-git';
-// import * as xml2js from 'xml2js';
 
-// @Injectable()
-// export class TasksService {
-//   private readonly logger = new Logger(TasksService.name);
-
-//   @Cron(CronExpression.EVERY_30_SECONDS) // For testing, change to EVERY_MINUTE if needed
-//   async handleCron() {
-//     const repoUrl = 'https://github.com/usgpo/bulk-data/blob/main/CFR-XML_User-Guide.md';
-//     const cloneDir = path.join(__dirname, '..', '..', 'tmp-repo');
-//     const outputDir = path.join(__dirname, '..', '..', 'data');
-
-//     this.logger.debug('Cron started: Cloning and processing XML files...');
-
-//     // Clean previous clone
-//     if (fs.existsSync(cloneDir)) {
-//       fs.rmSync(cloneDir, { recursive: true, force: true });
-//     }
-
-//     const git = simpleGit.default();
-
-//     try {
-//       // Clone the repo
-//       await git.clone(repoUrl, cloneDir);
-//       this.logger.log('Repository cloned.');
-
-//       // Find XML files
-//       const xmlFiles = this.getAllXmlFiles(cloneDir);
-
-//       // Create output dir if not exists
-//       if (!fs.existsSync(outputDir)) {
-//         fs.mkdirSync(outputDir, { recursive: true });
-//       }
-
-//       const parser = new xml2js.Parser();
-
-//       for (const filePath of xmlFiles) {
-//         const xmlContent = fs.readFileSync(filePath, 'utf-8');
-//         const jsonData = await parser.parseStringPromise(xmlContent);
-
-//         const fileName = path.basename(filePath, '.xml') + '.json';
-//         const outputPath = path.join(outputDir, fileName);
-
-//         fs.writeFileSync(outputPath, JSON.stringify(jsonData, null, 2));
-//         this.logger.log(`Parsed and saved: ${fileName}`);
-//       }
-
-//       this.logger.log('All XML files processed successfully.');
-//     } catch (error) {
-//       this.logger.error('Error during XML processing:', error.message);
-//     } finally {
-//       // Clean up cloned repo
-//       if (fs.existsSync(cloneDir)) {
-//         fs.rmSync(cloneDir, { recursive: true, force: true });
-//         this.logger.debug('Temporary clone removed.');
-//       }
-//     }
-//   }
-
-//   private getAllXmlFiles(dir: string, fileList: string[] = []): string[] {
-//     const files = fs.readdirSync(dir);
-//     for (const file of files) {
-//       const fullPath = path.join(dir, file);
-//       if (fs.statSync(fullPath).isDirectory()) {
-//         this.getAllXmlFiles(fullPath, fileList);
-//       } else if (file.toLowerCase().endsWith('.xml')) {
-//         fileList.push(fullPath);
-//       }
-//     }
-//     return fileList;
-//   }
-// }
-
-
-
-
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { runTexasStatuteScraper } from '../scrape/states/taxes';
 import { runDelawareCodeScraper } from 'scrape/states/delaware';
 import { runNewYorkCodeScraper } from 'scrape/states/newyork';
 import { processAllFloridaStatutes } from 'scrape/states/florida';
 import { scrapeCaliforniaCodes } from 'scrape/states/california';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Statute } from '../src/documents/entities/statute.entity';
 
 @Injectable()
-export class TasksService {
+export class TasksService implements OnModuleInit {
+  constructor(
+    @InjectRepository(Statute)
+    private readonly statuteRepository: Repository<Statute>,
+  ) { }
+
   private readonly logger = new Logger(TasksService.name);
 
-  @Cron(CronExpression.EVERY_30_SECONDS)
+ async onModuleInit() {
+
+      this.logger.log('Deleting all statutes with source_url = "scaper"');
+  await this.statuteRepository.delete({ source_url: 'scaper' });
+  this.logger.log('Deleted all statutes with source_url = "scaper"');
+
+    this.handletask();
+  }
+
+
+  @Cron(CronExpression.EVERY_WEEK)
+
+
   async handleCron() {
     this.logger.debug('Called every 30 seconds');
-    await runTexasStatuteScraper();
-    await runDelawareCodeScraper();
-    await runNewYorkCodeScraper();
-    await  processAllFloridaStatutes();
-    await  scrapeCaliforniaCodes();
+    this.handletask()
+
+  }
+
+  async handletask() {
+
+    for await (const statuteData of runTexasStatuteScraper()) {
+      // Process each statuteData as soon as it is available
+      this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
+      const StatuteEntity = new Statute();
+      StatuteEntity.code = statuteData.code;
+      StatuteEntity.title = statuteData.chapter;
+      StatuteEntity.content_html = statuteData.content || '';
+      StatuteEntity.source_url = 'scaper';
+
+      // Ensure content_html is defined
+
+      // Save to database
+      await this.statuteRepository.save(StatuteEntity);
+    }
+
+    for await (const codeData of runDelawareCodeScraper()) {
+      // Process each codeData as soon as it is available
+      this.logger.log(`Processing Delaware code: ${JSON.stringify(codeData)}`);
+      const StatuteEntity = new Statute();
+      StatuteEntity.code = codeData.titleNumber;
+      StatuteEntity.title = codeData.title;
+      StatuteEntity.content_html = codeData.content;
+      StatuteEntity.source_url = 'scaper';
+
+      // Save to database
+      await this.statuteRepository.save(StatuteEntity);
+    }
+
+    for await (const sectionData of runNewYorkCodeScraper()) {
+      // Process each sectionData as soon as it is available
+      this.logger.log(`Processing NY statute: ${JSON.stringify(sectionData)}`);
+      const StatuteEntity = new Statute();
+      StatuteEntity.code = sectionData.code;
+      StatuteEntity.title = sectionData.chapter;
+      StatuteEntity.content_html = sectionData.section;
+      StatuteEntity.source_url = 'scaper';
+
+      // Save to database
+      await this.statuteRepository.save(StatuteEntity);
+    }
+
+    for await (const { title, content } of processAllFloridaStatutes()) {
+      this.logger.log(`Processing Florida statute: ${title}`);
+      const statute = new Statute();
+      statute.title = title;
+      statute.content_html = content;
+
+      await this.statuteRepository.save(statute);
+    }
+
+    for await (const { url, content } of scrapeCaliforniaCodes()) {
+      this.logger.log(`Processing California code section: ${url}`);
+      const statute = new Statute();
+      statute.content_html = content;
+      statute.source_url = 'scaper';
+      // Add other fields if needed
+
+      await this.statuteRepository.save(statute);
+    }
   }
 }
 
