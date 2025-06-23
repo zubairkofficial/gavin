@@ -8,20 +8,28 @@ import { scrapeCaliforniaCodes } from 'scrape/states/california';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Statute } from '../src/documents/entities/statute.entity';
-
+import { EmbeddingService } from './documents/services/embedding.service';
+import  {parseXmlTitlesFromRepo}  from '../scrape/gitScrape';
+import { Regulation } from './documents/entities/regulation.entity';
 @Injectable()
 export class TasksService implements OnModuleInit {
   constructor(
     @InjectRepository(Statute)
     private readonly statuteRepository: Repository<Statute>,
+    @InjectRepository(Regulation)
+        private regulationRepository: Repository<Regulation>,
+     private embeddingService: EmbeddingService,
   ) { }
 
   private readonly logger = new Logger(TasksService.name);
 
   async onModuleInit() {
-    this.logger.log('Deleting all statutes with source_url = "scaper"');
-    await this.statuteRepository.delete({ source_url: 'scaper' });
+    // this.logger.log('Deleting all statutes with source_url = "scaper"');
+    // await this.statuteRepository.delete({ source_url: 'scaper' });
     this.logger.log('Deleted all statutes with source_url = "scaper"');
+    await this.regulationRepository.delete({ source_url: 'scaper' });
+    // this.logger.log('Deleting all regulations with source_url = "scaper"');
+    //   await this.embeddingService.deleteDocumentEmbadings('Scraper');
     this.scrape();
   }
 
@@ -33,65 +41,145 @@ export class TasksService implements OnModuleInit {
   }
 
   async scrape() {
-    for await (const statuteData of runTexasStatuteScraper()) {
-      // Process each statuteData as soon as it is available
-      this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
-      const StatuteEntity = new Statute();
-      StatuteEntity.code = statuteData.code;
-      StatuteEntity.title = statuteData.chapter;
-      StatuteEntity.content_html = statuteData.content || '';
-      StatuteEntity.source_url = 'scaper';
+    // for await (const statuteData of runTexasStatuteScraper()) {
+    //   // Process each statuteData as soon as it is available
+    //   this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
+    //   const StatuteEntity = new Statute();
+    //   StatuteEntity.code = statuteData.code;
+    //   StatuteEntity.title = statuteData.chapter;
+    //   StatuteEntity.content_html = statuteData.content || '';
+    //   StatuteEntity.source_url = 'scaper';
 
-      // Ensure content_html is defined
+    //   // Ensure content_html is defined
 
-      // Save to database
-      await this.statuteRepository.save(StatuteEntity);
-    }
+    //   // Save to database
+    //  const document =  await this.statuteRepository.save(StatuteEntity);
 
-    for await (const codeData of runDelawareCodeScraper()) {
-      // Process each codeData as soon as it is available
-      this.logger.log(`Processing Delaware code: ${JSON.stringify(codeData)}`);
-      const StatuteEntity = new Statute();
-      StatuteEntity.code = codeData.titleNumber;
-      StatuteEntity.title = codeData.title;
-      StatuteEntity.content_html = codeData.content;
-      StatuteEntity.source_url = 'scaper';
+    //   await this.embeddingService.processDocument({
+    //     documentId: document.id,
+    //     content: document.content_html || '',
+    //     additionalMetadata: {  
+    //       document_id: document.id,
+    //       processed_at: new Date().toISOString(),
+    //       enabled: true,
+    //       source :  'Scraper',
+    //     }
+    //   });
 
-      // Save to database
-      await this.statuteRepository.save(StatuteEntity);
-    }
 
-    for await (const sectionData of runNewYorkCodeScraper()) {
-      // Process each sectionData as soon as it is available
-      this.logger.log(`Processing NY statute: ${JSON.stringify(sectionData)}`);
-      const StatuteEntity = new Statute();
-      StatuteEntity.code = sectionData.code;
-      StatuteEntity.title = sectionData.chapter;
-      StatuteEntity.content_html = sectionData.section;
-      StatuteEntity.source_url = 'scaper';
 
-      // Save to database
-      await this.statuteRepository.save(StatuteEntity);
-    }
+    // }
 
-    for await (const { title, content } of processAllFloridaStatutes()) {
-      this.logger.log(`Processing Florida statute: ${title}`);
-      const statute = new Statute();
-      statute.title = title;
-      statute.content_html = content;
+    // for await (const codeData of runDelawareCodeScraper()) {
+    //   // Process each codeData as soon as it is available
+    //   this.logger.log(`Processing Delaware code: ${JSON.stringify(codeData)}`);
+    //   const StatuteEntity = new Statute();
+    //   StatuteEntity.code = codeData.titleNumber;
+    //   StatuteEntity.title = codeData.title;
+    //   StatuteEntity.content_html = codeData.content;
+    //   StatuteEntity.source_url = 'scaper';
 
-      await this.statuteRepository.save(statute);
-    }
+    //   // Save to database
+    //  const document = await this.statuteRepository.save(StatuteEntity);
 
-    for await (const { url, content } of scrapeCaliforniaCodes()) {
-      this.logger.log(`Processing California code section: ${url}`);
-      const statute = new Statute();
-      statute.content_html = content;
-      statute.source_url = 'scaper';
-      // Add other fields if needed
+    //   await this.embeddingService.processDocument({
+    //     documentId: document.id,
+    //     content: document.content_html || '',
+    //     additionalMetadata: {  
+    //       document_id: document.id,
+    //       processed_at: new Date().toISOString(),
+    //       enabled: true,
+    //       source :  'Scraper',
+    //     }
+    //   });
+    // }
 
-      await this.statuteRepository.save(statute);
-    }
+    // for await (const sectionData of runNewYorkCodeScraper()) {
+    //   // Process each sectionData as soon as it is available
+    //   this.logger.log(`Processing NY statute: ${JSON.stringify(sectionData)}`);
+    //   const StatuteEntity = new Statute();
+    //   StatuteEntity.code = sectionData.code;
+    //   StatuteEntity.title = sectionData.chapter;
+    //   StatuteEntity.content_html = sectionData.section;
+    //   StatuteEntity.source_url = 'scaper';
+
+    //   // Save to database
+    //  const document = await this.statuteRepository.save(StatuteEntity);
+
+    //   await this.embeddingService.processDocument({
+    //     documentId: document.id,
+    //     content: document.content_html || '',
+    //     additionalMetadata: {  
+    //       document_id: document.id,
+    //       processed_at: new Date().toISOString(),
+    //       enabled: true,
+    //       source :  'Scraper',
+    //     }
+    //   });
+    // }
+
+    // for await (const { title, content } of processAllFloridaStatutes()) {
+    //   this.logger.log(`Processing Florida statute: ${title}`);
+    //   const statute = new Statute();
+    //   statute.title = title;
+    //   statute.content_html = content;
+
+    //  const document = await this.statuteRepository.save(statute);
+
+    //   await this.embeddingService.processDocument({
+    //     documentId: document.id,
+    //     content: document.content_html || '',
+    //     additionalMetadata: {  
+    //       document_id: document.id,
+    //       processed_at: new Date().toISOString(),
+    //       enabled: true,
+    //       source :  'Scraper',
+    //     }
+    //   });
+    // }
+
+    // for await (const { url, content } of scrapeCaliforniaCodes()) {
+    //   this.logger.log(`Processing California code section: ${url}`);
+    //   const statute = new Statute();
+    //   statute.content_html = content;
+    //   statute.source_url = 'scaper';
+    //   // Add other fields if needed
+
+    // const document =  await this.statuteRepository.save(statute);
+
+    //   await this.embeddingService.processDocument({
+    //     documentId: document.id,
+    //     content: document.content_html || '',
+    //     additionalMetadata: {  
+    //       document_id: document.id,
+    //       processed_at: new Date().toISOString(),
+    //       enabled: true,
+    //       source :  'Scraper',
+    //     }
+    //   });
+    // }
+
+for await (const regulationData of parseXmlTitlesFromRepo()) {
+  // this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
+  const RegulationEntity = new Regulation();
+  RegulationEntity.title = regulationData.title || '';
+  RegulationEntity.content_html = regulationData.contant;
+  RegulationEntity.fileName = regulationData.file;
+  RegulationEntity.source_url = 'scaper';
+
+  const document = await this.regulationRepository.save(RegulationEntity);
+
+  // await this.embeddingService.processDocument({
+  //   documentId: document.id,
+  //   content: document.content_html || '',
+  //   additionalMetadata: {  
+  //     document_id: document.id,
+  //     processed_at: new Date().toISOString(),
+  //     enabled: true,
+  //     source :  'Scraper',
+  //   }
+  // });
+}
   }
 }
 

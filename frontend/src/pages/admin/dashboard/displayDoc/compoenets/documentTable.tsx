@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/pagination";
 import API from "@/lib/api";
 import { toast } from "sonner";
+import { EditDocumentModal } from "./edit-documet-model"; // Adjust path as needed
 
 interface Contract {
   id: string;
@@ -101,6 +102,8 @@ export default function DocumentsTable() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editDocument, setEditDocument] = useState<Contract | Regulation | Statute | null>(null);
 
   const fetchDocuments = async (type: DocumentType) => {
     setLoading(true);
@@ -281,8 +284,17 @@ export default function DocumentsTable() {
   };
 
   const handleEditClick = (document: Contract | Regulation | Statute) => {
-    // Handle edit button click if needed
-    console.log('Edit document:', document);
+    setEditDocument(document);
+    setEditModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setEditModalOpen(false);
+    setEditDocument(null);
+  };
+
+  const handleDocumentUpdate = () => {
+    fetchDocuments(documentType); // Refresh data after update
   };
 
   const handleViewClick = (document: Contract | Regulation | Statute) => {
@@ -637,6 +649,17 @@ export default function DocumentsTable() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Document Modal */}
+      {editModalOpen && editDocument && (
+        <EditDocumentModal
+          isOpen={editModalOpen}
+          document={editDocument}
+          documentType={documentType}
+          onClose={handleModalClose}
+          onUpdate={handleDocumentUpdate}
+        />
+      )}
     </div>
   );
 }
