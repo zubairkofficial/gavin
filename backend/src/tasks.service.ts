@@ -26,9 +26,9 @@ export class TasksService implements OnModuleInit {
   }
 
 
-  @Cron(CronExpression.EVERY_WEEK)
+  @Cron('0 0 1,15 * *')
   async handleCron() {
-    this.logger.debug('Called every week');
+    this.logger.debug('Scraping starts at midnight (00:00) on the 1st and 15th day of every month, which approximates "every 15 days."');
     this.scrape();
   }
 
