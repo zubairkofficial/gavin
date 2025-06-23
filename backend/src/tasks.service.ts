@@ -1,4 +1,3 @@
-
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { runTexasStatuteScraper } from '../scrape/states/taxes';
@@ -19,27 +18,21 @@ export class TasksService implements OnModuleInit {
 
   private readonly logger = new Logger(TasksService.name);
 
- async onModuleInit() {
-
-      this.logger.log('Deleting all statutes with source_url = "scaper"');
-  await this.statuteRepository.delete({ source_url: 'scaper' });
-  this.logger.log('Deleted all statutes with source_url = "scaper"');
-
-    this.handletask();
+  async onModuleInit() {
+    this.logger.log('Deleting all statutes with source_url = "scaper"');
+    await this.statuteRepository.delete({ source_url: 'scaper' });
+    this.logger.log('Deleted all statutes with source_url = "scaper"');
+    this.scrape();
   }
 
 
   @Cron(CronExpression.EVERY_WEEK)
-
-
   async handleCron() {
-    this.logger.debug('Called every 30 seconds');
-    this.handletask()
-
+    this.logger.debug('Called every week');
+    this.scrape();
   }
 
-  async handletask() {
-
+  async scrape() {
     for await (const statuteData of runTexasStatuteScraper()) {
       // Process each statuteData as soon as it is available
       this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
