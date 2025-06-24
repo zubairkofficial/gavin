@@ -40,15 +40,13 @@ export class Statute extends BaseEntity{
     @Column({ type: 'text' })
     content_html: string;
 
+    @Column({ type: 'text'  , nullable: true })
+    section: string;
+
     @Column("text", { array: true  , nullable: true })
     tags: string[];
 
     @Column({nullable: true})
     source_url: string;
 
-    @Column({nullable: true})
-    source: string;
-
-    @Column({ nullable: true })
-    filename: string;
 }

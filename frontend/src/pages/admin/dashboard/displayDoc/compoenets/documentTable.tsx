@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/pagination";
 import API from "@/lib/api";
 import { toast } from "sonner";
+import { EditDocumentModal } from "./edit-documet-model"; // Adjust path as needed
 
 interface Contract {
   id: string;
@@ -101,6 +102,8 @@ export default function DocumentsTable() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editDocument, setEditDocument] = useState<Contract | Regulation | Statute | null>(null);
 
   const fetchDocuments = async (type: DocumentType) => {
     setLoading(true);
@@ -281,8 +284,17 @@ export default function DocumentsTable() {
   };
 
   const handleEditClick = (document: Contract | Regulation | Statute) => {
-    // Handle edit button click if needed
-    console.log('Edit document:', document);
+    setEditDocument(document);
+    setEditModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setEditModalOpen(false);
+    setEditDocument(null);
+  };
+
+  const handleDocumentUpdate = () => {
+    fetchDocuments(documentType); // Refresh data after update
   };
 
   const handleViewClick = (document: Contract | Regulation | Statute) => {
@@ -311,11 +323,28 @@ export default function DocumentsTable() {
     return document.status || false;
   };
 
+  const handleClick = async () => {
+      console.log('Scraping started');
+      toast.success('Scraping started successfully');
+      const response = await API.post('/run-task');
+      if (response.status === 200) {
+        console.log('Scraping completed successfully');
+      }
+      else {
+        console.error('Error during scraping:', response.statusText);
+      }
+  
+    }
+
   return (
     <div className="w-full space-y-4">
+      
       <Card>
-        <CardHeader>
+        <CardHeader className="flex items-center justify-between">
           <CardTitle>Knowledge Base</CardTitle>
+          <Button onClick={() => handleClick()}>
+        Start Scraping
+      </Button>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -495,6 +524,7 @@ export default function DocumentsTable() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID</TableHead>
+                      <TableHead>FileName</TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Citation</TableHead>
                       <TableHead>Jurisdiction</TableHead>
@@ -520,7 +550,10 @@ export default function DocumentsTable() {
                             {index + 1 + startIndex}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {statute.title}
+                            {statute.fileName || "N/A"}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {statute.title.slice(0, 50) || "--"}
                           </TableCell>
                           <TableCell>{statute.citation}</TableCell>
                           <TableCell>{statute.jurisdiction}</TableCell>
@@ -637,6 +670,17 @@ export default function DocumentsTable() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Document Modal */}
+      {editModalOpen && editDocument && (
+        <EditDocumentModal
+          isOpen={editModalOpen}
+          document={editDocument}
+          documentType={documentType}
+          onClose={handleModalClose}
+          onUpdate={handleDocumentUpdate}
+        />
+      )}
     </div>
   );
 }

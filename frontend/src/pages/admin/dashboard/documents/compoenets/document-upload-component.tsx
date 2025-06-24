@@ -124,6 +124,7 @@ const DocumentUploadComponent = () => {
   const [tempSelectedDocs, setTempSelectedDocs] = useState<AttachedDocument[]>(
     []
   );
+  const [progressMessageIndex, setProgressMessageIndex] = useState<number>(0);
   const [documentTitle, setDocumentTitle] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [jurisdictions, setJurisdictions] = useState<Jurisdiction[]>([]);
@@ -131,6 +132,15 @@ const DocumentUploadComponent = () => {
     useState<Jurisdiction | null>(null);
   const [jurisdictionOpen, setJurisdictionOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Progress messages for upload
+  const messages = [
+    "We are doing our work... please wait",
+    "Processing your documents... this may take a moment",
+    "Hang tight! Your documents are being prepared for analysis",
+    "Thanks for your patience. It's almost done...",
+    "Just a little bit more... your documents are being processed",
+  ];
 
   // Fetch jurisdictions when component mounts
   useEffect(() => {
@@ -188,20 +198,15 @@ const DocumentUploadComponent = () => {
   // Helper function to start timer for progress messages
   const startProgressTimer = (): [NodeJS.Timeout, () => void] => {
     let messageCount = 0;
-    const messages = [
-      "We are doing our work... please wait",
-      "Processing your documents... this may take a moment",
-      "Hang tight! Your documents are being prepared for analysis",
-      "Thanks for your patience. It's almost done...",
-      "Just a little bit more... your documents are being processed",
-    ];
 
+    setProgressMessageIndex(0);
+    
     const timer = setInterval(() => {
-      if (messageCount < messages.length) {
-        toast.success(messages[messageCount]);
-        messageCount++;
-      }
-    }, 10000);
+    if (messageCount < messages.length - 1) {
+      messageCount++;
+      setProgressMessageIndex(messageCount);
+    }
+  }, 10000);
 
     const clearTimer = () => {
       clearInterval(timer);
@@ -230,7 +235,6 @@ const DocumentUploadComponent = () => {
     let clearCurrentTimer: (() => void) | null = null;
 
     try {
-      // Start timer for first file
       [currentTimer, clearCurrentTimer] = startProgressTimer();
 
       for (let i = 0; i < documents.length; i++) {
@@ -418,6 +422,7 @@ const DocumentUploadComponent = () => {
 
   const renderUploadDialog = () => (
     <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full mx-4">
+
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">{selectedType?.name}</h2>
@@ -571,6 +576,16 @@ const DocumentUploadComponent = () => {
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
+
+            {isUploading && (
+    <div className="flex-1 flex items-center">
+      <span className="text-sm text-gray-500">
+        {messages[progressMessageIndex]}
+      </span>
+    </div>
+  )}
+
+
           <button
             onClick={cancelUpload}
             className="px-4 py-2 border rounded hover:bg-gray-50"
@@ -664,7 +679,7 @@ const DocumentUploadComponent = () => {
 
       {typeSelectionOpen && (
         <Overlay>
-          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 border-gray-200 border-1 rounded-lg shadow-sm">
+          <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 border-gray-200 border-1 rounded-lg shadow-sm">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h2 className="text-xl font-semibold">Select Document Type</h2>

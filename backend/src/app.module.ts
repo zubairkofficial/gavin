@@ -11,12 +11,21 @@ import { CommonModule } from './common/common.module';
 import { SharedModule } from './shared/shared.module';
 import { DocumentsModule } from './documents/documents.module';
 import { JurisdictionsModule } from './jurisdictions/jurisdictions.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TasksService } from './tasks.service';
+import { Statute } from './documents/entities/statute.entity';
+import { EmbeddingService } from './documents/services/embedding.service';
+import { Regulation } from './documents/entities/regulation.entity';
+
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([Statute]),
+    TypeOrmModule.forFeature([Regulation]),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+     ScheduleModule.forRoot(),
     JwtModule.registerAsync({
       imports: [],
       useFactory: async (configService: ConfigService) => ({
@@ -47,7 +56,9 @@ import { JurisdictionsModule } from './jurisdictions/jurisdictions.module';
   ],
   controllers: [AppController],
   providers: [
+    TasksService,
     AppService,
+    EmbeddingService,
     {
       provide: APP_GUARD,
       useClass: AuthGuard,

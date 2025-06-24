@@ -68,7 +68,6 @@ const storage = multer.diskStorage({
 });
 
 @Controller('/documents')
-@Public()
 @UseGuards(AuthGuard)
 export class DocumentsController {
   constructor(
@@ -478,7 +477,8 @@ createDocumentDto.filePath = relativeToUploads;
         additionalMetadata: {  
           document_id: savedStatute.id,
           processed_at: new Date().toISOString(),
-          enabled: true
+          enabled: true,
+          source : dto.source || 'Upload',
         }
       });
 
