@@ -3,6 +3,7 @@ import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Document } from '@langchain/core/documents';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class EmbeddingService implements OnModuleInit {
@@ -11,6 +12,7 @@ export class EmbeddingService implements OnModuleInit {
   private textSplitter: RecursiveCharacterTextSplitter;
 
   constructor(
+    private dataSource: DataSource
   ) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -207,9 +209,41 @@ export class EmbeddingService implements OnModuleInit {
     }
   }
 
+  async deleteDocumentEmbadings(source : string): Promise<void> {
+    try {
+      const vectorStore = await this.ensureVectorStore();
+      await vectorStore.delete({ 
+        filter: { source  } 
+      });
+      
+      console.log(`Successfully deleted embeddings for document ${source}`);
+    } catch (error) {
+      console.error(`Error deleting document ${source}:`, error);
+      throw new Error(`Failed to delete document ${source}: ${error.message}`);
+    }
+  }
+
   /**
    * Get document statistics
    */
+
+
+async updateMetadata(documentId: string, newMetadata: Record<string, any>): Promise<void> {
+  try {
+    await this.dataSource
+      .createQueryBuilder()
+      .update('document_embeddings')
+      .set({ metadata: () => `${JSON.stringify(newMetadata)}` })
+      .where("metadata->>'document_id' = :documentId", { documentId })
+      .execute();
+
+    console.log(`Successfully updated metadata for document ${documentId}`);
+  } catch (error) {
+    console.error(`Error updating metadata for document ${documentId}:`, error);
+    throw new Error(`Failed to update metadata for document ${documentId}: ${error.message}`);
+  }
+}
+
   async getDocumentStats(documentId?: string): Promise<{
     totalDocuments: number;
     totalChunks: number;
