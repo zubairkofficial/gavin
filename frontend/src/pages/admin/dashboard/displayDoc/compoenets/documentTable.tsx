@@ -325,15 +325,16 @@ export default function DocumentsTable() {
 
   const handleClick = async () => {
       console.log('Scraping started');
-      toast.success('Scraping started successfully');
+      // toast.success('Scraping started successfully');
       const response = await API.post('/run-task');
+      toast.success(response.data.message);
       if (response.status === 200) {
         console.log('Scraping completed successfully');
       }
       else {
         console.error('Error during scraping:', response.statusText);
       }
-  
+      
     }
 
   return (

@@ -16,12 +16,14 @@ import { TasksService } from './tasks.service';
 import { Statute } from './documents/entities/statute.entity';
 import { EmbeddingService } from './documents/services/embedding.service';
 import { Regulation } from './documents/entities/regulation.entity';
+import { Status } from './documents/entities/status.entity';
 
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Statute]),
     TypeOrmModule.forFeature([Regulation]),
+    TypeOrmModule.forFeature([Status]),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -64,5 +66,8 @@ import { Regulation } from './documents/entities/regulation.entity';
       useClass: AuthGuard,
     },
   ],
+  exports:[
+    TasksService,
+  ]
 })
 export class AppModule {}

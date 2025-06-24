@@ -4,8 +4,8 @@ import { Contract } from './contract.entity';
 
 @Entity()
 export class Clause extends BaseEntity {
-  @Column()
-  contract_id: number;
+  @Column('uuid')
+  contract_id: string;
 
   @Column()
   fileName: string;

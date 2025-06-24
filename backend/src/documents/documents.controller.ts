@@ -383,7 +383,7 @@ createDocumentDto.filePath = relativeToUploads;
             clause.jurisdiction = dto.jurisdiction || '';
             clause.language_variant = clauseData.language_variant || '';
             clause.notes = '';
-            clause.contract_id = Number(savedContract.id);
+            clause.contract_id = savedContract.id;
 
             return await this.clauseRepository.save(clause);
           } catch (validationError) {
