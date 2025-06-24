@@ -21,6 +21,9 @@ export class TasksService  {
     @InjectRepository(Regulation)
         private regulationRepository: Repository<Regulation>,
      private embeddingService: EmbeddingService,
+    @InjectRepository(Regulation)
+        private regulationRepository: Repository<Regulation>,
+     private embeddingService: EmbeddingService,
   ) { }
 
   private readonly logger = new Logger(TasksService.name);
@@ -33,14 +36,14 @@ export class TasksService  {
   }
 
   async scrape() {
-    for await (const statuteData of runTexasStatuteScraper()) {
-      // Process each statuteData as soon as it is available
-      this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
-      const StatuteEntity = new Statute();
-      StatuteEntity.code = statuteData.code;
-      StatuteEntity.title = statuteData.chapter;
-      StatuteEntity.content_html = statuteData.content || '';
-      StatuteEntity.source_url = 'scaper';
+    // for await (const statuteData of runTexasStatuteScraper()) {
+    //   // Process each statuteData as soon as it is available
+    //   this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
+    //   const StatuteEntity = new Statute();
+    //   StatuteEntity.code = statuteData.code;
+    //   StatuteEntity.title = statuteData.chapter;
+    //   StatuteEntity.content_html = statuteData.content || '';
+    //   StatuteEntity.source_url = 'scaper';
 
      const document =  await this.statuteRepository.save(StatuteEntity);
 
