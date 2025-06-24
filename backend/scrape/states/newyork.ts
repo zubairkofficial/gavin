@@ -58,7 +58,7 @@ function parseSectionContent(html: string): string {
 
 export async function* runNewYorkCodeScraper(): AsyncGenerator<SectionData> {
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: true,
     defaultViewport: null,
     args: ['--start-maximized']
   });

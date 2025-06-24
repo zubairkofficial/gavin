@@ -12,7 +12,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
     try {
         console.log("Database connection established");
         const browser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             timeout: 0
         });
         const page = await browser.newPage();

@@ -21,9 +21,6 @@ export class TasksService  {
     @InjectRepository(Regulation)
         private regulationRepository: Repository<Regulation>,
      private embeddingService: EmbeddingService,
-    @InjectRepository(Regulation)
-        private regulationRepository: Repository<Regulation>,
-     private embeddingService: EmbeddingService,
   ) { }
 
   private readonly logger = new Logger(TasksService.name);
@@ -36,14 +33,23 @@ export class TasksService  {
   }
 
   async scrape() {
-    // for await (const statuteData of runTexasStatuteScraper()) {
-    //   // Process each statuteData as soon as it is available
-    //   this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
-    //   const StatuteEntity = new Statute();
-    //   StatuteEntity.code = statuteData.code;
-    //   StatuteEntity.title = statuteData.chapter;
-    //   StatuteEntity.content_html = statuteData.content || '';
-    //   StatuteEntity.source_url = 'scaper';
+
+    this.logger.log('Deleting all statutes with source_url = "scaper"');
+    await this.statuteRepository.delete({ source_url: 'scaper' });
+    this.logger.log('Deleted all regulations with source_url = "scaper"');
+    await this.regulationRepository.delete({ source_url: 'scaper' });
+    this.logger.log('Deleting all embadings with source_url = "scaper"');
+      await this.embeddingService.deleteDocumentEmbadings('Scraper');
+
+
+    for await (const statuteData of runTexasStatuteScraper()) {
+      // Process each statuteData as soon as it is available
+      this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
+      const StatuteEntity = new Statute();
+      StatuteEntity.code = statuteData.code;
+      StatuteEntity.title = statuteData.chapter;
+      StatuteEntity.content_html = statuteData.content || '';
+      StatuteEntity.source_url = 'scaper';
 
      const document =  await this.statuteRepository.save(StatuteEntity);
 
@@ -197,16 +203,16 @@ for await (const regulationData of parseXmlTitlesFromRepo()) {
       // Save to database
      const document =  await this.statuteRepository.save(StatuteEntity);
 
-      // await this.embeddingService.processDocument({
-      //   documentId: document.id,
-      //   content: document.content_html || '',
-      //   additionalMetadata: {  
-      //     document_id: document.id,
-      //     processed_at: new Date().toISOString(),
-      //     enabled: true,
-      //     source :  'Scraper',
-      //   }
-      // });
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {  
+          document_id: document.id,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source :  'Scraper',
+        }
+      });
        }
   }
 }

@@ -142,7 +142,7 @@ async function scrapeTitleLinks(page: Page): Promise<Array<{ title: string; titl
 
 export async function* runDelawareCodeScraper(): AsyncGenerator<DelawareCodeData> {
   const browser = await puppeteer.launch({
-    headless: false, // Set to true for production
+    headless: true, // Set to true for production
     defaultViewport: null,
     args: ['--start-maximized', '--no-sandbox', '--disable-setuid-sandbox']
   });

@@ -86,7 +86,7 @@ export async function fetchAndExtractContent(statuteData: StatuteData): Promise<
 
 export async function* runTexasStatuteScraper(): AsyncGenerator<StatuteData> {
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: true,
     defaultViewport: null,
     args: ['--start-maximized']
   });
