@@ -42,6 +42,7 @@ interface Contract {
   jurisdiction: string;
   source: string;
   createdAt: string;
+  filePath: string;
   status?: boolean;
 }
 
@@ -58,6 +59,7 @@ interface Regulation {
   jurisdiction: string;
   citation: string;
   title: string;
+  filePath: string;
   section: string;
   subject_area: string;
   id: string;
@@ -72,6 +74,7 @@ interface Statute {
   title: string;
   fileName: string;
   type: string;
+  filePath: string;
   court: string;
   citation: string;
   holding_summary: string;
@@ -300,17 +303,27 @@ export default function DocumentsTable() {
   const handleViewClick = (document: Contract | Regulation | Statute) => {
     console.log('View document:', document);
     
-    // Get the fileName from the document
+
     let fileName = '';
     
-    if ('fileName' in document && document.fileName) {
+    if( document.filePath){
+      fileName = document.filePath; 
+    }else{
+       if ('fileName' in document && document.fileName ) {
       fileName = document.fileName;
     } else {
       // Fallback: create a filename from title or id if fileName is not available
       const title = document.title || document.id;
       fileName = `${title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
     }
+    }
+   
     
+    if(fileName.startsWith('http://') || fileName.startsWith('https://')) {
+      // If the fileName is already a full URL, open it directly
+      window.open(fileName, '_blank');
+      return;
+    }
     // Construct the static file URL
     const fileUrl = `http://localhost:8080/static/files/${fileName}`;
     
@@ -388,6 +401,8 @@ export default function DocumentsTable() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID</TableHead>
+                      <TableHead>File Name</TableHead>
+
                       <TableHead>Title</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Jurisdiction</TableHead>
@@ -411,7 +426,10 @@ export default function DocumentsTable() {
                             {index + 1 + startIndex}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {contract.title}
+                            {contract.fileName?.slice(0, 30) }
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {contract.title }
                           </TableCell>
                           <TableCell>{contract.type}</TableCell>
                           <TableCell>{contract.jurisdiction}</TableCell>
@@ -456,6 +474,7 @@ export default function DocumentsTable() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID</TableHead>
+                      <TableHead>File Name</TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Citation</TableHead>
                       <TableHead>Jurisdiction</TableHead>
@@ -480,8 +499,12 @@ export default function DocumentsTable() {
                           <TableCell className="font-medium">
                             {index + 1 + startIndex}
                           </TableCell>
+
                           <TableCell className="font-medium">
-                            {regulation.title}
+                            {regulation.fileName?.slice(0, 30)}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {regulation.title.slice(0, 30)}
                           </TableCell>
                           <TableCell>{regulation.citation}</TableCell>
                           <TableCell>{regulation.jurisdiction}</TableCell>
@@ -551,10 +574,10 @@ export default function DocumentsTable() {
                             {index + 1 + startIndex}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {statute.fileName || "N/A"}
+                            {statute.fileName?.split('?')[0] || "N/A"}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {statute.title.slice(0, 50) || "--"}
+                            {statute.title.slice(0, 30) || "--"}
                           </TableCell>
                           <TableCell>{statute.citation}</TableCell>
                           <TableCell>{statute.jurisdiction}</TableCell>

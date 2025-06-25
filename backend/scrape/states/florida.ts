@@ -12,7 +12,7 @@ function delay(ms: number): Promise<void> {
 }
 
 // Async generator for a single URL
-export async function* processFloridaStatuteUrl(url: string, index: number, maxRetries: number = 3): AsyncGenerator<{ title: string, content: string }> {
+export async function* processFloridaStatuteUrl(url: string, index: number, maxRetries: number = 3): AsyncGenerator<{ title: string, content: string, url: string }> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`Processing URL ${index + 1} (attempt ${attempt}/${maxRetries}): ${url}`);
@@ -33,16 +33,22 @@ export async function* processFloridaStatuteUrl(url: string, index: number, maxR
       if (response.status >= 400) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-
       const $ = cheerio.load(response.data);
-      const title = $('title').text().trim();
       const content = $('body').text().trim();
+      const title = $('tr[valign="top"] td font center  ').first()
+        .contents()
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .join(' :')
+        .replace(/\s+/g, ' ')
+        .trim();
+
 
       if (!title && content.length < 100) {
         throw new Error('Received empty or minimal content');
       }
 
-      yield { title, content };
+      yield { title, content, url };
       return;
 
     } catch (error) {
@@ -59,7 +65,7 @@ export async function* processFloridaStatuteUrl(url: string, index: number, maxR
 }
 
 // Async generator for all URLs
-export async function* processAllFloridaStatutes(): AsyncGenerator<{ title: string, content: string }> {
+export async function* processAllFloridaStatutes(): AsyncGenerator<{ title: string, content: string, url: string }> {
   let pageI = 0;
   const urls: string[] = [];
   const lastChapter = 1015;
@@ -83,3 +89,12 @@ export async function* processAllFloridaStatutes(): AsyncGenerator<{ title: stri
     }
   }
 }
+
+// (async () => {
+//   for await (const { title, content, url } of processAllFloridaStatutes()) {
+//     console.log(`Title: ${title}`);
+//     console.log(`Content length: ${content.length} characters`);
+//     console.log(`Content url: ${url} `);
+//     console.log(`Content preview: ${content.substring(0, 200)}...`);
+//   }
+// })()

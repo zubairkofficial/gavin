@@ -9,18 +9,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Statute } from '../src/documents/entities/statute.entity';
 import { EmbeddingService } from './documents/services/embedding.service';
-import  {parseXmlTitlesFromRepo}  from '../scrape/gitScrape';
+import { parseXmlTitlesFromRepo } from '../scrape/gitScrape';
 import { Regulation } from './documents/entities/regulation.entity';
 import { openBrowser } from 'scrape/usCodesScraper';
 @Injectable()
 // export class TasksService implements OnModuleInit {
-export class TasksService  {
+export class TasksService {
   constructor(
     @InjectRepository(Statute)
     private readonly statuteRepository: Repository<Statute>,
     @InjectRepository(Regulation)
-        private regulationRepository: Repository<Regulation>,
-     private embeddingService: EmbeddingService,
+    private regulationRepository: Repository<Regulation>,
+    private embeddingService: EmbeddingService,
   ) { }
 
   private readonly logger = new Logger(TasksService.name);
@@ -39,8 +39,83 @@ export class TasksService  {
     this.logger.log('Deleted all regulations with source_url = "scaper"');
     await this.regulationRepository.delete({ source_url: 'scaper' });
     this.logger.log('Deleting all embadings with source_url = "scaper"');
-      await this.embeddingService.deleteDocumentEmbadings('Scraper');
+    await this.embeddingService.deleteDocumentEmbadings('Scraper');
 
+
+    for await (const { title, content , url} of processAllFloridaStatutes()) {
+      this.logger.log(`Processing Florida statute: ${title} and contat ${content.length}`);
+
+      const domain = new URL(url).hostname; // "www.leg.state.fl.us"
+const filename = url.substring(url.lastIndexOf('/') + 1); // "0001.html"
+
+const finalPath = `${domain}/${filename}`;
+      const statute = new Statute();
+      statute.title = title;
+      statute.content_html = content;
+      statute.jurisdiction = 'Florida';
+      statute.source_url = 'scaper';
+      statute.fileName = finalPath; 
+      statute.type = 'Statutes';
+      statute.filePath = url; 
+
+
+      const document = await this.statuteRepository.save(statute);
+
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Scraper',
+        }
+      });
+    }
+
+
+    for await (const { url, content, code, section, Title, subject_area , decision_date } of scrapeCaliforniaCodes()) {
+
+      console.log(`URL: ${url}`);
+      console.log(`Content length: ${content.length} characters`);
+      console.log(`Content preview: ${content.substring(0, 100)}...`);
+      console.log(`Code: ${code}`);
+      console.log(`Section: ${section}`);
+      console.log(`source_url: scraper`);
+      console.log(`type is Statutes`);
+      console.log(`Title: ${Title}`);
+      console.log(`subject_area: ${subject_area}`);
+
+    const statute = new Statute();
+    statute.content_html = content;
+    statute.source_url = 'scaper';
+    statute.fileName = url.split('/').pop() || '';
+    statute.title = Title ;
+    statute.section = section ;
+    statute.code = code ;
+    statute.jurisdiction = 'California';
+    statute.type = 'Statutes'; 
+    statute.holding_summary = subject_area ;
+    statute.filePath = url ;
+    statute.decision_date = decision_date
+      ? (decision_date instanceof Date ? decision_date.toISOString() : String(decision_date))
+      : '';
+
+
+
+    const document = await this.statuteRepository.save(statute);
+
+    await this.embeddingService.processDocument({
+      documentId: document.id,
+      content: document.content_html || '',
+      additionalMetadata: {
+        document_id: document.id,
+        processed_at: new Date().toISOString(),
+        enabled: true,
+        source: 'Scraper',
+      }
+    });
+  }
 
     for await (const statuteData of runTexasStatuteScraper()) {
       // Process each statuteData as soon as it is available
@@ -51,16 +126,16 @@ export class TasksService  {
       StatuteEntity.content_html = statuteData.content || '';
       StatuteEntity.source_url = 'scaper';
 
-     const document =  await this.statuteRepository.save(StatuteEntity);
+      const document = await this.statuteRepository.save(StatuteEntity);
 
       await this.embeddingService.processDocument({
         documentId: document.id,
         content: document.content_html || '',
-        additionalMetadata: {  
+        additionalMetadata: {
           document_id: document.id,
           processed_at: new Date().toISOString(),
           enabled: true,
-          source :  'Scraper',
+          source: 'Scraper',
         }
       });
 
@@ -78,16 +153,16 @@ export class TasksService  {
       StatuteEntity.source_url = 'scaper';
 
       // Save to database
-     const document = await this.statuteRepository.save(StatuteEntity);
+      const document = await this.statuteRepository.save(StatuteEntity);
 
       await this.embeddingService.processDocument({
         documentId: document.id,
         content: document.content_html || '',
-        additionalMetadata: {  
+        additionalMetadata: {
           document_id: document.id,
           processed_at: new Date().toISOString(),
           enabled: true,
-          source :  'Scraper',
+          source: 'Scraper',
         }
       });
     }
@@ -102,60 +177,21 @@ export class TasksService  {
       StatuteEntity.source_url = 'scaper';
 
       // Save to database
-     const document = await this.statuteRepository.save(StatuteEntity);
+      const document = await this.statuteRepository.save(StatuteEntity);
 
       await this.embeddingService.processDocument({
         documentId: document.id,
         content: document.content_html || '',
-        additionalMetadata: {  
+        additionalMetadata: {
           document_id: document.id,
           processed_at: new Date().toISOString(),
           enabled: true,
-          source :  'Scraper',
+          source: 'Scraper',
         }
       });
     }
 
-    for await (const { title, content } of processAllFloridaStatutes()) {
-      this.logger.log(`Processing Florida statute: ${title}`);
-      const statute = new Statute();
-      statute.title = title;
-      statute.content_html = content;
-
-     const document = await this.statuteRepository.save(statute);
-
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {  
-          document_id: document.id,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source :  'Scraper',
-        }
-      });
-    }
-
-    for await (const { url, content } of scrapeCaliforniaCodes()) {
-      this.logger.log(`Processing California code section: ${url}`);
-      const statute = new Statute();
-      statute.content_html = content;
-      statute.source_url = 'scaper';
-      // Add other fields if needed
-
-    const document =  await this.statuteRepository.save(statute);
-
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {  
-          document_id: document.id,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source :  'Scraper',
-        }
-      });
-    }
+    
 
 for await (const regulationData of parseXmlTitlesFromRepo()) {
   // this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
@@ -170,50 +206,50 @@ for await (const regulationData of parseXmlTitlesFromRepo()) {
   await this.embeddingService.processDocument({
     documentId: document.id,
     content: document.content_html || '',
-    additionalMetadata: {  
+    additionalMetadata: {
       document_id: document.id,
       processed_at: new Date().toISOString(),
       enabled: true,
-      source :  'Scraper',
+      source: 'Scraper',
     }
   });
 }
 
-    console.log('Scraping US Codes...');
+console.log('Scraping US Codes...');
 
-     for await (const parsedData of openBrowser()) {
-            console.log('Received parsed data:', {
-                fileName: parsedData.fileName,
-                title: parsedData.title,
-                hasError: !!parsedData.error,
-                section: parsedData.section,
-                citation: parsedData.citation,
-                data: parsedData.data
-            });
-           const StatuteEntity = new Statute();
-      StatuteEntity.fileName = parsedData.fileName;
-      StatuteEntity.title = parsedData.title ;
-      StatuteEntity.section = parsedData.section || '';
-      StatuteEntity.citation = parsedData.citation || '';
-      StatuteEntity.content_html = parsedData.data  || '';
-      StatuteEntity.source_url = 'scaper';
+for await (const parsedData of openBrowser()) {
+  console.log('Received parsed data:', {
+    fileName: parsedData.fileName,
+    title: parsedData.title,
+    hasError: !!parsedData.error,
+    section: parsedData.section,
+    citation: parsedData.citation,
+    data: parsedData.data
+  });
+  const StatuteEntity = new Statute();
+  StatuteEntity.fileName = parsedData.fileName;
+  StatuteEntity.title = parsedData.title;
+  StatuteEntity.section = parsedData.section || '';
+  StatuteEntity.citation = parsedData.citation || '';
+  StatuteEntity.content_html = parsedData.data || '';
+  StatuteEntity.source_url = 'scaper';
 
-      // Ensure content_html is defined
+  // Ensure content_html is defined
 
-      // Save to database
-     const document =  await this.statuteRepository.save(StatuteEntity);
+  // Save to database
+  const document = await this.statuteRepository.save(StatuteEntity);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {  
-          document_id: document.id,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source :  'Scraper',
-        }
-      });
-       }
+  await this.embeddingService.processDocument({
+    documentId: document.id,
+    content: document.content_html || '',
+    additionalMetadata: {
+      document_id: document.id,
+      processed_at: new Date().toISOString(),
+      enabled: true,
+      source: 'Scraper',
+    }
+  });
+}
   }
 }
 
