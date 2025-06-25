@@ -660,12 +660,12 @@ export default function DocumentsTable() {
 
                 {/* Show content_html if available */}
                 {documentDetails.content_html ? (
-                  <div className="space-y-4 m-6 ">
+                  <div className="space-y-4 m-6 overflow-y-auto ">
                     <div>
                       <label className="text-md font-semibold text-gray-800 mb-2 block">Document Content</label>
                       <h2 className="text-sm mb-5"><span className="font-bold ">Title : </span>{selectedDocument?.title || "Document Information"}</h2>
                       <div
-                        className="border rounded-lg p-4 max-[70vh]  overflow-y-auto overflow-x-hidden bg-gray-50 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200"
+                        className="border rounded-lg p-4 max-h-[80vh]  overflow-y-auto  bg-gray-50 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200"
                         dangerouslySetInnerHTML={{ __html: documentDetails.content_html }}
                         style={{
                           scrollBehavior: 'smooth',
