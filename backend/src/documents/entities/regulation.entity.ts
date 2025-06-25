@@ -32,6 +32,9 @@ export class Regulation extends BaseEntity{
     @Column({nullable: true})
     subject_area: string;
 
+     @Column({nullable :true , default: true})
+  isEnabled: boolean;
+
     @Column({ type: 'text'  , nullable: true})
     summary: string;
 

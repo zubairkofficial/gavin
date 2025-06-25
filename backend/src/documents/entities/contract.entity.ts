@@ -34,6 +34,9 @@ export class Contract extends BaseEntity {
   @Column()
   jurisdiction: string;
 
+  @Column({nullable :true , default: true})
+  isEnabled: boolean;
+
 
   @Column({ type: 'text' , nullable:true })
   content_html: string;

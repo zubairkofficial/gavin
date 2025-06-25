@@ -55,7 +55,7 @@ const finalPath = `${domain}/${filename}`;
       statute.jurisdiction = 'Florida';
       statute.source_url = 'scaper';
       statute.fileName = finalPath; 
-      statute.type = 'Statutes';
+      statute.type = 'statute';
       statute.filePath = url; 
 
 
@@ -76,15 +76,6 @@ const finalPath = `${domain}/${filename}`;
 
     for await (const { url, content, code, section, Title, subject_area , decision_date } of scrapeCaliforniaCodes()) {
 
-      console.log(`URL: ${url}`);
-      console.log(`Content length: ${content.length} characters`);
-      console.log(`Content preview: ${content.substring(0, 100)}...`);
-      console.log(`Code: ${code}`);
-      console.log(`Section: ${section}`);
-      console.log(`source_url: scraper`);
-      console.log(`type is Statutes`);
-      console.log(`Title: ${Title}`);
-      console.log(`subject_area: ${subject_area}`);
 
     const statute = new Statute();
     statute.content_html = content;
@@ -94,7 +85,7 @@ const finalPath = `${domain}/${filename}`;
     statute.section = section ;
     statute.code = code ;
     statute.jurisdiction = 'California';
-    statute.type = 'Statutes'; 
+    statute.type = 'statute'; 
     statute.holding_summary = subject_area ;
     statute.filePath = url ;
     statute.decision_date = decision_date
@@ -123,6 +114,8 @@ const finalPath = `${domain}/${filename}`;
       const StatuteEntity = new Statute();
       StatuteEntity.code = statuteData.code;
       StatuteEntity.title = statuteData.chapter;
+      StatuteEntity.type = 'statute';
+
       StatuteEntity.content_html = statuteData.content || '';
       StatuteEntity.source_url = 'scaper';
 
@@ -149,6 +142,7 @@ const finalPath = `${domain}/${filename}`;
       const StatuteEntity = new Statute();
       StatuteEntity.code = codeData.titleNumber;
       StatuteEntity.title = codeData.title;
+      StatuteEntity.type = 'statute';
       StatuteEntity.content_html = codeData.content;
       StatuteEntity.source_url = 'scaper';
 
@@ -174,6 +168,7 @@ const finalPath = `${domain}/${filename}`;
       StatuteEntity.code = sectionData.code;
       StatuteEntity.title = sectionData.chapter;
       StatuteEntity.content_html = sectionData.section;
+      StatuteEntity.type = 'statute';
       StatuteEntity.source_url = 'scaper';
 
       // Save to database
@@ -198,6 +193,7 @@ for await (const regulationData of parseXmlTitlesFromRepo()) {
   const RegulationEntity = new Regulation();
   RegulationEntity.title = regulationData.title || '';
   RegulationEntity.content_html = regulationData.contant;
+  RegulationEntity.type = 'regulation';
   RegulationEntity.fileName = regulationData.file;
   RegulationEntity.source_url = 'scaper';
 
@@ -229,6 +225,7 @@ for await (const parsedData of openBrowser()) {
   const StatuteEntity = new Statute();
   StatuteEntity.fileName = parsedData.fileName;
   StatuteEntity.title = parsedData.title;
+  StatuteEntity.type = 'statute';
   StatuteEntity.section = parsedData.section || '';
   StatuteEntity.citation = parsedData.citation || '';
   StatuteEntity.content_html = parsedData.data || '';

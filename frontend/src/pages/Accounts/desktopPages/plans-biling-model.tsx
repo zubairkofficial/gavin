@@ -39,7 +39,10 @@ export function PlansBillingModal({ isOpen, onClose, initialSection = "plans-bil
    ...(user?.role === 'admin' ? [
    
   ] : [ { id: "plans-billing", label: "Plans & Billing", icon: CreditCard }]),
-    { id: "help-center", label: "Help Center", icon: HelpCircle },
+   ...(user?.role === 'admin' ? [
+   
+  ] : [ { id: "help-center", label: "Help Center", icon: HelpCircle}]),
+
   ]
 
   const handleLogout = () => {

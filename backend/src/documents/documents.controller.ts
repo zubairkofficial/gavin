@@ -18,7 +18,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import * as fs from 'fs';
-import { z } from 'zod';
+import { boolean, z } from 'zod';
 import { Contract } from './entities/contract.entity';
 import { Clause } from './entities/clause.entity';
 import { Regulation } from './entities/regulation.entity';
@@ -541,6 +541,7 @@ createDocumentDto.filePath = relativeToUploads;
           title: true,
           fileName: true,
           filePath: true,
+          isEnabled:true,
           jurisdiction: true,
           source: true,
           createdAt: true,
@@ -575,6 +576,7 @@ createDocumentDto.filePath = relativeToUploads;
           citation: true,
           holding_summary: true,
           decision_date: true,
+          isEnabled:true,
           createdAt: true,
         },
         order: {
@@ -601,6 +603,7 @@ createDocumentDto.filePath = relativeToUploads;
           createdAt: true,
           updatedAt: true,
           type: true,
+          isEnabled:true,
           jurisdiction: true,
           citation: true,
           title: true,
@@ -751,26 +754,35 @@ createDocumentDto.filePath = relativeToUploads;
     }
   }
 
-  @Put('/metadata/:documentId')
+
+  @Put('/metadata/statute/:id')
   async updateMetadata(
-    @Param('documentId', ParseUUIDPipe) documentId: string,
-    @Body() newMetadata: Record<string, any>,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() newMetadata: Record<string ,  boolean>,
     @Request() req: any
   ) {
     try {
-      console.log('📋 Updating metadata for document:', documentId);
+      console.log('📋 Updating metadata for document:', id);
+
+      const document = await this.statuteRepository.findOne({where: {id}})
+      if (!document){
+        return {message : 'document not fount'}
+      }
+      document.isEnabled = !document.isEnabled
+      console.log(document.isEnabled)
+      this.statuteRepository.save(document)
 
       await this.dataSource
         .createQueryBuilder()
         .update('document_embeddings')
         .set({ metadata: JSON.stringify(newMetadata) })
-        .where("metadata->>'document_id' = :documentId", { documentId })
+        .where("metadata->>'document_id' = :id", { id })
         .execute();
 
       return {
         success: true,
         data: {
-          documentId,
+          id,
           userId: req.user?.id,
           metadata: newMetadata
         },
@@ -786,6 +798,95 @@ createDocumentDto.filePath = relativeToUploads;
       throw new BadRequestException(`Failed to update document metadata: ${error.message}`);
     }
   }
+
+  @Put('/metadata/regulation/:id')
+  async updateMetaRegulation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() newMetadata: Record<string ,  boolean>,
+    @Request() req: any
+  ) {
+    try {
+      console.log('📋 Updating metadata for document:', id);
+
+      const document = await this.regulationRepository.findOne({where: {id}})
+      if (!document){
+        return {message : 'document not fount'}
+      }
+      document.isEnabled = !document.isEnabled
+      console.log(document.isEnabled)
+      this.regulationRepository.save(document)
+
+      await this.dataSource
+        .createQueryBuilder()
+        .update('document_embeddings')
+        .set({ metadata: JSON.stringify(newMetadata) })
+        .where("metadata->>'document_id' = :id", { id })
+        .execute();
+
+      return {
+        success: true,
+        data: {
+          id,
+          userId: req.user?.id,
+          metadata: newMetadata
+        },
+      };
+
+    } catch (error) {
+      console.error('Error updating document metadata:', error);
+      
+      if (error?.code === '22P02') {
+        throw new BadRequestException('Invalid UUID format');
+      }
+      
+      throw new BadRequestException(`Failed to update document metadata: ${error.message}`);
+    }
+  }
+
+  @Put('/metadata/contract/:id')
+  async updateMetastatute(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() newMetadata: Record<string ,  boolean>,
+    @Request() req: any
+  ) {
+    try {
+      console.log('📋 Updating metadata for document:', id);
+
+      const document = await this.contractRepository.findOne({where: {id}})
+      if (!document){
+        return {message : 'document not fount'}
+      }
+      document.isEnabled = !document.isEnabled
+      console.log(document.isEnabled)
+      this.contractRepository.save(document)
+
+      await this.dataSource
+        .createQueryBuilder()
+        .update('document_embeddings')
+        .set({ metadata: JSON.stringify(newMetadata) })
+        .where("metadata->>'document_id' = :id", { id })
+        .execute();
+
+      return {
+        success: true,
+        data: {
+          id,
+          userId: req.user?.id,
+          metadata: newMetadata
+        },
+      };
+
+    } catch (error) {
+      console.error('Error updating document metadata:', error);
+      
+      if (error?.code === '22P02') {
+        throw new BadRequestException('Invalid UUID format');
+      }
+      
+      throw new BadRequestException(`Failed to update document metadata: ${error.message}`);
+    }
+  }
+
 
   @Get('contracts/:id')
   async viewContract(@Param('id', ParseUUIDPipe) id: string) {
@@ -811,27 +912,28 @@ createDocumentDto.filePath = relativeToUploads;
   }
 
   @Get('regulations/:id')
-  async viewRegulations(@Param('id', ParseUUIDPipe) id: string) {
+  async viewRegulation(@Param('id', ParseUUIDPipe) id: string) {
     try {
       const regulation = await this.regulationRepository.findOne({ where: { id } });
 
       if (!regulation) {
-        throw new BadRequestException('Regulation not found');
+        throw new BadRequestException('Contract not found');
       }
 
       return {
         success: true,
         content_html: regulation.content_html,
-        message: 'Regulation retrieved successfully'
+        message: 'Contract retrieved successfully'
       };
 
     } catch (error) {
       if (error?.code === '22P02') {
         throw new BadRequestException('Invalid UUID format');
       }
-      throw new BadRequestException(`Failed to view regulation data: ${error.message}`);
+      throw new BadRequestException(`Failed to view contract data: ${error.message}`);
     }
   }
+
 
   @Get('statutes/:id')
   async viewStatute(@Param('id', ParseUUIDPipe) id: string) {
@@ -856,92 +958,4 @@ createDocumentDto.filePath = relativeToUploads;
     }
   }
 
-
-
-  @Get('contracts/:documentId/view')
-async viewContractDocument(
-  @Param('documentId', ParseUUIDPipe) documentId: string,
-  @Res() res: Response
-) {
-  try {
-    const contract = await this.contractRepository.findOne({ 
-      where: { id: documentId },
-      select: ['id', 'fileName', 'filePath', 'title']
-    });
-
-    if (!contract) {
-      return res.status(404).json({
-        success: false,
-        message: 'Contract not found'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: contract.id,
-        fileName: contract.fileName,
-        filePath: contract.filePath,
-        title: contract.title,
-      },
-      message: 'Contract document served successfully'
-    });
-
-  } catch (error) {
-    console.error('❌ Error serving contract document:', error);
-    if (error?.code === '22P02') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid UUID format'
-      });
-    }
-    return res.status(500).json({
-      success: false,
-      message: `Failed to serve contract document: ${error.message}`
-    });
-  }
-}
-  @Get('regulations/:documentId/view')
-async viewRegulationDocument(
-  @Param('documentId', ParseUUIDPipe) documentId: string,
-  @Res() res: Response
-) {
-  try {
-    const regulation = await this.regulationRepository.findOne({ 
-      where: { id: documentId },
-      select: ['id', 'fileName', 'filePath', 'title']
-    });
-
-    if (!regulation) {
-      return res.status(404).json({
-        success: false,
-        message: 'Contract not found'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: regulation.id,
-        fileName: regulation.fileName,
-        filePath: regulation.filePath,
-        title: regulation.title,
-      },
-      message: 'Contract document served successfully'
-    });
-
-  } catch (error) {
-    console.error('❌ Error serving contract document:', error);
-    if (error?.code === '22P02') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid UUID format'
-      });
-    }
-    return res.status(500).json({
-      success: false,
-      message: `Failed to serve contract document: ${error.message}`
-    });
-  }
-}
 }

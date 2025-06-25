@@ -21,7 +21,9 @@ export default function ProfileDropdown() {
     ...(user?.role === 'admin' ? [
    
   ] : [ { id: "plans-billing", label: "Plans & Billing", icon: CreditCard }]),
-    { id: "help-center", label: "Help Center", icon: BookOpenText },
+    ...(user?.role === 'admin' ? [
+   
+  ] : [ { id: "help-center", label: "Help Center", icon: BookOpenText }]),
   ]
 
   // Handle dropdown item clicks
@@ -61,7 +63,7 @@ export default function ProfileDropdown() {
               <h2 className="text-xl font-semibold mb-1">{user?.fullName || "User"}</h2>
               <p className="text-gray-500 mb-4">{user?.email || "No email"}</p>
 
-              <div className="w-full bg-transparent border rounded-xl p-4 mb-4">
+              {/* <div className="w-full bg-transparent border rounded-xl p-4 mb-4">
                 <h3 className="font-semibold text-left">Credits Used</h3>
                 <div className="flex justify-between mb-1 items-center">
                   <Progress value={60} className="h-[5px] w-[80%]" />
@@ -70,7 +72,7 @@ export default function ProfileDropdown() {
                 <div className="flex justify-between mt-2">
                   <span className="text-xs text-gray-500 text-start">You have 5 daily credits to use first</span>
                 </div>
-              </div>
+              </div> */}
 
               <div className="w-full">
                 {/* Generate dropdown items dynamically */}

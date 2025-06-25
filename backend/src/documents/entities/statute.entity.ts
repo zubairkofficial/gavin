@@ -49,4 +49,7 @@ export class Statute extends BaseEntity{
     @Column({nullable: true})
     source_url: string;
 
+    @Column({nullable: true , default :true})
+    isEnabled: boolean;
+
 }
