@@ -403,7 +403,6 @@ export default function DocumentsTable() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>File Name</TableHead>
-
                       <TableHead>Title</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Jurisdiction</TableHead>
@@ -430,7 +429,7 @@ export default function DocumentsTable() {
                             {contract.fileName?.slice(0, 30) || "N/A"}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {contract.title }
+                            {contract.title?.slice(0,30) }
                           </TableCell>
                           <TableCell>{contract.type}</TableCell>
                           <TableCell>{contract.jurisdiction}</TableCell>
@@ -507,7 +506,7 @@ export default function DocumentsTable() {
                           <TableCell className="font-medium">
                             {regulation.title.slice(0, 30)}
                           </TableCell>
-                          <TableCell>{regulation.citation}</TableCell>
+                          <TableCell>{regulation.citation?.slice(0, 30)}</TableCell>
                           <TableCell>{regulation.jurisdiction}</TableCell>
                           <TableCell>
                             {formatDate(regulation.createdAt)}
@@ -580,7 +579,7 @@ export default function DocumentsTable() {
                           <TableCell className="font-medium">
                             {statute.title.slice(0, 30) || "--"}
                           </TableCell>
-                          <TableCell>{statute.citation}</TableCell>
+                          <TableCell>{statute.citation?.slice(0,30)}</TableCell>
                           <TableCell>{statute.jurisdiction}</TableCell>
                           <TableCell>
                             {formatDate(statute.createdAt)}
