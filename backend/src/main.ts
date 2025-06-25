@@ -41,7 +41,7 @@ async function bootstrap() {
   logger.log(`Upload path: ${uploadPath}`);
   // logger.log(`Serving static files from ${uploadPath}`);
   app.useStaticAssets(uploadPath, {
-    prefix: '/static/files/', // URL prefix for accessing the files
+    prefix: '/api/v1/static/files/', // URL prefix for accessing the files
   });
 
   app.setGlobalPrefix('/api/v1');  app.useGlobalPipes(

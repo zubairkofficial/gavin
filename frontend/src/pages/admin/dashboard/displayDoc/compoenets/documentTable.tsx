@@ -325,7 +325,8 @@ export default function DocumentsTable() {
       return;
     }
     // Construct the static file URL
-    const fileUrl = `http://localhost:8080/static/files/${fileName}`;
+    const url = import.meta.env.VITE_API_URL
+    const fileUrl = `${url}/static/files/${fileName}`;
     
     // Open the document in a new window/tab
     window.open(fileUrl, '_blank');
@@ -426,7 +427,7 @@ export default function DocumentsTable() {
                             {index + 1 + startIndex}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {contract.fileName?.slice(0, 30) }
+                            {contract.fileName?.slice(0, 30) || "N/A"}
                           </TableCell>
                           <TableCell className="font-medium">
                             {contract.title }
