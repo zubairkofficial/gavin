@@ -37,7 +37,7 @@ export class Statute extends BaseEntity{
     @Column({nullable: true})
     userId: string;
     
-    @Column({ type: 'text' })
+    @Column({ type: 'text' , nullable:true })
     content_html: string;
 
     @Column({ type: 'text'  , nullable: true })

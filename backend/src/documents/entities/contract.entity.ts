@@ -35,7 +35,7 @@ export class Contract extends BaseEntity {
   jurisdiction: string;
 
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text' , nullable:true })
   content_html: string;
 
   @OneToMany(() => Clause, (clause) => clause.contract)

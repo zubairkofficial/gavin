@@ -35,7 +35,7 @@ export class Regulation extends BaseEntity{
     @Column({ type: 'text'  , nullable: true})
     summary: string;
 
-    @Column({ type: 'text' })
+    @Column({ type: 'text' , nullable: true })
     content_html: string;
 
     @Column({nullable: true})
