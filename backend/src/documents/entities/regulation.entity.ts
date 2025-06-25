@@ -20,7 +20,7 @@ export class Regulation extends BaseEntity{
     @Column({nullable: true})
     filePath: string;
 
-    @Column()
+    @Column({nullable: true})
     fileName: string;
 
     @Column()
