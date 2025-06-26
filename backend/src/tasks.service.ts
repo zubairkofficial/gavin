@@ -40,14 +40,25 @@ export class TasksService implements OnModuleInit {
 
 
   async onModuleInit(){
-
-    const crons = await this.cronRepository.find()
-    console.log(crons)
+    const crons = await this.cronRepository.find();
+    console.log('Fetched Cron Jobs:', crons);
+    
     for(const cron of crons){
-      this.addCronJob(cron.jobName, cron.cronExpresion)
-    }
+        console.log(`Checking cron expression: ${cron.jobName}`);
+        
+        if (!this.isValidCronExpression(cron.jobName)) {
+            this.logger.error(`Invalid cron expression: ${cron.jobName}`);
+            continue;  // Skip invalid cron expressions
+        }
 
-  }
+        this.addCronJob(cron.cronExpresion, cron.jobName);
+    }
+}
+
+  private isValidCronExpression(cronExp: string): boolean {
+    const cronPattern = /^([0-5]?\d|\*) ([01]?\d|2[0-3]|\*) ([0-3]?\d|\*) ([01]?\d|\*) ([0-6]|\*)$/;
+    return cronPattern.test(cronExp);
+}
 
   // @Cron('0 0 1,15 * *')
   // async handleCron() {
@@ -65,7 +76,7 @@ export class TasksService implements OnModuleInit {
 
 
   addCronJob(jobName: string, cronTime: string): string {
-
+    
     if (!cronTime || typeof cronTime !== 'string') {
     return ('Invalid or missing cron expression');
   }
@@ -79,6 +90,8 @@ export class TasksService implements OnModuleInit {
 
   return `Added job: ${jobName} with schedule: ${cronTime}`;
 }
+
+
 
 
   
