@@ -59,7 +59,7 @@ export class TasksService implements OnModuleInit {
     return () => {
       const now = new Date().toISOString();
       this.logger.debug(`Running job: ${jobName} at ${now}`);
-      // this.scrape(); // Call the method you want
+      this.scrape(); // Call the method you want
     };
   }
 
