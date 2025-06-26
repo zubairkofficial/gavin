@@ -38,6 +38,7 @@ import { Public } from '@/auth/decorators/public.decorator';
 import type { File as MulterFile } from 'multer';
 import * as path from 'path';
 import { Response } from 'express';
+import axios from 'axios';
 
 // Configure multer storage to save files with original names in uploads folder
 const storage = multer.diskStorage({
@@ -261,11 +262,11 @@ async scrapeUrl(
   console.log(`🌐 Scrape request received:  ${createDocumentDto.filePath} , ${createDocumentDto.type}` );
 
   try {
-    const response = await fetch(createDocumentDto.filePath);
-    if (!response.ok) {
+    const response = await axios.get(createDocumentDto.filePath);
+    if (response.status < 200 || response.status >= 300) {
       throw new BadRequestException(`Failed to fetch URL: ${response.statusText}`);
     }
-    const html = await response.text();
+    const html = response.data;
 
     // Parse and extract text using Cheerio
     const cheerio = require('cheerio');

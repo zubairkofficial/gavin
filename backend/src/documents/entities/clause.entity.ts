@@ -7,7 +7,7 @@ export class Clause extends BaseEntity {
   @Column('uuid')
   contract_id: string;
 
-  @Column()
+  @Column({nullable :true})
   fileName: string;
 
   @Column()
