@@ -60,7 +60,8 @@ export async function* runNewYorkCodeScraper(): AsyncGenerator<SectionData> {
   const browser = await puppeteer.launch({
     headless: true,
     defaultViewport: null,
-    args: ['--start-maximized']
+    args: ['--start-maximized' , '--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'] // Start maximized
+
   });
 
   try {

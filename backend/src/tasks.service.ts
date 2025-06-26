@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import {  CronExpression, SchedulerRegistry } from '@nestjs/schedule';
+import { CronJob } from 'cron';
 import { runTexasStatuteScraper } from '../scrape/states/taxes';
 import { runDelawareCodeScraper } from 'scrape/states/delaware';
 import { runNewYorkCodeScraper } from 'scrape/states/newyork';
@@ -12,24 +13,100 @@ import { EmbeddingService } from './documents/services/embedding.service';
 import { parseXmlTitlesFromRepo } from '../scrape/gitScrape';
 import { Regulation } from './documents/entities/regulation.entity';
 import { openBrowser } from 'scrape/usCodesScraper';
+import { Cron } from './cron.entity';
+
+
+export interface CronJobInfo {
+  name: any;
+  cronTime: string;
+  lastDate: string | null;
+}
+
 @Injectable()
-// export class TasksService implements OnModuleInit {
-export class TasksService {
+export class TasksService implements OnModuleInit {
+// export class TasksService {
   constructor(
     @InjectRepository(Statute)
     private readonly statuteRepository: Repository<Statute>,
     @InjectRepository(Regulation)
     private regulationRepository: Repository<Regulation>,
+    @InjectRepository(Cron)
+    private cronRepository: Repository<Cron>,
     private embeddingService: EmbeddingService,
+    private schedulerRegistry: SchedulerRegistry
   ) { }
 
   private readonly logger = new Logger(TasksService.name);
 
 
-  @Cron('0 0 1,15 * *')
-  async handleCron() {
-    this.logger.debug('Scraping starts at midnight (00:00) on the 1st and 15th day of every month, which approximates "every 15 days."');
-    this.scrape();
+  async onModuleInit(){
+
+    const crons = await this.cronRepository.find()
+    console.log(crons)
+    for(const cron of crons){
+      this.addCronJob(cron.jobName, cron.cronExpresion)
+    }
+
+  }
+
+  // @Cron('0 0 1,15 * *')
+  // async handleCron() {
+  //   this.logger.debug('Scraping starts at midnight (00:00) on the 1st and 15th day of every month, which approximates "every 15 days."');
+  //   this.scrape();
+  // }
+
+   private jobCallbackFactory(jobName: string): () => void {
+    return () => {
+      const now = new Date().toISOString();
+      this.logger.debug(`Running job: ${jobName} at ${now}`);
+      // this.scrape(); // Call the method you want
+    };
+  }
+
+
+  addCronJob(jobName: string, cronTime: string): string {
+
+    if (!cronTime || typeof cronTime !== 'string') {
+    return ('Invalid or missing cron expression');
+  }
+  if (this.schedulerRegistry.doesExist('cron', jobName)) {
+    return `Job '${jobName}' already exists.`;
+  }
+
+  const job = new CronJob(cronTime, this.jobCallbackFactory(jobName));
+  this.schedulerRegistry.addCronJob(jobName, job);
+  job.start();
+
+  return `Added job: ${jobName} with schedule: ${cronTime}`;
+}
+
+
+  
+
+getCronJobs(): CronJobInfo[] {
+  const jobs = this.schedulerRegistry.getCronJobs();
+  const jobDetails: CronJobInfo[] = [];
+
+  jobs.forEach((job: CronJob, name: any) => {
+    jobDetails.push({
+      name,
+      cronTime: typeof job.cronTime.source === 'string' ? job.cronTime.source : job.cronTime.source.toString(), // ensure string
+      lastDate: job.lastDate()?.toISOString() || null,
+      
+    });
+  });
+
+  return jobDetails;
+}
+
+
+deleteCronJob(jobName: string): string {
+    if (!this.schedulerRegistry.doesExist('cron', jobName)) {
+      return `Job '${jobName}' does not exist.`;
+    }
+
+    this.schedulerRegistry.deleteCronJob(jobName);
+    return `Deleted job: ${jobName}`;
   }
 
   async scrape() {
@@ -88,9 +165,10 @@ const finalPath = `${domain}/${filename}`;
     statute.type = 'statute'; 
     statute.holding_summary = subject_area ;
     statute.filePath = url ;
-    statute.decision_date = decision_date
-      ? (decision_date instanceof Date ? decision_date.toISOString() : String(decision_date))
-      : '';
+    statute.decision_date =
+  decision_date && !isNaN(new Date(decision_date).getTime())
+    ? new Date(decision_date).toISOString()
+    : '';
 
 
 
@@ -188,65 +266,65 @@ const finalPath = `${domain}/${filename}`;
 
     
 
-for await (const regulationData of parseXmlTitlesFromRepo()) {
-  // this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
-  const RegulationEntity = new Regulation();
-  RegulationEntity.title = regulationData.title || '';
-  RegulationEntity.content_html = regulationData.contant;
-  RegulationEntity.type = 'regulation';
-  RegulationEntity.fileName = regulationData.file;
-  RegulationEntity.source_url = 'scaper';
+    for await (const regulationData of parseXmlTitlesFromRepo()) {
+      // this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
+      const RegulationEntity = new Regulation();
+      RegulationEntity.title = regulationData.title || '';
+      RegulationEntity.content_html = regulationData.contant;
+      RegulationEntity.type = 'regulation';
+      RegulationEntity.fileName = regulationData.file;
+      RegulationEntity.source_url = 'scaper';
 
-  const document = await this.regulationRepository.save(RegulationEntity);
+      const document = await this.regulationRepository.save(RegulationEntity);
 
-  await this.embeddingService.processDocument({
-    documentId: document.id,
-    content: document.content_html || '',
-    additionalMetadata: {
-      document_id: document.id,
-      processed_at: new Date().toISOString(),
-      enabled: true,
-      source: 'Scraper',
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Scraper',
+        }
+      });
     }
-  });
-}
 
-console.log('Scraping US Codes...');
+    console.log('Scraping US Codes...');
 
-for await (const parsedData of openBrowser()) {
-  console.log('Received parsed data:', {
-    fileName: parsedData.fileName,
-    title: parsedData.title,
-    hasError: !!parsedData.error,
-    section: parsedData.section,
-    citation: parsedData.citation,
-    data: parsedData.data
-  });
-  const StatuteEntity = new Statute();
-  StatuteEntity.fileName = parsedData.fileName;
-  StatuteEntity.title = parsedData.title;
-  StatuteEntity.type = 'statute';
-  StatuteEntity.section = parsedData.section || '';
-  StatuteEntity.citation = parsedData.citation || '';
-  StatuteEntity.content_html = parsedData.data || '';
-  StatuteEntity.source_url = 'scaper';
+    for await (const parsedData of openBrowser()) {
+      console.log('Received parsed data:', {
+        fileName: parsedData.fileName,
+        title: parsedData.title,
+        hasError: !!parsedData.error,
+        section: parsedData.section,
+        citation: parsedData.citation,
+        data: parsedData.data
+      });
+      const StatuteEntity = new Statute();
+      StatuteEntity.fileName = parsedData.fileName;
+      StatuteEntity.title = parsedData.title;
+      StatuteEntity.type = 'statute';
+      StatuteEntity.section = parsedData.section || '';
+      StatuteEntity.citation = parsedData.citation || '';
+      StatuteEntity.content_html = parsedData.data || '';
+      StatuteEntity.source_url = 'scaper';
 
-  // Ensure content_html is defined
+      // Ensure content_html is defined
 
-  // Save to database
-  const document = await this.statuteRepository.save(StatuteEntity);
+      // Save to database
+      const document = await this.statuteRepository.save(StatuteEntity);
 
-  await this.embeddingService.processDocument({
-    documentId: document.id,
-    content: document.content_html || '',
-    additionalMetadata: {
-      document_id: document.id,
-      processed_at: new Date().toISOString(),
-      enabled: true,
-      source: 'Scraper',
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Scraper',
+        }
+      });
     }
-  });
-}
   }
 }
 

@@ -1,14 +1,15 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { JWTUser } from './auth/decorators/jwtUser.decorator';
 import { Public } from './auth/decorators/public.decorator';
 import { Roles } from './auth/decorators/roles.decorator';
 import { JWTPayload, UserRole } from './common/types';
-import { TasksService } from './tasks.service';
+import { TasksService, CronJobInfo } from './tasks.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Status } from './documents/entities/status.entity';
 import { Repository } from 'typeorm';
+import { Cron } from './cron.entity';
 
 let isProcessing = false;
 
@@ -19,6 +20,8 @@ export class AppController {
      private readonly tasksService: TasksService,
      @InjectRepository(Status)
          private StatusRepository: Repository<Status>,
+     @InjectRepository(Cron)
+         private cronRepository: Repository<Cron>,
   ) {
 
   }
@@ -89,6 +92,30 @@ export class AppController {
   
     return { message: 'Task started successfully' };
   }
-  
+
+  @Public()
+  @Post('add')
+   async  addJob(@Body() body: { name: string; cron: string }) {
+     const  cron = new Cron()
+     cron.cronExpresion = body.name,
+     cron.jobName = body.cron
+     
+     const crons = await  this.cronRepository.save(cron)
+     console.log(crons)
+
+      return this.tasksService.addCronJob(body.name, body.cron);
+    }
+
+    @Public()
+  @Get('jobs')
+  getJobs(): CronJobInfo[] {
+    return this.tasksService.getCronJobs();
+  }
+
+  @Public()
+  @Delete(':name')
+    deleteJob(@Param('name') name: string) {
+      return this.tasksService.deleteCronJob(name);
+    }
 
 }

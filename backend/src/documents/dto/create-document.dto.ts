@@ -2,18 +2,24 @@ import { IsNotEmpty, IsString, IsOptional, IsArray } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateDocumentDto {
-    @IsNotEmpty()
+
+    @IsOptional()
     @IsString()
     title: string; 
 
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
     fileName: string; 
+
+    @IsOptional()
+    @IsString()
+    url: string; 
 
      @IsOptional()
     @IsString()
     filePath: string;
 
+    @IsOptional()
       @IsNotEmpty()
     @IsString()
     @Transform(({ value }) => value.toLowerCase())

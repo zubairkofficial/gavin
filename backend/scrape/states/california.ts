@@ -23,7 +23,9 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
         // Launch browser
         browser = await puppeteer.launch({
             headless: true,
-            timeout: 0
+            timeout: 0,
+            args: ['--start-maximized' , '--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'] // Start maximized
+
         });
 
         const page = await browser.newPage();

@@ -6,6 +6,8 @@ import UsersPage from "./admin/dashboard/users";
 import UploadDoc from "./admin/dashboard/documents";
 import DocTable from "./admin/dashboard/displayDoc/index";
 import JurisdictionsPage from "./admin/dashboard/jurisdictions";
+import ScrapeUrlPage from "./admin/dashboard/ScrapeUrl/Home";
+import SetTimePage from "./admin/dashboard/setTimeCron/Home";
 export default function AuthenticateRoutes() {
   return createRoutesFromElements(
     <>
@@ -35,6 +37,12 @@ export default function AuthenticateRoutes() {
         <Route
           path="/all-docs"
           element={<DocTable />} />
+        <Route
+          path="/Scraping"
+          element={<ScrapeUrlPage />} />
+        <Route
+          path="/set-time"
+          element={<SetTimePage />} />
         </Route>
       <Route
         path="/onboarding"

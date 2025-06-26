@@ -17,13 +17,12 @@ import { Statute } from './documents/entities/statute.entity';
 import { EmbeddingService } from './documents/services/embedding.service';
 import { Regulation } from './documents/entities/regulation.entity';
 import { Status } from './documents/entities/status.entity';
+import { Cron } from './cron.entity';
 
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Statute]),
-    TypeOrmModule.forFeature([Regulation]),
-    TypeOrmModule.forFeature([Status]),
+    
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -55,6 +54,7 @@ import { Status } from './documents/entities/status.entity';
     SharedModule,
     DocumentsModule,
     JurisdictionsModule,
+    TypeOrmModule.forFeature([Statute , Regulation , Status , Cron]),
   ],
   controllers: [AppController],
   providers: [

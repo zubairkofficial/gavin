@@ -88,7 +88,8 @@ export async function* runTexasStatuteScraper(): AsyncGenerator<StatuteData> {
   const browser = await puppeteer.launch({
     headless: true,
     defaultViewport: null,
-    args: ['--start-maximized']
+    args: ['--start-maximized' , '--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'] // Start maximized
+
   });
 
   try {

@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon,FileUp, HomeIcon, Scale, BookOpen } from "lucide-react"
+import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon,FileUp, HomeIcon, Scale, BookOpen, Wrench, CalendarClock } from "lucide-react"
 import type React from "react"
 
 import {
@@ -181,6 +181,29 @@ function AdminSidebar() {
                   <span className="truncate" style={{
                     textOverflow: "clip",
                   }}>Knowledge Base</span>
+                    <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </NavLink>
+              <NavLink to="/Scraping">
+                <SidebarMenuItem className="px-2">
+                  <SidebarMenuButton className="gap-2 py-5 relative">
+                    <Wrench size={18} />
+                  <span className="truncate" style={{
+                    textOverflow: "clip",
+                  }}>Scraping</span>
+                    <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </NavLink>
+              <NavLink to="/set-time">
+                <SidebarMenuItem className="px-2">
+                  <SidebarMenuButton className="gap-2 py-5 relative">
+                    <CalendarClock size={18} />
+                  <span className="truncate" style={{
+                    textOverflow: "clip",
+                  }}>Scraping Scheduler
+</span>
                     <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -144,7 +144,7 @@ export async function* runDelawareCodeScraper(): AsyncGenerator<DelawareCodeData
   const browser = await puppeteer.launch({
     headless: true, // Set to true for production
     defaultViewport: null,
-    args: ['--start-maximized', '--no-sandbox', '--disable-setuid-sandbox']
+    args: ['--start-maximized', '--no-sandbox', '--disable-setuid-sandbox' , '--no-sandbox', '--disable-setuid-sandbox']
   });
 
   try {

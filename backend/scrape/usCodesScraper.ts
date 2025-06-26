@@ -256,7 +256,7 @@ export async function* openBrowser(): AsyncGenerator<ParsedXMLData> {
         browser = await puppeteer.launch({
             headless: true, // Set to true if you want to run without UI
             defaultViewport: null, // Use full screen
-            args: ['--start-maximized' , '--disable-http2'] // Start maximized
+            args: ['--start-maximized' , '--disable-http2', '--no-sandbox', '--disable-setuid-sandbox'] // Start maximized
         });
 
         // Create a new page

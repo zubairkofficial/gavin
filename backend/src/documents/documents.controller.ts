@@ -244,9 +244,61 @@ createDocumentDto.filePath = relativeToUploads;
     return cleanText.replace(/\0/g, '').trim();
   }
 
-  /**
-   * Process document based on its type
-   */
+ 
+// ...existing code...
+
+@Post('/scrape/url')
+async scrapeUrl(
+  @Body() createDocumentDto: CreateDocumentDto,
+  @Request() req: any,
+) {
+
+  console.log(`the url ${createDocumentDto.filePath} , and the type is ${createDocumentDto.type}`)
+  if (!createDocumentDto.filePath || !createDocumentDto.type) {
+    throw new BadRequestException('Both url and type are required');
+  }
+
+  console.log(`🌐 Scrape request received:  ${createDocumentDto.filePath} , ${createDocumentDto.type}` );
+
+  try {
+    const response = await fetch(createDocumentDto.filePath);
+    if (!response.ok) {
+      throw new BadRequestException(`Failed to fetch URL: ${response.statusText}`);
+    }
+    const html = await response.text();
+
+    // Parse and extract text using Cheerio
+    const cheerio = require('cheerio');
+    const $ = cheerio.load(html);
+
+    // Extract visible text from the body
+    let fullText = $('body').text();
+
+    // Sanitize the extracted text
+    fullText = this.sanitizeText(fullText);
+
+    // Validate extracted text
+    if (!fullText || fullText.length < 10) {
+      throw new BadRequestException('Could not extract sufficient text from the URL');
+    }
+
+    console.log('📄 URL text extraction successful:', {
+      textLength: fullText.length,
+      firstChars: fullText.substring(0, 100),
+    })
+
+    // Process document based on type
+    return await this.processDocumentByType(createDocumentDto, fullText, req.user?.id);
+
+  } catch (error) {
+    console.error('❌ URL scraping error:', error);
+    if (error instanceof BadRequestException) {
+      throw error;
+    }
+    throw new BadRequestException(`Failed to scrape URL: ${error.message}`);
+  }
+}
+
   private async processDocumentByType(dto: CreateDocumentDto, fullText: string, userId: string) {
     const documentType = dto.type?.toLowerCase();
 
@@ -957,5 +1009,10 @@ createDocumentDto.filePath = relativeToUploads;
       throw new BadRequestException(`Failed to view statute data: ${error.message}`);
     }
   }
+
+
+
+  
+
 
 }
