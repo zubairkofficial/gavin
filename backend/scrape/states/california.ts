@@ -10,7 +10,6 @@ export interface ExtractedContent {
     section: string;
     Title:string;
     subject_area:string;
-    decision_date?: string | Date;
 }
 
 export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent> {
@@ -129,14 +128,9 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                     if (!Title) {
                         console.warn(`⚠ No code title found for link: ${link}`);
                     }
-                    const Dates = $content('div[style*="float:left;text-indent: 0.5in;"] i ').first().text().trim();
-                    const date = Dates.split(',')[0].trim();
-                    const _date = Number(date.split('.')[1]?.trim());
-                    const decision_date = new Date(_date , 0 , 1 );
+                   
 
-                    console.log(`Decision Date: ${decision_date}`);
-
-                    console.log(`Date: ${date}`);
+                    
                     if (!Date) {
                         console.warn(`⚠ No code title found for link: ${link}`);
                     }
@@ -146,7 +140,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                     }
 
                     if (content) {
-                        yield { url: link, content , code , section ,Title , subject_area  , decision_date };
+                        yield { url: link, content , code , section ,Title , subject_area  };
                         console.log(`✓ Yielded content for: ${link} (${content.length} characters)`);
                     } else {
                         console.warn(`⚠ No content found for link: ${link}`);
@@ -204,7 +198,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
 //         let errorCount = 0;
 //         const startTime = Date.now();
 
-//         for await (const { url, content , code , section , Title, subject_area , decision_date } of scrapeCaliforniaCodes()) {
+//         for await (const { url, content , code , section , Title, subject_area  } of scrapeCaliforniaCodes()) {
 //             processedCount++;
 
 //             console.log(`\n[${processedCount}] Processing California code section:`);
@@ -216,7 +210,6 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
 //             console.log(`source_url: scraper`);
 //             console.log(`type is Statutes`);
 //             console.log(`Title: ${Title}`);
-//             console.log(`decision_date: ${decision_date}`);
 //             console.log(`subject_area: ${subject_area}`);
 
 //         }

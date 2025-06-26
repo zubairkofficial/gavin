@@ -7,7 +7,7 @@ export class Statute extends BaseEntity{
     @Column({nullable: true})
     fileName: string;
 
-    @Column()
+    @Column({nullable:true})
     title: string;
 
     @Column({nullable: true})

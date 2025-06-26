@@ -84,7 +84,13 @@ export class TasksService implements OnModuleInit {
     return `Job '${jobName}' already exists.`;
   }
 
-  const job = new CronJob(cronTime, this.jobCallbackFactory(jobName));
+  const job = new CronJob(
+  cronTime,
+  this.jobCallbackFactory(jobName),
+  null,
+  false,
+  'GMT' 
+);
   this.schedulerRegistry.addCronJob(jobName, job);
   job.start();
 
@@ -151,20 +157,20 @@ const finalPath = `${domain}/${filename}`;
 
       const document = await this.statuteRepository.save(statute);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-        }
-      });
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //   }
+      // });
     }
 
 
-    for await (const { url, content, code, section, Title, subject_area , decision_date } of scrapeCaliforniaCodes()) {
+    for await (const { url, content, code, section, Title, subject_area  } of scrapeCaliforniaCodes()) {
 
 
     const statute = new Statute();
@@ -178,27 +184,22 @@ const finalPath = `${domain}/${filename}`;
     statute.type = 'statute'; 
     statute.holding_summary = subject_area ;
     statute.filePath = url ;
-    statute.decision_date =
-  decision_date && !isNaN(new Date(decision_date).getTime())
-    ? new Date(decision_date).toISOString()
-    : '';
 
 
 
     const document = await this.statuteRepository.save(statute);
 
-    await this.embeddingService.processDocument({
-      documentId: document.id,
-      content: document.content_html || '',
-      additionalMetadata: {
-        document_id: document.id,
-        processed_at: new Date().toISOString(),
-        enabled: true,
-        source: 'Scraper',
-      }
-    });
+    // await this.embeddingService.processDocument({
+    //   documentId: document.id,
+    //   content: document.content_html || '',
+    //   additionalMetadata: {
+    //     document_id: document.id,
+    //     processed_at: new Date().toISOString(),
+    //     enabled: true,
+    //     source: 'Scraper',
+    //   }
+    // });
   }
-
     for await (const statuteData of runTexasStatuteScraper()) {
       // Process each statuteData as soon as it is available
       this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
@@ -212,17 +213,16 @@ const finalPath = `${domain}/${filename}`;
 
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-        }
-      });
-
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //   }
+      // });
 
 
     }
@@ -240,16 +240,16 @@ const finalPath = `${domain}/${filename}`;
       // Save to database
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-        }
-      });
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //   }
+      // });
     }
 
     for await (const sectionData of runNewYorkCodeScraper()) {
@@ -265,16 +265,16 @@ const finalPath = `${domain}/${filename}`;
       // Save to database
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-        }
-      });
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //   }
+      // });
     }
 
     
@@ -290,16 +290,16 @@ const finalPath = `${domain}/${filename}`;
 
       const document = await this.regulationRepository.save(RegulationEntity);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-        }
-      });
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //   }
+      // });
     }
 
     console.log('Scraping US Codes...');
@@ -327,16 +327,16 @@ const finalPath = `${domain}/${filename}`;
       // Save to database
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-        }
-      });
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //   }
+      // });
     }
   }
 }

@@ -9,6 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog"
+import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
@@ -352,7 +363,23 @@ export default function DocumentsTable() {
       <Card>
         <CardHeader className="flex items-center justify-between">
           <CardTitle>Knowledge Base</CardTitle>
-          <Button onClick={() => handleClick()}>Start Scraping</Button>
+          <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button>Start Scraping</Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will start the scraping process. Make sure everything is ready.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleClick}>Confirm</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
           
         </CardHeader>
         <CardContent>
