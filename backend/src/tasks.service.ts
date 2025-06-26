@@ -89,7 +89,7 @@ export class TasksService implements OnModuleInit {
   this.jobCallbackFactory(jobName),
   null,
   false,
-  'GMT' 
+  'UTC' 
 );
   this.schedulerRegistry.addCronJob(jobName, job);
   job.start();
