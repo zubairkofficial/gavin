@@ -221,8 +221,9 @@ export default function Settime() {
                           mode="single"
                           selected={date}
                           onSelect={setDate}
-                          disabled={(date) => date < new Date()}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                           initialFocus
+                          today={new Date()}
                         />
                       </PopoverContent>
                     </Popover>

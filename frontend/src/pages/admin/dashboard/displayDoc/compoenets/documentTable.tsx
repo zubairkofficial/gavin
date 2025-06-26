@@ -2,7 +2,7 @@
 
 import { Switch } from "@/components/ui/switch"
 import { useState, useEffect } from "react"
-import { Pencil, Eye } from "lucide-react"
+import { Pencil, Eye, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -353,6 +353,7 @@ export default function DocumentsTable() {
         <CardHeader className="flex items-center justify-between">
           <CardTitle>Knowledge Base</CardTitle>
           <Button onClick={() => handleClick()}>Start Scraping</Button>
+          
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -375,6 +376,7 @@ export default function DocumentsTable() {
                 className="flex-1"
               />
             </div>
+            <Button variant={'ghost'} className="p-6 bg-white text-black" onClick={() => fetchDocuments(documentType)}><RefreshCcw/></Button>
           </div>
 
           {error && <div className="text-red-500 mb-4 p-3 bg-red-50 rounded-md">Error: {error}</div>}
