@@ -58,6 +58,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
         // Execute search
         console.log("Executing search...");
         await page.click('input[id="codeSearchForm:execute_search"]');
+       await new Promise(resolve => setTimeout(resolve, 1000))
         await page.waitForSelector('span[title="Sections Returned"]');
         await page.waitForSelector('.table_main');
 
