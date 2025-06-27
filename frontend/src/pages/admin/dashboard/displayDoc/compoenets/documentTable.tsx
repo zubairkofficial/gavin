@@ -439,11 +439,11 @@ export default function DocumentsTable() {
                       paginatedContracts.map((contract, index) => (
                         <TableRow key={contract.id}>
                           <TableCell className="font-medium">{index + 1 + startIndex}</TableCell>
-                          <TableCell className="font-medium">{contract.fileName?.slice(0, 30) || "N/A"}</TableCell>
-                          <TableCell className="font-medium">{contract.title?.slice(0, 30)}</TableCell>
-                          <TableCell>{contract.type}</TableCell>
-                          <TableCell>{contract.jurisdiction}</TableCell>
-                          <TableCell>{contract.source}</TableCell>
+                          <TableCell className="font-medium">{contract.fileName?.slice(0, 30) || "--"}</TableCell>
+                          <TableCell className="font-medium">{contract.title?.slice(0, 30) || '--'}</TableCell>
+                          <TableCell>{contract.type || '--'}</TableCell>
+                          <TableCell>{contract.jurisdiction || '--'}</TableCell>
+                          <TableCell>{contract.source || '--'}</TableCell>
                           <TableCell>{formatDate(contract.createdAt)}</TableCell>
                           <TableCell>
                             <Switch
@@ -503,10 +503,10 @@ export default function DocumentsTable() {
                         <TableRow key={regulation.id}>
                           <TableCell className="font-medium">{index + 1 + startIndex}</TableCell>
 
-                          <TableCell className="font-medium">{regulation.fileName?.slice(0, 30)}</TableCell>
-                          <TableCell className="font-medium">{regulation.title.slice(0, 30)}</TableCell>
-                          <TableCell>{regulation.citation?.slice(0, 30)}</TableCell>
-                          <TableCell>{regulation.jurisdiction}</TableCell>
+                          <TableCell className="font-medium">{regulation.fileName?.slice(0, 30) || '--'}</TableCell>
+                          <TableCell className="font-medium">{regulation.title.slice(0, 30) || '--'}</TableCell>
+                          <TableCell>{regulation.citation?.slice(0, 30) || '--'}</TableCell>
+                          <TableCell>{regulation.jurisdiction || '--'}</TableCell>
                           <TableCell>{formatDate(regulation.createdAt)}</TableCell>
                           <TableCell>
                             <Switch
@@ -567,11 +567,11 @@ export default function DocumentsTable() {
                       paginatedStatutes.map((statute, index) => (
                         <TableRow key={statute.id}>
                           <TableCell className="font-medium">{index + 1 + startIndex}</TableCell>
-                          <TableCell className="font-medium">{statute.fileName?.split("?")[0] || "N/A"}</TableCell>
+                          <TableCell className="font-medium">{statute.fileName?.split("?")[0] || "--"}</TableCell>
                           <TableCell className="font-medium">{statute.title.slice(0, 30) || "--"}</TableCell>
-                          <TableCell>{statute.citation?.slice(0, 30)}</TableCell>
+                          <TableCell>{statute.citation?.slice(0, 30) || '--'}</TableCell>
                           <TableCell>{statute.code?.slice(0,15) || '--'}</TableCell>
-                          <TableCell>{statute.jurisdiction}</TableCell>
+                          <TableCell>{statute.jurisdiction || '--'}</TableCell>
                           <TableCell>{formatDate(statute.createdAt)}</TableCell>
                           <TableCell>
                             <Switch
