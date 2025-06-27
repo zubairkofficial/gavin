@@ -60,7 +60,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
         await page.click('input[id="codeSearchForm:execute_search"]');
        await new Promise(resolve => setTimeout(resolve, 1000))
         await page.waitForSelector('span[title="Sections Returned"]');
-        await page.waitForSelector('.table_main');
+        // await page.waitForSelector('.table_main');
 
         console.log("Search completed, starting content extraction...");
 
@@ -165,8 +165,9 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
             if (nextBtn.length && !nextBtn.attr('disabled')) {
                 console.log(`Moving to page ${pageCount + 1}...`);
                 await page.click('input[id="datanavform:nextTen"]');
+                await new Promise(resolve => setTimeout(resolve, 1000))
                 await page.waitForNetworkIdle();
-                await page.waitForSelector('.table_main');
+                // await page.waitForSelector('.table_main');
                 pageCount++;
                 isDisabled = false;
             } else {

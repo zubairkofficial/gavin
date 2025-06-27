@@ -625,6 +625,7 @@ async scrapeUrl(
           filePath: true,
           jurisdiction: true,
           type: true,
+          code:true,
           court: true,
           citation: true,
           holding_summary: true,

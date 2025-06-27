@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import {  CronExpression, SchedulerRegistry } from '@nestjs/schedule';
+import { CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { runTexasStatuteScraper } from '../scrape/states/taxes';
 import { runDelawareCodeScraper } from 'scrape/states/delaware';
@@ -24,7 +24,7 @@ export interface CronJobInfo {
 
 @Injectable()
 export class TasksService implements OnModuleInit {
-// export class TasksService {
+  // export class TasksService {
   constructor(
     @InjectRepository(Statute)
     private readonly statuteRepository: Repository<Statute>,
@@ -39,26 +39,26 @@ export class TasksService implements OnModuleInit {
   private readonly logger = new Logger(TasksService.name);
 
 
-  async onModuleInit(){
+  async onModuleInit() {
     const crons = await this.cronRepository.find();
     console.log('Fetched Cron Jobs:', crons);
-    
-    for(const cron of crons){
-        console.log(`Checking cron expression: ${cron.jobName}`);
-        
-        if (!this.isValidCronExpression(cron.jobName)) {
-            this.logger.error(`Invalid cron expression: ${cron.jobName}`);
-            continue;  // Skip invalid cron expressions
-        }
 
-        this.addCronJob(cron.cronExpresion, cron.jobName);
+    for (const cron of crons) {
+      console.log(`Checking cron expression: ${cron.jobName}`);
+
+      if (!this.isValidCronExpression(cron.jobName)) {
+        this.logger.error(`Invalid cron expression: ${cron.jobName}`);
+        continue;  // Skip invalid cron expressions
+      }
+
+      this.addCronJob(cron.cronExpresion, cron.jobName);
     }
-}
+  }
 
   private isValidCronExpression(cronExp: string): boolean {
     const cronPattern = /^([0-5]?\d|\*) ([01]?\d|2[0-3]|\*) ([0-3]?\d|\*) ([01]?\d|\*) ([0-6]|\*)$/;
     return cronPattern.test(cronExp);
-}
+  }
 
   // @Cron('0 0 1,15 * *')
   // async handleCron() {
@@ -66,7 +66,7 @@ export class TasksService implements OnModuleInit {
   //   this.scrape();
   // }
 
-   private jobCallbackFactory(jobName: string): () => void {
+  private jobCallbackFactory(jobName: string): () => void {
     return () => {
       const now = new Date().toISOString();
       this.logger.debug(`Running job: ${jobName} at ${now}`);
@@ -76,50 +76,50 @@ export class TasksService implements OnModuleInit {
 
 
   addCronJob(jobName: string, cronTime: string): string {
-    
+
     if (!cronTime || typeof cronTime !== 'string') {
-    return ('Invalid or missing cron expression');
+      return ('Invalid or missing cron expression');
+    }
+    if (this.schedulerRegistry.doesExist('cron', jobName)) {
+      return `Job '${jobName}' already exists.`;
+    }
+
+    const job = new CronJob(
+      cronTime,
+      this.jobCallbackFactory(jobName),
+      null,
+      false,
+      'UTC'
+    );
+    this.schedulerRegistry.addCronJob(jobName, job);
+    job.start();
+
+    return `Added job: ${jobName} with schedule: ${cronTime}`;
   }
-  if (this.schedulerRegistry.doesExist('cron', jobName)) {
-    return `Job '${jobName}' already exists.`;
-  }
-
-  const job = new CronJob(
-  cronTime,
-  this.jobCallbackFactory(jobName),
-  null,
-  false,
-  'UTC' 
-);
-  this.schedulerRegistry.addCronJob(jobName, job);
-  job.start();
-
-  return `Added job: ${jobName} with schedule: ${cronTime}`;
-}
 
 
 
 
-  
 
-getCronJobs(): CronJobInfo[] {
-  const jobs = this.schedulerRegistry.getCronJobs();
-  const jobDetails: CronJobInfo[] = [];
 
-  jobs.forEach((job: CronJob, name: any) => {
-    jobDetails.push({
-      name,
-      cronTime: typeof job.cronTime.source === 'string' ? job.cronTime.source : job.cronTime.source.toString(), // ensure string
-      lastDate: job.lastDate()?.toISOString() || null,
-      
+  getCronJobs(): CronJobInfo[] {
+    const jobs = this.schedulerRegistry.getCronJobs();
+    const jobDetails: CronJobInfo[] = [];
+
+    jobs.forEach((job: CronJob, name: any) => {
+      jobDetails.push({
+        name,
+        cronTime: typeof job.cronTime.source === 'string' ? job.cronTime.source : job.cronTime.source.toString(), // ensure string
+        lastDate: job.lastDate()?.toISOString() || null,
+
+      });
     });
-  });
 
-  return jobDetails;
-}
+    return jobDetails;
+  }
 
 
-deleteCronJob(jobName: string): string {
+  deleteCronJob(jobName: string): string {
     if (!this.schedulerRegistry.doesExist('cron', jobName)) {
       return `Job '${jobName}' does not exist.`;
     }
@@ -138,21 +138,23 @@ deleteCronJob(jobName: string): string {
     await this.embeddingService.deleteDocumentEmbadings('Scraper');
 
 
-    for await (const { title, content , url} of processAllFloridaStatutes()) {
-      this.logger.log(`Processing Florida statute: ${title} and contat ${content.length}`);
 
-      const domain = new URL(url).hostname; // "www.leg.state.fl.us"
-const filename = url.substring(url.lastIndexOf('/') + 1); // "0001.html"
 
-const finalPath = `${domain}/${filename}`;
+    for await (const { url, content, code, section, Title, subject_area } of scrapeCaliforniaCodes()) {
+
+
       const statute = new Statute();
-      statute.title = title;
       statute.content_html = content;
-      statute.jurisdiction = 'Florida';
       statute.source_url = 'scaper';
-      statute.fileName = finalPath; 
+      statute.fileName = url.split('/').pop() || '';
+      statute.title = Title;
+      statute.section = section;
+      statute.code = code;
+      statute.jurisdiction = 'California';
       statute.type = 'statute';
-      statute.filePath = url; 
+      statute.holding_summary = subject_area;
+      statute.filePath = url;
+
 
 
       const document = await this.statuteRepository.save(statute);
@@ -170,36 +172,36 @@ const finalPath = `${domain}/${filename}`;
     }
 
 
-    for await (const { url, content, code, section, Title, subject_area  } of scrapeCaliforniaCodes()) {
+    for await (const { title, content, url } of processAllFloridaStatutes()) {
+      this.logger.log(`Processing Florida statute: ${title} and contat ${content.length}`);
+
+      const domain = new URL(url).hostname; // "www.leg.state.fl.us"
+      const filename = url.substring(url.lastIndexOf('/') + 1); // "0001.html"
+
+      const finalPath = `${domain}/${filename}`;
+      const statute = new Statute();
+      statute.title = title;
+      statute.content_html = content;
+      statute.jurisdiction = 'Florida';
+      statute.source_url = 'scaper';
+      statute.fileName = finalPath;
+      statute.type = 'statute';
+      statute.filePath = url;
 
 
-    const statute = new Statute();
-    statute.content_html = content;
-    statute.source_url = 'scaper';
-    statute.fileName = url.split('/').pop() || '';
-    statute.title = Title ;
-    statute.section = section ;
-    statute.code = code ;
-    statute.jurisdiction = 'California';
-    statute.type = 'statute'; 
-    statute.holding_summary = subject_area ;
-    statute.filePath = url ;
+      const document = await this.statuteRepository.save(statute);
 
-
-
-    const document = await this.statuteRepository.save(statute);
-
-    // await this.embeddingService.processDocument({
-    //   documentId: document.id,
-    //   content: document.content_html || '',
-    //   additionalMetadata: {
-    //     document_id: document.id,
-    //     processed_at: new Date().toISOString(),
-    //     enabled: true,
-    //     source: 'Scraper',
-    //   }
-    // });
-  }
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //   }
+      // });
+    }
     for await (const statuteData of runTexasStatuteScraper()) {
       // Process each statuteData as soon as it is available
       this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
@@ -277,7 +279,7 @@ const finalPath = `${domain}/${filename}`;
       // });
     }
 
-    
+
 
     for await (const regulationData of parseXmlTitlesFromRepo()) {
       // this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);

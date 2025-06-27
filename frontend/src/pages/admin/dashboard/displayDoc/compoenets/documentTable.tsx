@@ -74,6 +74,7 @@ interface Statute {
   jurisdiction: string
   title: string
   fileName: string
+  code : string
   isEnabled:boolean
   type: string
   filePath: string
@@ -548,6 +549,7 @@ export default function DocumentsTable() {
                       <TableHead>FileName</TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Citation</TableHead>
+                      <TableHead>Code</TableHead>
                       <TableHead>Jurisdiction</TableHead>
                       <TableHead>Created At</TableHead>
                       <TableHead>Status</TableHead>
@@ -568,6 +570,7 @@ export default function DocumentsTable() {
                           <TableCell className="font-medium">{statute.fileName?.split("?")[0] || "N/A"}</TableCell>
                           <TableCell className="font-medium">{statute.title.slice(0, 30) || "--"}</TableCell>
                           <TableCell>{statute.citation?.slice(0, 30)}</TableCell>
+                          <TableCell>{statute.code.slice(0,15) || '--'}</TableCell>
                           <TableCell>{statute.jurisdiction}</TableCell>
                           <TableCell>{formatDate(statute.createdAt)}</TableCell>
                           <TableCell>
