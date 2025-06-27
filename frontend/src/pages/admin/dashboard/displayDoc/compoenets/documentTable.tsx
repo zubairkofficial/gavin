@@ -570,7 +570,7 @@ export default function DocumentsTable() {
                           <TableCell className="font-medium">{statute.fileName?.split("?")[0] || "N/A"}</TableCell>
                           <TableCell className="font-medium">{statute.title.slice(0, 30) || "--"}</TableCell>
                           <TableCell>{statute.citation?.slice(0, 30)}</TableCell>
-                          <TableCell>{statute.code.slice(0,15) || '--'}</TableCell>
+                          <TableCell>{statute.code?.slice(0,15) || '--'}</TableCell>
                           <TableCell>{statute.jurisdiction}</TableCell>
                           <TableCell>{formatDate(statute.createdAt)}</TableCell>
                           <TableCell>
