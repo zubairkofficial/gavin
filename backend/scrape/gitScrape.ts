@@ -76,7 +76,7 @@ export async function* parseXmlTitlesFromRepo() {
                 console.error(`Error parsing XML file ${file}:`, parseErr.message);
             }
             // console.log(`Parsed file: ${file}, Title: ${title}`);
-            yield { file, title, contant: parsedData };
+            yield { file, title, contant: parsedData , repoUrl };
         } catch (readError: any) {
             console.error(`Error reading file ${file}:`, readError.message);
             yield { file, title: null, contant: '' };

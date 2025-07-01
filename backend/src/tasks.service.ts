@@ -44,14 +44,14 @@ export class TasksService implements OnModuleInit {
     console.log('Fetched Cron Jobs:', crons);
 
     for (const cron of crons) {
-      console.log(`Checking cron expression: ${cron.jobName}`);
+      console.log(`Checking cron expression: ${cron.cronExpresion}`);
 
-      if (!this.isValidCronExpression(cron.jobName)) {
-        this.logger.error(`Invalid cron expression: ${cron.jobName}`);
+      if (!this.isValidCronExpression(cron.cronExpresion)) {
+        this.logger.error(`Invalid cron expression: ${cron.cronExpresion}`);
         continue;  // Skip invalid cron expressions
       }
 
-      this.addCronJob(cron.cronExpresion, cron.jobName);
+      this.addCronJob( cron.jobName , cron.cronExpresion);
     }
   }
 
@@ -64,6 +64,12 @@ export class TasksService implements OnModuleInit {
   // async handleCron() {
   //   this.logger.debug('Scraping starts at midnight (00:00) on the 1st and 15th day of every month, which approximates "every 15 days."');
   //   this.scrape();
+  // }
+
+
+  // @Cron(CronExpression.)
+  // handleCron() {
+  //   this.logger.debug('Called every 30 seconds');
   // }
 
   private jobCallbackFactory(jobName: string): () => void {
@@ -89,12 +95,13 @@ export class TasksService implements OnModuleInit {
       this.jobCallbackFactory(jobName),
       null,
       false,
-      'UTC'
+      'local'
     );
     this.schedulerRegistry.addCronJob(jobName, job);
     job.start();
 
-    return `Added job: ${jobName} with schedule: ${cronTime}`;
+  const message = `Added job: ${jobName} with schedule: ${cronTime}`;
+  return message;
   }
 
 
@@ -119,9 +126,15 @@ export class TasksService implements OnModuleInit {
   }
 
 
-  deleteCronJob(jobName: string): string {
+ async deleteCronJob(jobName: string): Promise<string> {
     if (!this.schedulerRegistry.doesExist('cron', jobName)) {
       return `Job '${jobName}' does not exist.`;
+    }
+
+    const result = await this.cronRepository.delete( { jobName :  jobName })
+    console.log(result)
+    if (!result) {
+      console.log( `Deleted job from scheduler, but no record found in DB for '${jobName}'.`);
     }
 
     this.schedulerRegistry.deleteCronJob(jobName);
@@ -202,14 +215,18 @@ export class TasksService implements OnModuleInit {
       //   }
       // });
     }
+
+
     for await (const statuteData of runTexasStatuteScraper()) {
       // Process each statuteData as soon as it is available
       this.logger.log(`Processing statute: ${JSON.stringify(statuteData)}`);
       const StatuteEntity = new Statute();
       StatuteEntity.code = statuteData.code;
       StatuteEntity.title = statuteData.chapter;
+      StatuteEntity.fileName = statuteData.fileName;
       StatuteEntity.type = 'statute';
-
+      StatuteEntity.jurisdiction = 'Texas';
+      StatuteEntity.filePath = statuteData.url;
       StatuteEntity.content_html = statuteData.content || '';
       StatuteEntity.source_url = 'scaper';
 
@@ -235,7 +252,10 @@ export class TasksService implements OnModuleInit {
       const StatuteEntity = new Statute();
       StatuteEntity.code = codeData.titleNumber;
       StatuteEntity.title = codeData.title;
+      StatuteEntity.fileName = codeData.fileName || '';
       StatuteEntity.type = 'statute';
+      StatuteEntity.filePath = codeData.filePath;
+      StatuteEntity.jurisdiction = 'delaware';
       StatuteEntity.content_html = codeData.content;
       StatuteEntity.source_url = 'scaper';
 
@@ -260,8 +280,13 @@ export class TasksService implements OnModuleInit {
       const StatuteEntity = new Statute();
       StatuteEntity.code = sectionData.code;
       StatuteEntity.title = sectionData.chapter;
+      StatuteEntity.fileName = sectionData.fileName || '';
+      StatuteEntity.holding_summary = sectionData.subject_area || '';
+      StatuteEntity.filePath = sectionData.filePath || '';
       StatuteEntity.content_html = sectionData.section;
+      // StatuteEntity.filePath = sectionData.filePath;
       StatuteEntity.type = 'statute';
+      StatuteEntity.jurisdiction = 'NewYork';
       StatuteEntity.source_url = 'scaper';
 
       // Save to database
@@ -287,6 +312,8 @@ export class TasksService implements OnModuleInit {
       RegulationEntity.title = regulationData.title || '';
       RegulationEntity.content_html = regulationData.contant;
       RegulationEntity.type = 'regulation';
+      RegulationEntity.jurisdiction = 'federal';
+      RegulationEntity.filePath = regulationData.repoUrl || '';
       RegulationEntity.fileName = regulationData.file;
       RegulationEntity.source_url = 'scaper';
 
@@ -307,18 +334,12 @@ export class TasksService implements OnModuleInit {
     console.log('Scraping US Codes...');
 
     for await (const parsedData of openBrowser()) {
-      console.log('Received parsed data:', {
-        fileName: parsedData.fileName,
-        title: parsedData.title,
-        hasError: !!parsedData.error,
-        section: parsedData.section,
-        citation: parsedData.citation,
-        data: parsedData.data
-      });
       const StatuteEntity = new Statute();
       StatuteEntity.fileName = parsedData.fileName;
       StatuteEntity.title = parsedData.title;
+      StatuteEntity.filePath = parsedData.filePath || '';
       StatuteEntity.type = 'statute';
+      StatuteEntity.jurisdiction = 'federal';
       StatuteEntity.section = parsedData.section || '';
       StatuteEntity.citation = parsedData.citation || '';
       StatuteEntity.content_html = parsedData.data || '';

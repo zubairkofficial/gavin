@@ -144,7 +144,7 @@ function getAllSectionParagraphs(parsed: any): string[] {
   return result;
 }
 
-async function parseXMLFile(xmlFilePath: string): Promise<ParsedXMLData> {
+async function parseXMLFile(xmlFilePath: string , url: string): Promise<ParsedXMLData> {
     try {
         console.log(`Parsing: ${path.basename(xmlFilePath)}`);
 
@@ -172,8 +172,9 @@ async function parseXMLFile(xmlFilePath: string): Promise<ParsedXMLData> {
         const Data = cleanedData.map((item: string) => item.trim()).filter((item: string) => item.length > 0).join('\n\n');
         return {
             fileName: path.basename(xmlFilePath),
-            filePath: xmlFilePath,
+            filePath: url,
             title: title,
+
             section: section,
             citation: citation,
             data: Data
@@ -200,7 +201,7 @@ function deleteDirectorySync(dirPath: string) {
     }
 }
 
-async function* parseAllXMLFiles(extractDir: string): AsyncGenerator<ParsedXMLData> {
+async function* parseAllXMLFiles(extractDir: string , url :string): AsyncGenerator<ParsedXMLData> {
     try {
         console.log('Starting XML parsing process...');
 
@@ -217,7 +218,7 @@ async function* parseAllXMLFiles(extractDir: string): AsyncGenerator<ParsedXMLDa
             const xmlFile = xmlFiles[i];
             console.log(`Processing file ${i + 1}/${xmlFiles.length}: ${path.basename(xmlFile)}`);
 
-            const parsedData = await parseXMLFile(xmlFile);
+            const parsedData = await parseXMLFile(xmlFile , url);
             
             // Add a small delay to prevent overwhelming the system
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -318,7 +319,7 @@ export async function* openBrowser(): AsyncGenerator<ParsedXMLData> {
 
         // Parse all XML files and yield each result as it becomes available
         console.log('\nStarting XML to JSON conversion...');
-        for await (const parsedData of parseAllXMLFiles(extractDir)) {
+        for await (const parsedData of parseAllXMLFiles(extractDir , fullUrl)) {
             yield parsedData;
         }
 

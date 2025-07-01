@@ -8,7 +8,10 @@ interface SectionData {
   articleNumber: string;
   articleName: string;
   chapter: string;
+  filePath:string
 section:string
+subject_area:string
+fileName:string
 }
 
 const SELECTED_CODES = {
@@ -132,10 +135,11 @@ export async function* runNewYorkCodeScraper(): AsyncGenerator<SectionData> {
                       const contentContainer = document.querySelector('.nys-openleg-result-text');
                       if (!titleContainer) return null;
                       const headline = titleContainer.querySelector('.nys-openleg-result-title-headline')?.textContent?.trim() || '';
-                      const shortTitle = titleContainer.querySelector('.nys-openleg-result-title-short')?.textContent?.trim() || '';
+                      const shortTitle = titleContainer.querySelector('.nys-openleg-result-title-location')?.textContent?.trim() || '';
+                      const subject_area = titleContainer.querySelector('.nys-openleg-result-text')?.textContent?.trim() || '';
                       const location = titleContainer.querySelector('.nys-openleg-result-title-location')?.textContent?.trim() || '';
                       const content = contentContainer?.innerHTML?.trim() || '';
-                      return { shortTitle, location, content };
+                      return { shortTitle, location, content , subject_area  , headline};
                     });
 
                     if (sectionDetails) {
@@ -144,10 +148,16 @@ export async function* runNewYorkCodeScraper(): AsyncGenerator<SectionData> {
                       const parsedContent = parseSectionContent(sectionDetails.content);
 
                       // Yield structured data
+
+                      const filename= section.url.split('laws')[1]
+
                       yield {
                         code: codeName,
+                        filePath:section.url,
                         articleNumber: articleNumber,
                         articleName: article.articleName,
+                        fileName:filename,
+                        subject_area : sectionDetails.subject_area,
                         chapter: sectionDetails.shortTitle,
                         section: parsedContent
                       };

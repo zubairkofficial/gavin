@@ -28,7 +28,7 @@ export class Contract extends BaseEntity {
   title: string;
 
   @IsOptional()
-  @Column()
+  @Column({nullable:true})
   fileName : string;
 
   @Column()

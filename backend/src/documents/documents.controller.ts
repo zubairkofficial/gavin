@@ -98,6 +98,8 @@ export class DocumentsController {
         'application/pdf',
         'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/png',
+        'image/jpeg',
       ];
 
       if (supportedTypes.includes(file.mimetype)) {
@@ -245,8 +247,6 @@ createDocumentDto.filePath = relativeToUploads;
     return cleanText.replace(/\0/g, '').trim();
   }
 
- 
-// ...existing code...
 
 @Post('/scrape/url')
 async scrapeUrl(
@@ -335,7 +335,7 @@ async scrapeUrl(
       const regulation = new Regulation();
       regulation.content_html = fullText;
       regulation.title = dto.title || analysis.title;
-      regulation.fileName = dto.fileName;
+      regulation.fileName = dto.fileName || dto.filePath?.split('//')[1]?.substring(0,20);
       regulation.filePath = dto.filePath;
       regulation.userId = userId;
       regulation.type = dto.type;
@@ -344,7 +344,7 @@ async scrapeUrl(
       regulation.section = analysis.section || dto.section || '';
       regulation.subject_area = analysis.subject_area || dto.subject_area || '';
       regulation.summary = analysis.summary || dto.summary || '';
-      regulation.source_url = dto.source_url || '';
+      regulation.source_url = dto.source_url || 'Upload';
       regulation.updated_at = new Date().toISOString();
 
       const savedRegulation = await this.regulationRepository.save(regulation);
@@ -399,7 +399,7 @@ async scrapeUrl(
       contract.type = dto.type;
       contract.title = dto.title;
       contract.userId = userId;
-      contract.fileName = dto.fileName || 'Untitled Contract';
+      contract.fileName = dto.fileName || dto.filePath?.split('//')[1]?.substring(0,20) ;
       contract.filePath = dto.filePath;
       contract.jurisdiction = dto.jurisdiction || 'Unknown';
       contract.content_html = fullText;
@@ -468,6 +468,7 @@ async scrapeUrl(
           fileName: savedContract.fileName,
           filePath: savedContract.filePath,
           jurisdiction: savedContract.jurisdiction,
+
           documentType: 'contract',
           processingDetails: {
             textLength: fullText.length,
@@ -511,7 +512,8 @@ async scrapeUrl(
       StatuteEntity.title = dto.title;
       StatuteEntity.userId = userId;
       StatuteEntity.type = dto.type || 'statute';
-      StatuteEntity.fileName = dto.fileName;
+      StatuteEntity.source_url =dto.source_url || 'Upload';
+      StatuteEntity.fileName = dto.fileName || dto.filePath?.split('//')[1]?.substring(0,20);
       StatuteEntity.filePath = dto.filePath;
       StatuteEntity.court = analysis.court;
       StatuteEntity.jurisdiction = dto.jurisdiction || '';
@@ -627,6 +629,7 @@ async scrapeUrl(
           type: true,
           code:true,
           court: true,
+          source_url:true,
           citation: true,
           holding_summary: true,
           decision_date: true,
@@ -661,6 +664,7 @@ async scrapeUrl(
           jurisdiction: true,
           citation: true,
           title: true,
+          source_url:true,
           fileName: true,
           filePath: true,
           section: true,

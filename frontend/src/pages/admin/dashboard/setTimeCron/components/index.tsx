@@ -1,17 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { CalendarIcon, Plus, Search, Trash2 } from "lucide-react"
-import { format } from "date-fns"
+import { Plus, Search, Trash2, Clock } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import API from "@/lib/api"
 
@@ -21,10 +20,29 @@ interface CronJob {
   lastDate: string | null
 }
 
+interface ScheduleOption {
+  value: string
+  label: string
+  description: string
+}
+
+const scheduleOptions: ScheduleOption[] = [
+  { value: "daily", label: "Every Day", description: "Runs daily at specified time" },
+  { value: "monday", label: "Every Monday", description: "Runs every Monday at specified time" },
+  { value: "tuesday", label: "Every Tuesday", description: "Runs every Tuesday at specified time" },
+  { value: "wednesday", label: "Every Wednesday", description: "Runs every Wednesday at specified time" },
+  { value: "thursday", label: "Every Thursday", description: "Runs every Thursday at specified time" },
+  { value: "friday", label: "Every Friday", description: "Runs every Friday at specified time" },
+  { value: "saturday", label: "Every Saturday", description: "Runs every Saturday at specified time" },
+  { value: "sunday", label: "Every Sunday", description: "Runs every Sunday at specified time" },
+  { value: "every15days", label: "Every 15 Days", description: "Runs on 1st and 16th of every month" },
+  { value: "monthly", label: "Every Month", description: "Runs on 1st of every month" },
+]
+
 export default function Settime() {
-  const [date, setDate] = useState<Date>()
   const [time, setTime] = useState("")
   const [name, setJobName] = useState("")
+  const [scheduleType, setScheduleType] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -58,6 +76,38 @@ export default function Settime() {
 
   const filteredJobs = cronJobs.filter((job) => job.name.toLowerCase().includes(searchTerm.toLowerCase()))
 
+  // Convert schedule type and time to cron expression
+  const generateCronExpression = (scheduleType: string, time: string): string => {
+    const [hours, minutes] = time.split(":")
+    const minute = parseInt(minutes)
+    const hour = parseInt(hours)
+
+    switch (scheduleType) {
+      case "daily":
+        return `${minute} ${hour} * * *`
+      case "monday":
+        return `${minute} ${hour} * * 1`
+      case "tuesday":
+        return `${minute} ${hour} * * 2`
+      case "wednesday":
+        return `${minute} ${hour} * * 3`
+      case "thursday":
+        return `${minute} ${hour} * * 4`
+      case "friday":
+        return `${minute} ${hour} * * 5`
+      case "saturday":
+        return `${minute} ${hour} * * 6`
+      case "sunday":
+        return `${minute} ${hour} * * 0`
+      case "every15days":
+        return `${minute} ${hour} 1,16 * *`
+      case "monthly":
+        return `${minute} ${hour} 1 * *`
+      default:
+        return `${minute} ${hour} * * *`
+    }
+  }
+
   // Convert cron expression to readable format
   const cronToReadableTime = (cronExpression: string): string => {
     try {
@@ -70,15 +120,17 @@ export default function Settime() {
       if (minute !== '*' && hour !== '*') {
         const hourNum = parseInt(hour)
         const minuteNum = parseInt(minute)
-        const timeStr = `${hourNum.toString().padStart(2, '0')}:${minuteNum.toString().padStart(2, '0')} UTC`
+        const timeStr = `${hourNum.toString().padStart(2, '0')}:${minuteNum.toString().padStart(2, '0')}`
         
-        if (dayOfMonth !== '*') {
-          return `${timeStr} on day ${dayOfMonth} of each month`
+        if (dayOfMonth === '1,16') {
+          return `${timeStr} on 1st and 16th of every month`
+        } else if (dayOfMonth === '1' && month === '*' && dayOfWeek === '*') {
+          return `${timeStr} on 1st of every month`
         } else if (dayOfWeek !== '*') {
           const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
           const dayNames = dayOfWeek.split(',').map(d => days[parseInt(d)] || d).join(', ')
           return `${timeStr} every ${dayNames}`
-        } else {
+        } else if (dayOfMonth === '*' && dayOfWeek === '*') {
           return `${timeStr} daily`
         }
       }
@@ -89,16 +141,8 @@ export default function Settime() {
     }
   }
 
-  const convertUtcToCron = (utcDateString: string): string => {
-    const date = new Date(utcDateString)
-    const minute = date.getUTCMinutes()
-    const hour = date.getUTCHours()
-    const day = date.getUTCDate()
-    return `${minute} ${hour} ${day} * *`
-  }
-
   const handleSubmit = async () => {
-    if (!date || !time || !name.trim()) {
+    if (!scheduleType || !time || !name.trim()) {
       toast.error("Please fill in all required fields.")
       return
     }
@@ -106,29 +150,38 @@ export default function Settime() {
     setIsLoading(true)
 
     try {
-      // Combine date and time
-      const [hours, minutes] = time.split(":")
-      const scheduledDateTime = new Date(date)
-      scheduledDateTime.setHours(Number.parseInt(hours), Number.parseInt(minutes), 0, 0)
+      const cron = generateCronExpression(scheduleType, time)
+      console.log(`Generated cron: ${cron}`)
 
-      const cron = convertUtcToCron(scheduledDateTime.toISOString())
-      console.log(cron)
-
+      const selectedOption = scheduleOptions.find(opt => opt.value === scheduleType)
       console.log(
-        `Job: ${name}, Date: ${format(date, "yyyy-MM-dd")}, Time: ${time}, Schedule: ${scheduledDateTime.toISOString()}`,
+        `Job: ${name}, Schedule: ${selectedOption?.label}, Time: ${time}, Cron: ${cron}`
       )
-
 
       // API call
       const response = await API.post("/add", {
         name,
         cron
       })
+      console.log(response)
 
-      if (response.status >= 200 && response.status < 300) {
-        toast.success(`"${name}" scheduled for ${format(date, "PPP")} at ${time}`)
+      console.log(response.data.error)
+      if(response.data.error){
+        // toast.error(`response.data.error`)
+        throw new Error(`${response.data.error}`)
+      }
+      // if(response.data){
+      //   toast(`${response.data}`)
+      // }else {
+       
+      // }
+
+
+      if (response.status >= 200 && response.status < 300 ) {
+        const selectedOption = scheduleOptions.find(opt => opt.value === scheduleType)
+        toast.success(`"${name}" scheduled for ${selectedOption?.label} at ${time}`)
         // Reset form
-        setDate(undefined)
+        setScheduleType("")
         setTime("")
         setJobName("")
         setIsPopoverOpen(false)
@@ -136,9 +189,10 @@ export default function Settime() {
         fetchJobs()
       } else {
         throw new Error("Failed to schedule job")
+
       }
     } catch (error) {
-      toast.error(`Failed to schedule job. Please try again.`)
+      toast.error(`${error}`)
     } finally {
       setIsLoading(false)
     }
@@ -162,6 +216,12 @@ export default function Settime() {
     } finally {
       setDeletingJob(null)
     }
+  }
+
+  const getPreviewText = () => {
+    if (!scheduleType || !time || !name) return null
+    const selectedOption = scheduleOptions.find(opt => opt.value === scheduleType)
+    return `${name} - ${selectedOption?.label} at ${time}`
   }
 
   return (
@@ -205,40 +265,44 @@ export default function Settime() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="date-picker">Select Date *</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {date ? format(date, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={date}
-                          onSelect={setDate}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          initialFocus
-                          today={new Date()}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <Label htmlFor="schedule-type">Schedule Type *</Label>
+                    <Select value={scheduleType} onValueChange={setScheduleType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select schedule frequency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {scheduleOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            <div className="flex flex-col">
+                              <span>{option.label}</span>
+                              <span className="text-xs text-muted-foreground">{option.description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="time-picker">Select Time *</Label>
-                    <Input id="time-picker" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+                    <div className="relative">
+                      <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        id="time-picker" 
+                        type="time" 
+                        value={time} 
+                        onChange={(e) => setTime(e.target.value)}
+                        className="pl-8"
+                      />
+                    </div>
                   </div>
 
-                  {date && time && name && (
+                  {getPreviewText() && (
                     <div className="p-3 bg-muted rounded-lg">
                       <p className="text-sm text-muted-foreground">Preview:</p>
-                      <p className="font-medium text-sm">
-                        {name} - {format(date, "PPP")} at {time}
+                      <p className="font-medium text-sm">{getPreviewText()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Cron: {generateCronExpression(scheduleType, time)}
                       </p>
                     </div>
                   )}
@@ -246,7 +310,7 @@ export default function Settime() {
                   <div className="flex gap-2">
                     <Button
                       onClick={handleSubmit}
-                      disabled={!date || !time || !name.trim() || isLoading}
+                      disabled={!scheduleType || !time || !name.trim() || isLoading}
                       className="flex-1"
                     >
                       {isLoading ? "Creating..." : "Create Job"}
@@ -281,20 +345,20 @@ export default function Settime() {
                 <TableRow>
                   <TableHead>Job Name</TableHead>
                   <TableHead>Schedule</TableHead>
-                  <TableHead>Last Run</TableHead>
+                  <TableHead>Cron Expression</TableHead>
                   <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoadingJobs ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       Loading jobs...
                     </TableCell>
                   </TableRow>
                 ) : filteredJobs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       {searchTerm
                         ? "No jobs found matching your search."
                         : "No scheduled jobs yet. Create your first job!"}
@@ -305,9 +369,12 @@ export default function Settime() {
                     <TableRow key={job.name}>
                       <TableCell className="font-medium">{job.name}</TableCell>
                       <TableCell className="text-sm">{cronToReadableTime(job.cronTime)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {job.lastDate ? new Date(job.lastDate).toLocaleString() : "Never"}
+                      <TableCell className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                        {job.cronTime}
                       </TableCell>
+                      {/* <TableCell className="text-sm text-muted-foreground">
+                        {job.lastDate ? new Date(job.lastDate).toLocaleString() : "Never"}
+                      </TableCell> */}
                       <TableCell>
                         <Button
                           variant="outline"

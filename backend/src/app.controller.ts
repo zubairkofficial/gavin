@@ -96,12 +96,21 @@ export class AppController {
   @Public()
   @Post('add')
    async  addJob(@Body() body: { name: string; cron: string }) {
-     const  cron = new Cron()
-     cron.cronExpresion = body.name,
-     cron.jobName = body.cron
+
+    const data = await this.cronRepository.findOne({ where: { jobName: body.name } });
+    if(data){
+      const error ={
+        error : `job already exist with name ${body.name}`,
+        staus : 'flase'
+      } 
+      return error
+    }
+     const cron = new Cron();
+     cron.cronExpresion = body.cron;
+     cron.jobName = body.name;
      
-     const crons = await  this.cronRepository.save(cron)
-     console.log(crons)
+     const crons = await this.cronRepository.save(cron);
+     console.log(crons);
 
       return this.tasksService.addCronJob(body.name, body.cron);
     }

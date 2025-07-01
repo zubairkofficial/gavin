@@ -8,6 +8,7 @@ interface StatuteData {
   section: string;
   url: string;
   content?: string;
+  fileName:string
 }
 
 const SELECTED_CODES = {
@@ -173,6 +174,7 @@ export async function* runTexasStatuteScraper(): AsyncGenerator<StatuteData> {
               });
 
               let finalUrl = '';
+            
               if (capturedUrls.length > 0) {
                 const url = capturedUrls[0];
                 if (url && (url.includes('/Docs/') || url.includes('.htm'))) {
@@ -190,12 +192,15 @@ export async function* runTexasStatuteScraper(): AsyncGenerator<StatuteData> {
                 }
               }
 
+              const hiddenUrl = finalUrl.split('Docs')[1]
+
               if (finalUrl) {
                 const statuteData: StatuteData = {
                   code: codeName,
                   chapter: chapter.text,
                   section: section.text,
-                  url: finalUrl
+                  url: finalUrl,
+                  fileName : hiddenUrl,
                 };
                 const content = await fetchAndExtractContent(statuteData);
                 statuteData.content = content;

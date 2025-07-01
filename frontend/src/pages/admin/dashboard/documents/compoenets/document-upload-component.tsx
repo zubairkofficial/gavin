@@ -54,7 +54,7 @@ const documentTypes: DocumentType[] = [
         />
       </svg>
     ),
-    acceptedFormats: [".pdf", ".doc", ".docx", ".txt"],
+    acceptedFormats: [".pdf", ".doc", ".docx", ".txt" , ".png" , ".jpeg"],
   },
   {
     id: "Regulation",
@@ -75,7 +75,7 @@ const documentTypes: DocumentType[] = [
         />
       </svg>
     ),
-    acceptedFormats: [".pdf", ".doc", ".docx", ".txt"],
+    acceptedFormats: [".pdf", ".doc", ".docx", ".txt", ".png" , ".jpeg"],
   },
   {
     id: "Statute",
@@ -97,7 +97,7 @@ const documentTypes: DocumentType[] = [
         />
       </svg>
     ),
-    acceptedFormats: [".pdf", ".doc", ".docx", ".txt", ".rtf"],
+    acceptedFormats: [".pdf", ".doc", ".docx", ".txt", ".rtf" , ".png" , ".jpeg"],
   },
 ];
 
@@ -173,7 +173,12 @@ const DocumentUploadComponent = () => {
         const newDoc: AttachedDocument = {
           id: `${Date.now()}-${index}`,
           name: file.name,
-          type: file.type.includes("pdf") ? "PDF" : "Document",
+          type: file.type.includes("pdf")
+            ? "PDF"
+            : file.type.includes("png") || file.type.includes("jpeg") || file.type.includes("jpg")
+              ? "Image"
+              : "Document",
+
           category: selectedType.name,
           size: `${(file.size / 1024).toFixed(1)} KB`,
           title: "",
@@ -200,13 +205,13 @@ const DocumentUploadComponent = () => {
     let messageCount = 0;
 
     setProgressMessageIndex(0);
-    
+
     const timer = setInterval(() => {
-    if (messageCount < messages.length - 1) {
-      messageCount++;
-      setProgressMessageIndex(messageCount);
-    }
-  }, 10000);
+      if (messageCount < messages.length - 1) {
+        messageCount++;
+        setProgressMessageIndex(messageCount);
+      }
+    }, 10000);
 
     const clearTimer = () => {
       clearInterval(timer);
@@ -577,13 +582,13 @@ const DocumentUploadComponent = () => {
 
         <div className="flex justify-end gap-2 pt-4">
 
-            {isUploading && (
-    <div className="flex-1 flex items-center">
-      <span className="text-sm text-gray-500">
-        {messages[progressMessageIndex]}
-      </span>
-    </div>
-  )}
+          {isUploading && (
+            <div className="flex-1 flex items-center">
+              <span className="text-sm text-gray-500">
+                {messages[progressMessageIndex]}
+              </span>
+            </div>
+          )}
 
 
           <button
@@ -601,13 +606,12 @@ const DocumentUploadComponent = () => {
               !documentTitle.trim() ||
               isUploading
             }
-            className={`px-4 py-2 text-white rounded transition flex items-center gap-2 ${
-              tempSelectedDocs.length === 0 ||
-              !documentTitle.trim() ||
-              isUploading
+            className={`px-4 py-2 text-white rounded transition flex items-center gap-2 ${tempSelectedDocs.length === 0 ||
+                !documentTitle.trim() ||
+                isUploading
                 ? "bg-gray-600 opacity-50 cursor-not-allowed"
                 : "bg-gray-600 hover:bg-gray-700"
-            }`}
+              }`}
             type="button"
           >
             {isUploading && (
@@ -634,9 +638,8 @@ const DocumentUploadComponent = () => {
             )}
             {isUploading
               ? "Uploading..."
-              : `Upload ${tempSelectedDocs.length} Document${
-                  tempSelectedDocs.length > 1 ? "s" : ""
-                }`}
+              : `Upload ${tempSelectedDocs.length} Document${tempSelectedDocs.length > 1 ? "s" : ""
+              }`}
           </button>
         </div>
       </div>

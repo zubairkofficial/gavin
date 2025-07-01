@@ -7,6 +7,6 @@ export class Cron extends BaseEntity{
     @Column()
     cronExpresion : string
 
-    @Column()
+    @Column({unique : true})
     jobName: string
 }

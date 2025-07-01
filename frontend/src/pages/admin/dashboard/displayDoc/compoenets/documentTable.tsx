@@ -2,12 +2,13 @@
 
 import { Switch } from "@/components/ui/switch"
 import { useState, useEffect } from "react"
-import { Pencil, Eye, RefreshCcw } from "lucide-react"
+import { Pencil, Eye, RefreshCcw, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -38,7 +39,7 @@ interface Contract {
   fileName: string
   type: string
   title: string
-  isEnabled:boolean
+  isEnabled: boolean
   jurisdiction: string
   source: string
   createdAt: string
@@ -59,7 +60,8 @@ interface Regulation {
   jurisdiction: string
   citation: string
   title: string
-  isEnabled:boolean
+  source_url: string
+  isEnabled: boolean
   filePath: string
   section: string
   subject_area: string
@@ -74,10 +76,11 @@ interface Statute {
   jurisdiction: string
   title: string
   fileName: string
-  code : string
-  isEnabled:boolean
+  code: string
+  isEnabled: boolean
   type: string
   filePath: string
+  source_url: string
   court: string
   citation: string
   holding_summary: string
@@ -114,6 +117,8 @@ export default function DocumentsTable() {
   const [selectedDocument, setSelectedDocument] = useState<Contract | Regulation | Statute | null>(null)
   const [documentDetails, setDocumentDetails] = useState<any>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+
 
   const fetchDocuments = async (type: DocumentType) => {
     setLoading(true)
@@ -234,6 +239,7 @@ export default function DocumentsTable() {
   }
 
   const handleStatusToggle = async (documentId: string, currentStatus: boolean, type: string) => {
+    setLoadingIds(prev => new Set(prev).add(documentId));
     try {
       // Use the correct endpoint - PUT /metadata/:documentId
       const response = await API.put(`documents/metadata/${type}/${documentId}`, {
@@ -264,6 +270,12 @@ export default function DocumentsTable() {
           )
         }
 
+        setLoadingIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(documentId); // Stop loading
+          return newSet;
+        });
+
         // Optionally, you can still refresh the data in the background
         // fetchDocuments(documentType);
       } else {
@@ -277,6 +289,7 @@ export default function DocumentsTable() {
 
   const handleEditClick = (document: Contract | Regulation | Statute) => {
     setEditDocument(document)
+    // fetchDocuments(documentType)
     setEditModalOpen(true)
   }
 
@@ -344,7 +357,7 @@ export default function DocumentsTable() {
   // Helper function to get document status - FIXED
   const getDocumentStatus = (document: Contract | Regulation | Statute): boolean => {
     // Prioritize the status field if it exists, otherwise fall back to isEnabled
-    return document.status !== undefined ? document.status : document.isEnabled 
+    return document.status !== undefined ? document.status : document.isEnabled
   }
 
   const handleClick = async () => {
@@ -360,28 +373,28 @@ export default function DocumentsTable() {
   }
 
   return (
-    <div className="w-full space-y-4">
+    <div className=" space-y-4 h-full ">
       <Card>
         <CardHeader className="flex items-center justify-between">
           <CardTitle>Knowledge Base</CardTitle>
           <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button>Start Scraping</Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will start the scraping process. Make sure everything is ready.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleClick}>Confirm</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-          
+            <AlertDialogTrigger asChild>
+              <Button>Start Scraping</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will start the scraping process. Make sure everything is ready.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClick}>Confirm</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -404,7 +417,7 @@ export default function DocumentsTable() {
                 className="flex-1"
               />
             </div>
-            <Button variant={'ghost'} className="p-6 bg-white text-black" onClick={() => fetchDocuments(documentType)}><RefreshCcw/></Button>
+            <Button variant={'ghost'} className="p-6 bg-white text-black" onClick={() => fetchDocuments(documentType)}><RefreshCcw /></Button>
           </div>
 
           {error && <div className="text-red-500 mb-4 p-3 bg-red-50 rounded-md">Error: {error}</div>}
@@ -446,12 +459,17 @@ export default function DocumentsTable() {
                           <TableCell>{contract.source || '--'}</TableCell>
                           <TableCell>{formatDate(contract.createdAt)}</TableCell>
                           <TableCell>
-                            <Switch
-                              checked={getDocumentStatus(contract)}
-                              onCheckedChange={() => handleStatusToggle(contract.id, getDocumentStatus(contract), contract.type)}
-                              className="data-[state=checked]:bg-primary"
-                            />
+                            {loadingIds.has(contract.id) ? (
+                              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                            ) : (
+                              <Switch
+                                checked={getDocumentStatus(contract)}
+                                onCheckedChange={() => handleStatusToggle(contract.id, getDocumentStatus(contract), contract.type)}
+                                className="data-[state=checked]:bg-primary"
+                              />
+                            )}
                           </TableCell>
+
                           <TableCell>
                             <div className="flex gap-2">
                               <Button
@@ -484,6 +502,7 @@ export default function DocumentsTable() {
                       <TableHead>ID</TableHead>
                       <TableHead>File Name</TableHead>
                       <TableHead>Title</TableHead>
+                      <TableHead>Source </TableHead>
                       <TableHead>Citation</TableHead>
                       <TableHead>Jurisdiction</TableHead>
                       <TableHead>Created At</TableHead>
@@ -505,16 +524,20 @@ export default function DocumentsTable() {
 
                           <TableCell className="font-medium">{regulation.fileName?.slice(0, 30) || '--'}</TableCell>
                           <TableCell className="font-medium">{regulation.title.slice(0, 30) || '--'}</TableCell>
+                          <TableCell className="font-medium">{regulation.source_url}</TableCell>
                           <TableCell>{regulation.citation?.slice(0, 30) || '--'}</TableCell>
                           <TableCell>{regulation.jurisdiction || '--'}</TableCell>
                           <TableCell>{formatDate(regulation.createdAt)}</TableCell>
                           <TableCell>
-                            <Switch
-                              checked={getDocumentStatus(regulation)}
-                              onCheckedChange={() => handleStatusToggle(regulation.id, getDocumentStatus(regulation), regulation.type)}
-                              
-                              className="data-[state=checked]:bg-primary"
-                            />
+                            {loadingIds.has(regulation.id) ? (
+                              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                            ) : (
+                              <Switch
+                                checked={getDocumentStatus(regulation)}
+                                onCheckedChange={() => handleStatusToggle(regulation.id, getDocumentStatus(regulation), regulation.type)}
+                                className="data-[state=checked]:bg-primary"
+                              />
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -548,6 +571,7 @@ export default function DocumentsTable() {
                       <TableHead>ID</TableHead>
                       <TableHead>FileName</TableHead>
                       <TableHead>Title</TableHead>
+                      <TableHead>Source</TableHead>
                       <TableHead>Citation</TableHead>
                       <TableHead>Code</TableHead>
                       <TableHead>Jurisdiction</TableHead>
@@ -569,17 +593,21 @@ export default function DocumentsTable() {
                           <TableCell className="font-medium">{index + 1 + startIndex}</TableCell>
                           <TableCell className="font-medium">{statute.fileName?.split("?")[0] || "--"}</TableCell>
                           <TableCell className="font-medium">{statute.title.slice(0, 30) || "--"}</TableCell>
+                          <TableCell className="font-medium">{statute.source_url || "--"}</TableCell>
                           <TableCell>{statute.citation?.slice(0, 30) || '--'}</TableCell>
-                          <TableCell>{statute.code?.slice(0,15) || '--'}</TableCell>
+                          <TableCell>{statute.code?.slice(0, 15) || '--'}</TableCell>
                           <TableCell>{statute.jurisdiction || '--'}</TableCell>
                           <TableCell>{formatDate(statute.createdAt)}</TableCell>
                           <TableCell>
-                            <Switch
-                              checked={getDocumentStatus(statute)}
-                              onCheckedChange={() => handleStatusToggle(statute.id, getDocumentStatus(statute), statute.type)}
-                              
-                              className="data-[state=checked]:bg-primary"
-                            />
+                            {loadingIds.has(statute.id) ? (
+                              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                            ) : (
+                              <Switch
+                                checked={getDocumentStatus(statute)}
+                                onCheckedChange={() => handleStatusToggle(statute.id, getDocumentStatus(statute), statute.type)}
+                                className="data-[state=checked]:bg-primary"
+                              />
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -692,12 +720,20 @@ export default function DocumentsTable() {
 
                 {/* Show content_html if available */}
                 {documentDetails.content_html ? (
-                  <div className="space-y-4 m-6 overflow-y-auto ">
+                  <div className="space-y-4 m-6 overflow-y-auto  overflow-x-hidden">
                     <div>
                       <label className="text-md font-semibold text-gray-800 mb-2 block">Document Content</label>
-                      <h2 className="text-sm mb-5"><span className="font-bold ">Title : </span>{selectedDocument?.title || "Document Information"}</h2>
+                      <h2 className="text-sm mb-5 break-words whitespace-normal">
+                        <span className="font-bold">Title: </span>
+                        {selectedDocument?.title || "Document Information"}
+                      </h2>
+
+                      <h2 className="text-sm mb-5 break-words whitespace-normal">
+                        <span className="font-bold">Source URL: </span>
+                        {selectedDocument?.filePath || "URL Not Found"}
+                      </h2>
                       <div
-                        className="border rounded-lg p-4 max-h-[80vh]  overflow-y-auto  bg-gray-50 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200"
+                        className="border rounded-lg p-4 max-h-[70vh]  overflow-y-auto  bg-gray-50 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200"
                         dangerouslySetInnerHTML={{ __html: documentDetails.content_html }}
                         style={{
                           scrollBehavior: 'smooth',

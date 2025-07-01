@@ -12,6 +12,8 @@ interface DelawareCodeData {
   content: string;
   pages: number;
   downloadDate: string;
+  fileName:string
+  filePath:string
 }
 
 const BASE_URL = 'https://delcode.delaware.gov/';
@@ -173,7 +175,9 @@ export async function* runDelawareCodeScraper(): AsyncGenerator<DelawareCodeData
           title: title.title,
           titleNumber: title.titleNumber,
           pdfUrl: title.pdfUrl,
+          filePath : title.pdfUrl,
           htmlUrl: title.htmlUrl,
+          fileName:safeFilename,
           content: parsedData.text,
           pages: parsedData.pages,
           downloadDate: new Date().toISOString()
