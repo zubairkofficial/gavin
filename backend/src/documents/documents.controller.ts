@@ -39,6 +39,8 @@ import type { File as MulterFile } from 'multer';
 import * as path from 'path';
 import { Response } from 'express';
 import axios from 'axios';
+import { Case } from './entities/case.entity';
+import { UpdateCaseDto } from './dto/update.case.dto';
 
 // Configure multer storage to save files with original names in uploads folder
 const storage = multer.diskStorage({
@@ -76,6 +78,8 @@ export class DocumentsController {
     private readonly documentsService: DocumentsService,
     @InjectRepository(Regulation)
     private regulationRepository: Repository<Regulation>,
+    @InjectRepository(Case)
+    private caseRepository: Repository<Case>,
     @InjectRepository(Contract)
     private contractRepository: Repository<Contract>,
     @InjectRepository(Clause)
@@ -260,6 +264,10 @@ async scrapeUrl(
   }
 
   console.log(`🌐 Scrape request received:  ${createDocumentDto.filePath} , ${createDocumentDto.type}` );
+
+ 
+
+  createDocumentDto.source_url = 'scraper'
 
   try {
     const response = await axios.get(createDocumentDto.filePath);
@@ -614,6 +622,36 @@ async scrapeUrl(
       throw new BadRequestException(`Failed to fetch contracts: ${error.message}`);
     }
   }
+  @Get('/cases')
+  async getAllCases(@Request() req: any) {
+    console.log('📋 Getting contracts for user:', req.user?.id);
+    try {
+      const contracts = await this.caseRepository.find({
+        select: {
+          id: true,
+          case_type: true,
+          name: true,
+          fileName: true,
+          filePath: true,
+          type:true,
+          isEnabled:true,
+          jurisdiction: true,
+          source_url: true,
+          createdAt: true,
+        },
+        order: {
+          createdAt: 'DESC', 
+        },
+      });
+      return {
+        success: true,
+        data: contracts,
+        count: contracts.length,
+      };
+    } catch (error) {
+      throw new BadRequestException(`Failed to fetch contracts: ${error.message}`);
+    }
+  }
 
   @Get('/statutes')
   async getAllStatute(@Request() req: any) {
@@ -710,6 +748,45 @@ async scrapeUrl(
 
       Object.assign(contract, updates);
       const updatedContract = await this.contractRepository.save(contract);
+
+      return {
+        success: true,
+        data: updatedContract,
+        message: 'Contract updated successfully'
+      };
+
+    } catch (error) {
+      if (error?.code === '22P02') {
+        throw new BadRequestException('Invalid UUID format');
+      }
+      throw new BadRequestException(`Failed to update contract: ${error.message}`);
+    }
+  }
+  @Put('cases/:id')
+  async updateCases(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateCasetDto: UpdateCaseDto
+  ) {
+    try {
+      console.log('🛠 Raw Body:', updateCasetDto);
+      
+      if (!updateCasetDto || Object.keys(updateCasetDto).length === 0) {
+        throw new BadRequestException('Update data is required');
+      }
+
+      const contract = await this.caseRepository.findOne({ where: { id } });
+
+      if (!contract) {
+        throw new BadRequestException('Contract not found');
+      }
+
+      const updates: Partial<Case> = {};
+      if (updateCasetDto.jurisdiction !== undefined) updates.jurisdiction = updateCasetDto.jurisdiction;
+      if (updateCasetDto.case_type !== undefined) updates.case_type = updateCasetDto.case_type;
+      updates.updatedAt = new Date(); 
+
+      Object.assign(contract, updates);
+      const updatedContract = await this.caseRepository.save(contract);
 
       return {
         success: true,
@@ -856,6 +933,49 @@ async scrapeUrl(
       throw new BadRequestException(`Failed to update document metadata: ${error.message}`);
     }
   }
+  @Put('/metadata/case/:id')
+  async updateCaseMetadata(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() newMetadata: Record<string ,  boolean>,
+    @Request() req: any
+  ) {
+    try {
+      console.log('📋 Updating metadata for document:', id);
+
+      const document = await this.caseRepository.findOne({where: {id}})
+      if (!document){
+        return {message : 'document not fount'}
+      }
+      document.isEnabled = !document.isEnabled
+      console.log(document.isEnabled)
+      this.caseRepository.save(document)
+
+      await this.dataSource
+        .createQueryBuilder()
+        .update('document_embeddings')
+        .set({ metadata: JSON.stringify(newMetadata) })
+        .where("metadata->>'document_id' = :id", { id })
+        .execute();
+
+      return {
+        success: true,
+        data: {
+          id,
+          userId: req.user?.id,
+          metadata: newMetadata
+        },
+      };
+
+    } catch (error) {
+      console.error('Error updating document metadata:', error);
+      
+      if (error?.code === '22P02') {
+        throw new BadRequestException('Invalid UUID format');
+      }
+      
+      throw new BadRequestException(`Failed to update document metadata: ${error.message}`);
+    }
+  }
 
   @Put('/metadata/regulation/:id')
   async updateMetaRegulation(
@@ -950,6 +1070,28 @@ async scrapeUrl(
   async viewContract(@Param('id', ParseUUIDPipe) id: string) {
     try {
       const contract = await this.contractRepository.findOne({ where: { id } });
+
+      if (!contract) {
+        throw new BadRequestException('Contract not found');
+      }
+
+      return {
+        success: true,
+        content_html: contract.content_html,
+        message: 'Contract retrieved successfully'
+      };
+
+    } catch (error) {
+      if (error?.code === '22P02') {
+        throw new BadRequestException('Invalid UUID format');
+      }
+      throw new BadRequestException(`Failed to view contract data: ${error.message}`);
+    }
+  }
+  @Get('cases/:id')
+  async viewCase(@Param('id', ParseUUIDPipe) id: string) {
+    try {
+      const contract = await this.caseRepository.findOne({ where: { id } });
 
       if (!contract) {
         throw new BadRequestException('Contract not found');

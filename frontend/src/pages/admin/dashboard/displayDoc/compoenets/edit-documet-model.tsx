@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -50,19 +49,30 @@ interface Statute {
   decision_date: string
 }
 
-type DocumentType = "contracts" | "regulations" | "statutes"
+interface Case {
+  id: string
+  createdAt: string
+  updatedAt: string
+  jurisdiction: string
+  title: string
+  fileName: string
+  source_url: string
+  case_type :string
+}
+
+type DocumentType = "contracts" | "regulations" | "statutes" | "cases"
 
 interface EditDocumentModalProps {
   isOpen: boolean
   onClose: () => void
   documentType: DocumentType
-  document: Contract | Regulation | Statute | null
+  document: Contract | Regulation | Statute | Case | null
   onUpdate: () => void
 }
 
 export function EditDocumentModal({ isOpen, onClose, documentType, document, onUpdate }: EditDocumentModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState<Partial<Contract | Regulation | Statute>>({})
+  const [formData, setFormData] = useState<Partial<Contract | Regulation | Statute | Case>>({})
 
   // Update form data when document changes or modal opens
   useEffect(() => {
@@ -120,6 +130,8 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
         return "Regulation"
       case "statutes":
         return "Statute"
+      case "cases":
+        return "Case"
       default:
         return "Document"
     }
@@ -139,6 +151,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
             Update the fields below to modify this {getDocumentTypeName().toLowerCase()}.
           </DialogDescription>
         </DialogHeader>
+
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             {documentType === "contracts" ? (
@@ -245,7 +258,7 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                   />
                 </div>
               </>
-            ) : (
+            ) : documentType === "statutes" ? (
               // Statute fields
               <>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -260,7 +273,6 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                     className="col-span-3"
                   />
                 </div>
-                
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="jurisdiction" className="text-right">
                     Jurisdiction
@@ -323,8 +335,38 @@ export function EditDocumentModal({ isOpen, onClose, documentType, document, onU
                   />
                 </div>
               </>
+            ) : (
+              // Case fields
+              <>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="jurisdiction" className="text-right">
+                    Jurisdiction
+                  </Label>
+                  <Input
+                    id="jurisdiction"
+                    name="jurisdiction"
+                    value={(formData as Case).jurisdiction || ""}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+              
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="source_url" className="text-right">
+                    Source URL
+                  </Label>
+                  <Input
+                    id="source_url"
+                    name="source_url"
+                    value={(formData as Case).source_url || ""}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+              </>
             )}
           </div>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel

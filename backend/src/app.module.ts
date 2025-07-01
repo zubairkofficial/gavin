@@ -18,6 +18,7 @@ import { EmbeddingService } from './documents/services/embedding.service';
 import { Regulation } from './documents/entities/regulation.entity';
 import { Status } from './documents/entities/status.entity';
 import { Cron } from './cron.entity';
+import { Case } from './documents/entities/case.entity';
 
 
 @Module({
@@ -54,7 +55,7 @@ import { Cron } from './cron.entity';
     SharedModule,
     DocumentsModule,
     JurisdictionsModule,
-    TypeOrmModule.forFeature([Statute , Regulation , Status , Cron]),
+    TypeOrmModule.forFeature([Statute , Regulation , Status , Cron , Case]),
   ],
   controllers: [AppController],
   providers: [
@@ -70,4 +71,4 @@ import { Cron } from './cron.entity';
     TasksService,
   ]
 })
-export class AppModule {}
+export class AppModule { }

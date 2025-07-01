@@ -10,12 +10,16 @@ import { useModel } from "@/context/Model.context";
 
 export function AppSidebarHeader() {
 
+   const { user } = useAuth()
+
   const { setIsModalOpen ,setIsModalvalue  } = useModel();
   const {toggleSidebar} = useSidebar()
   const [isInnerSideBarOpen, setIsInnerSideBarOpen] = useState(false)
   
   const { logout } = useAuth()
   const navigate = useNavigate()
+  // console.log(user)
+
  useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 724) { // Set threshold for large screen (1024px)
@@ -38,8 +42,8 @@ export function AppSidebarHeader() {
       <div className="md:hidden">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold mb-1">Alex Smith</h2>
-            <p className="text-gray-500 mb-4">alexsmith@gmail.com</p>
+            <h2 className="text-xl font-semibold mb-1">{user.fullName}</h2>
+            <p className="text-gray-500 mb-4">{user.email}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setIsInnerSideBarOpen(!isInnerSideBarOpen)}>
             <ChevronRight className="size-[24px]" />
@@ -53,8 +57,8 @@ export function AppSidebarHeader() {
                   </Button>
                 </div>
                 <div className="w-full h-full bg-background">
-                  <h2 className="text-xl font-semibold mb-1">Alex Smith</h2>
-                  <p className="text-gray-500 mb-4">alexsmith@gmail.com</p>
+                  <h2 className="text-xl font-semibold mb-1">{user.fullName}</h2>
+                  <p className="text-gray-500 mb-4">{user.email}</p>
                 </div>
               </div>
               <div className="flex flex-col gap-1 px-4">
@@ -63,15 +67,22 @@ export function AppSidebarHeader() {
                   <span className="text-base">Account</span>
                 </div>
 
+                {user?.role === "admin" ? 
+                <>
+                
+                </>:<>
                 <div className="py-1 flex items-center cursor-pointer px-0" onClick={() => {setIsModalOpen(true); setIsInnerSideBarOpen(!isInnerSideBarOpen); toggleSidebar() , setIsModalvalue('PlansBilling')} }>
                   <CreditCard className="mr-2 !h-[18px] !w-[1" />
                   <button   className="text-base">Plans & Billing</button>
                 </div>
+                </> }
 
+                {user?.role === "admin" ? <></>:<>
                 <div className="py-1 flex items-center cursor-pointer px-0" onClick={() => {setIsModalOpen(true); setIsInnerSideBarOpen(!isInnerSideBarOpen); toggleSidebar() , setIsModalvalue('HelpCenter')} }>
                   <BookOpenText className="mr-2 !h-[18px] !w-[1" />
                   <span className="text-base">Help Center</span>
                 </div>
+                </>}
 
                 <div className="pt-1 flex items-center cursor-pointer px-0" onClick={() => {
                   logout()
@@ -84,7 +95,10 @@ export function AppSidebarHeader() {
             </div>
           )}
         </div>
-        <div className="w-full bg-transparent border rounded-md p-4 mb-4">
+        {user?.role == 'admin' ? <>
+       
+        </>:<>
+         <div className="w-full bg-transparent border rounded-md p-4 mb-4">
           <h3 className="font-semibold text-left">Credits Used</h3>
           <div className="flex justify-between mb-1 items-center">
             <Progress value={60} className="h-[5px] w-[80%]" />
@@ -95,6 +109,7 @@ export function AppSidebarHeader() {
             <span className="text-xs text-gray-500 text-start">You have 5 daily credits to use first</span>
           </div>
         </div>
+        </>}
       </div>
      
     </SidebarHeader>

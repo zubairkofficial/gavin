@@ -14,6 +14,8 @@ import { parseXmlTitlesFromRepo } from '../scrape/gitScrape';
 import { Regulation } from './documents/entities/regulation.entity';
 import { openBrowser } from 'scrape/usCodesScraper';
 import { Cron } from './cron.entity';
+import { scrapeCourtListener } from 'scrape/CourtListner';
+import { Case } from './documents/entities/case.entity';
 
 
 export interface CronJobInfo {
@@ -28,6 +30,8 @@ export class TasksService implements OnModuleInit {
   constructor(
     @InjectRepository(Statute)
     private readonly statuteRepository: Repository<Statute>,
+    @InjectRepository(Case)
+    private readonly caseRepository: Repository<Case>,
     @InjectRepository(Regulation)
     private regulationRepository: Repository<Regulation>,
     @InjectRepository(Cron)
@@ -144,13 +148,53 @@ export class TasksService implements OnModuleInit {
   async scrape() {
 
     this.logger.log('Deleting all statutes with source_url = "scaper"');
-    await this.statuteRepository.delete({ source_url: 'scaper' });
+    await this.statuteRepository.delete({ source_url: 'Api' });
     this.logger.log('Deleted all regulations with source_url = "scaper"');
     await this.regulationRepository.delete({ source_url: 'scaper' });
+    this.logger.log('Deleted all cases with source_url = "api"');
+    await this.caseRepository.delete({ source_url: 'Api' });
     this.logger.log('Deleting all embadings with source_url = "scaper"');
     await this.embeddingService.deleteDocumentEmbadings('Scraper');
 
 
+     for await (const data of scrapeCourtListener()) {
+      //   console.log(data); // Each plain_text as soon as it's available
+        console.log('='.repeat(60))
+        console.log('scraping started')
+        console.log('te all data of ',data.text)
+        console.log(data.filePath)
+        console.log(data.id)
+        console.log(data.type)
+        console.log(data.pageCount)
+        console.log(data.opinions_cited)
+      // console.log(data.text)   
+
+
+      const cases = new Case();
+      cases.content_html = data.text;
+      cases.source_url = 'Api';
+      cases.name = data.filePath.split('//')[1];
+      cases.filePath = data.filePath;
+      cases.case_type= data.type;
+      cases.type='case';
+      cases.jurisdiction = '';
+
+
+
+      const document = await this.caseRepository.save(cases);
+
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //   }
+      // });
+}
+    
 
 
     for await (const { url, content, code, section, Title, subject_area } of scrapeCaliforniaCodes()) {

@@ -15,10 +15,11 @@ import { EmbeddingService } from './services/embedding.service';
 import { OpenAIStatuteService } from '@/services/openai.statute.service';
 import { AuthModule } from '../auth/auth.module';
 import { Status } from './entities/status.entity';
+import { Case } from './entities/case.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Document, Regulation, Contract, Clause, Statute , Status]),
+    TypeOrmModule.forFeature([Document, Regulation, Contract, Clause, Statute , Status , Case]),
     AuthModule,
     ConfigModule.forRoot(),
     JwtModule.registerAsync({
