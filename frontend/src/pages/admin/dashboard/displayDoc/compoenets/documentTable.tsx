@@ -845,9 +845,9 @@ export default function DocumentsTable() {
                       </h2>
                       <h2 className="text-sm mb-5 break-words whitespace-normal">
                         <span className="font-bold">Source URL: </span>
-                        <Link to={`${selectedDocument?.filePath}`}>
+                        <a href={`${selectedDocument?.filePath}`} target="_blank">
                           {selectedDocument?.filePath || "URL Not Found"}
-                        </Link>
+                        </a>
                       </h2>
                       <div
                         className="border rounded-lg p-4 max-h-[70vh]  overflow-y-auto  bg-gray-50 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200"

@@ -148,7 +148,7 @@ export class TasksService implements OnModuleInit {
   async scrape() {
 
     this.logger.log('Deleting all statutes with source_url = "scaper"');
-    await this.statuteRepository.delete({ source_url: 'Api' });
+    await this.statuteRepository.delete({ source_url: 'scaper' });
     this.logger.log('Deleted all regulations with source_url = "scaper"');
     await this.regulationRepository.delete({ source_url: 'scaper' });
     this.logger.log('Deleted all cases with source_url = "api"');
