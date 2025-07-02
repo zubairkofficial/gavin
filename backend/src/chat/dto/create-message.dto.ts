@@ -14,7 +14,16 @@ export class CreateMessageDto {
     description: 'Optional user ID to track conversations',
     example: 'user123',
   })
+
   @IsOptional()
   @IsString()
   userId?: string;
+
+  @IsOptional()
+  @IsString()
+  conversationId?: string;
+
+  @IsOptional()
+  @IsString()
+  isComplete?: string;
 }

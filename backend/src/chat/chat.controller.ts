@@ -33,34 +33,17 @@ export class ChatController {
 
   @Public()
   @Post('message')
-  @ApiOperation({ summary: 'Send a message and get AI response' })
-  @ApiResponse({
-    status: 201,
-    description: 'Message sent successfully',
-    type: ChatResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request - invalid input',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-  })  async sendMessage(@Body() createMessageDto: CreateMessageDto): Promise<ChatResponseDto> {
+    async sendMessage(@Body() createMessageDto: CreateMessageDto): Promise<any> {
     console.log('Received request body:', createMessageDto);
     const result = await this.chatService.sendMessage(createMessageDto);
-    
+
     return {
       success: true,
       data: {
-        id: result.message.id,
-        userMessage: result.message.userMessage,
-        aiResponse: result.message.aiResponse,
-        userId: result.message.userId,
-        createdAt: result.message.createdAt,
-        updatedAt: result.message.updatedAt,
+        message: result.message,
+        conversationId: result.conversationId,
+        isComplete: ''
       },
-      usage: result.usage,
     };
   }
 
@@ -72,9 +55,9 @@ export class ChatController {
   @ApiResponse({
     status: 200,
     description: 'Conversation history retrieved successfully',
-    type: MessagesListResponseDto,
+    
   })
-  async getHistory(@Query() getMessagesDto: GetMessagesDto): Promise<MessagesListResponseDto> {
+  async getHistory(@Query() getMessagesDto: GetMessagesDto): Promise<any> {
     const result = await this.chatService.getMessages(getMessagesDto);
     
     return {

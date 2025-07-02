@@ -23,6 +23,9 @@ export class Message {
   @Column({ nullable: true })
   userId?: string;
 
+  @Column({ nullable: true })
+  conversationId?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -26,6 +26,9 @@ export class GetMessagesDto {
   @IsNumber()
   @Min(0)
   offset?: number = 0;
+
+  @IsOptional()
+  conversationId : string
 }
 
 export class GetUserMessagesDto extends GetMessagesDto {

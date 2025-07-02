@@ -19,6 +19,7 @@ import { Regulation } from './documents/entities/regulation.entity';
 import { Status } from './documents/entities/status.entity';
 import { Cron } from './cron.entity';
 import { Case } from './documents/entities/case.entity';
+import { ChatModule } from './chat/chat.module';
 
 
 @Module({
@@ -52,6 +53,7 @@ import { Case } from './documents/entities/case.entity';
     }),
     CommonModule,
     AuthModule,
+    ChatModule,
     SharedModule,
     DocumentsModule,
     JurisdictionsModule,
