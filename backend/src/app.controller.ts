@@ -93,7 +93,6 @@ export class AppController {
     return { message: 'Task started successfully' };
   }
 
-  @Public()
   @Post('add')
    async  addJob(@Body() body: { name: string; cron: string }) {
 
@@ -115,13 +114,11 @@ export class AppController {
       return this.tasksService.addCronJob(body.name, body.cron);
     }
 
-    @Public()
   @Get('jobs')
   getJobs(): CronJobInfo[] {
     return this.tasksService.getCronJobs();
   }
 
-  @Public()
   @Delete(':name')
     deleteJob(@Param('name') name: string) {
       return this.tasksService.deleteCronJob(name);

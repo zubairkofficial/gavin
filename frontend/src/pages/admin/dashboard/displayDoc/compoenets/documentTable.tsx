@@ -484,7 +484,7 @@ export default function DocumentsTable() {
                       <TableHead>Jurisdiction</TableHead>
                       <TableHead>Source</TableHead>
                       <TableHead>Created At</TableHead>
-                      <TableHead>Enable/Disable</TableHead>
+                      <TableHead className="flex justify-center items-center">Enable/Disable</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -505,7 +505,7 @@ export default function DocumentsTable() {
                           <TableCell>{contract.jurisdiction || "--"}</TableCell>
                           <TableCell>{contract.source || "--"}</TableCell>
                           <TableCell>{formatDate(contract.createdAt)}</TableCell>
-                          <TableCell>
+                          <TableCell className="flex justify-center items-center">
                             {loadingIds.has(contract.id) ? (
                               <Loader2 className="h-5 w-5 animate-spin text-primary" />
                             ) : (
@@ -554,7 +554,7 @@ export default function DocumentsTable() {
                       <TableHead>Citation</TableHead>
                       <TableHead>Jurisdiction</TableHead>
                       <TableHead>Created At</TableHead>
-                      <TableHead>Enable/Disable</TableHead>
+                      <TableHead className="flex justify-center items-center">Enable/Disable</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -575,7 +575,7 @@ export default function DocumentsTable() {
                           <TableCell>{regulation.citation?.slice(0, 30) || "--"}</TableCell>
                           <TableCell>{regulation.jurisdiction || "--"}</TableCell>
                           <TableCell>{formatDate(regulation.createdAt)}</TableCell>
-                          <TableCell>
+                          <TableCell className="flex justify-center items-center">
                             {loadingIds.has(regulation.id) ? (
                               <Loader2 className="h-5 w-5 animate-spin text-primary" />
                             ) : (
@@ -625,7 +625,7 @@ export default function DocumentsTable() {
                       <TableHead>Code</TableHead>
                       <TableHead>Jurisdiction</TableHead>
                       <TableHead>Created At</TableHead>
-                      <TableHead>Enable/Disable</TableHead>
+                      <TableHead className="flex justify-center items-center">Enable/Disable</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -647,7 +647,7 @@ export default function DocumentsTable() {
                           <TableCell>{statute.code?.slice(0, 15) || "--"}</TableCell>
                           <TableCell>{statute.jurisdiction || "--"}</TableCell>
                           <TableCell>{formatDate(statute.createdAt)}</TableCell>
-                          <TableCell>
+                          <TableCell className="flex justify-center items-center">
                             {loadingIds.has(statute.id) ? (
                               <Loader2 className="h-5 w-5 animate-spin text-primary" />
                             ) : (
@@ -696,7 +696,7 @@ export default function DocumentsTable() {
                       <TableHead>Jurisdiction</TableHead>
                       <TableHead>case_type</TableHead>
                       <TableHead>Created At</TableHead>
-                      <TableHead>Enable/Disable</TableHead>
+                      <TableHead className="flex justify-center items-center">Enable/Disable</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
