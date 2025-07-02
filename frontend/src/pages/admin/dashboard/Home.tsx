@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { Suspense, useEffect, useState } from "react"
+import {  useEffect, useState } from "react"
 import API from "@/lib/api"
 import { FileText, Scale, BookOpen, Gavel } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,7 +18,7 @@ interface DocumentCount {
 async function fetchDocumentCount(type: string): Promise<number> {
   try {
     const url = `/documents/${type}`
-    console.log(`Fetching ${type} from ${url}`)
+    // console.log(`Fetching ${type} from ${url}`)
     const response = await API.get(url)
 
     if (response.status < 200 || response.status >= 300) {
@@ -26,7 +26,7 @@ async function fetchDocumentCount(type: string): Promise<number> {
     }
 
     const responseData = response.data
-    console.log(`Response data for ${type}:`, responseData)
+    // console.log(`Response data for ${type}:`, responseData)
 
     // Assuming the API returns an array or an object with a count property
     // Adjust this based on your actual API response structure
@@ -43,25 +43,25 @@ async function getDocumentCounts(): Promise<DocumentCount[]> {
       type: "contracts",
       title: "Contracts",
       icon: FileText,
-      color: "text-blue-600",
+      color: "text-gray-600",
     },
     {
       type: "regulations",
       title: "Regulations",
       icon: Scale,
-      color: "text-green-600",
+      color: "text-gray-600",
     },
     {
       type: "statutes",
       title: "Statutes",
       icon: BookOpen,
-      color: "text-purple-600",
+      color: "text-gray-600",
     },
     {
       type: "cases",
       title: "Cases",
       icon: Gavel,
-      color: "text-orange-600",
+      color: "text-gray-600",
     },
   ]
 
