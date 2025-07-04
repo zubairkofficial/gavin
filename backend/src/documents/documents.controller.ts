@@ -363,6 +363,7 @@ async scrapeUrl(
         content: fullText,
         additionalMetadata: {
           document_id: savedRegulation.id,
+          document_type: savedRegulation.type,
           processed_date: new Date().toISOString(),
           enabled: true
         }
@@ -462,6 +463,7 @@ async scrapeUrl(
         content: fullText,
         additionalMetadata: {
           document_id: savedContract.id,
+          document_type: savedContract.type,
           processed_date: new Date().toISOString(),
           enabled: true
         }
@@ -539,6 +541,7 @@ async scrapeUrl(
         content: fullText,
         additionalMetadata: {  
           document_id: savedStatute.id,
+          document_type: savedStatute.type,
           processed_at: new Date().toISOString(),
           enabled: true,
           source : dto.source || 'Upload',
@@ -1022,7 +1025,7 @@ async scrapeUrl(
   }
 
   @Put('/metadata/contract/:id')
-  async updateMetastatute(
+  async updateMetacontract(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() newMetadata: Record<string ,  boolean>,
     @Request() req: any
@@ -1038,12 +1041,15 @@ async scrapeUrl(
       console.log(document.isEnabled)
       this.contractRepository.save(document)
 
-      await this.dataSource
-        .createQueryBuilder()
-        .update('document_embeddings')
-        .set({ metadata: JSON.stringify(newMetadata) })
-        .where("metadata->>'document_id' = :id", { id })
-        .execute();
+       await this.dataSource
+      .createQueryBuilder()
+      .update('document_embeddings')
+      .set({
+        metadata: () =>
+          `jsonb_set(metadata, '{enabled}', '${document.isEnabled}'::jsonb)`
+      })
+      .where("metadata->>'document_id' = :id", { id })
+      .execute();
 
       return {
         success: true,

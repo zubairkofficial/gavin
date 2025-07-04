@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import {EventSource} from 'eventsource'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -41,4 +42,21 @@ export function updateUserInfo({companyName, ...userInfo}: any) {
     }
   }
   return null;
+}
+
+export function SSE(url: string) {
+  const token = localStorage.getItem("authToken");
+
+  const eventSource = new EventSource(url, {
+    fetch: (input, init) =>
+      fetch(input, {
+        ...init,
+        headers: {
+          ...init?.headers,
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+  });
+
+  return eventSource;
 }

@@ -20,6 +20,9 @@ export default function AuthenticateRoutes() {
         <Route
           index
           element={<Home />} />
+        <Route
+          path='/chat/:conversationId'
+          element={<Home />} />
       </Route>
       <Route
         path="/onboarding"

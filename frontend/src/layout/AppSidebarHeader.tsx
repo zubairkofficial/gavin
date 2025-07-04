@@ -42,8 +42,8 @@ export function AppSidebarHeader() {
       <div className="md:hidden">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold mb-1">{user.fullName}</h2>
-            <p className="text-gray-500 mb-4">{user.email}</p>
+            <h2 className="text-xl font-semibold mb-1">{user?.fullName}</h2>
+            <p className="text-gray-500 mb-4">{user?.email}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setIsInnerSideBarOpen(!isInnerSideBarOpen)}>
             <ChevronRight className="size-[24px]" />
@@ -57,8 +57,8 @@ export function AppSidebarHeader() {
                   </Button>
                 </div>
                 <div className="w-full h-full bg-background">
-                  <h2 className="text-xl font-semibold mb-1">{user.fullName}</h2>
-                  <p className="text-gray-500 mb-4">{user.email}</p>
+                  <h2 className="text-xl font-semibold mb-1">{user?.fullName}</h2>
+                  <p className="text-gray-500 mb-4">{user?.email}</p>
                 </div>
               </div>
               <div className="flex flex-col gap-1 px-4">

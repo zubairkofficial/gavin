@@ -19,10 +19,10 @@ export class Contract extends BaseEntity {
   type: string;
 
   @Column({nullable: true})
-    userId: string;
+  userId: string;
 
-    @Column({nullable: true})
-    filePath: string;
+  @Column({nullable: true})
+  filePath: string;
   
   @Column( { nullable: true })
   title: string;

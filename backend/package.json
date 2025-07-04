@@ -22,7 +22,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "ts-node seeder.ts",
-    "scrape": "ts-node ./scrape/usCodesScraper.ts",
+    "scrape": "ts-node ./scrape/sec-api.ts",
     "newyork": "ts-node ./scrape/states/california.ts"
   },
   "dependencies": {
@@ -63,6 +63,7 @@
     "pdfjs-lib": "^0.0.149",
     "pg": "^8.14.1",
     "pgvector": "^0.2.1",
+    "playwright": "^1.53.2",
     "puppeteer": "^24.10.1",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",

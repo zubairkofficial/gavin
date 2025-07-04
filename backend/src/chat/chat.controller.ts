@@ -1,147 +1,289 @@
 import {
   Controller,
   Post,
-  Get,
   Body,
-  Param,
+  Res,
+  Sse,
+  MessageEvent,
   Query,
-  ParseIntPipe,
-  HttpStatus,
-  HttpException,
+  Request,
+  Get,
+  Param,
+  UseInterceptors,
+  Req,
+  UploadedFiles,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiQuery,
-} from '@nestjs/swagger';
 import { ChatService } from './chat.service';
+import { HumanMessage } from '@langchain/core/messages';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { GetMessagesDto } from './dto/get-messages.dto';
-import {
-  ChatResponseDto,
-  MessagesListResponseDto,
-  MessageResponseDto,
-} from './dto/message-response.dto';
+import { ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import * as multer from 'multer';
+import * as fs from 'fs';
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Message } from './entities/message.entity';
+import { Repository } from 'typeorm';
 import { Public } from '@/auth/decorators/public.decorator';
-
+import { ChatOpenAI } from '@langchain/openai';
+import { ConfigService } from '@nestjs/config';
+import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 @ApiTags('Chat')
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
 
-  @Public()
+  constructor(
+
+    private configService: ConfigService,
+    @InjectRepository(Message)
+    private messageRepository: Repository<Message>,
+    private readonly chatService: ChatService,
+
+  ) {
+
+  }
+
+
+
   @Post('message')
-    async sendMessage(@Body() createMessageDto: CreateMessageDto): Promise<any> {
-    console.log('Received request body:', createMessageDto);
-    const result = await this.chatService.sendMessage(createMessageDto);
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'files', maxCount: 10 },
+      ],
+      {
+        // Optional: Add file size and type restrictions
+        limits: {
+          fileSize: 10 * 1024 * 1024, // 10MB per file
+        },
+        fileFilter: (req, file, cb) => {
+          // Allow specific file types (adjust as needed)
+          const allowedTypes = [
+            'application/pdf',
+            'text/plain',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'image/jpeg',
+            'image/png',
+            'image/jpg'
+          ];
 
-    return {
-      success: true,
-      data: {
-        message: result.message,
-        conversationId: result.conversationId,
-        isComplete: ''
-      },
-    };
+          if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+          } else {
+            cb(new Error(`File type ${file.mimetype} not allowed`), false);
+          }
+        },
+      }
+    )
+  )
+  async sendMessage(
+    @Body() createMessageDto: CreateMessageDto,
+    @Res() res: Response,
+    @Req() req: any,
+    @UploadedFiles() files: { files?: multer.File[] },
+  ): Promise<void> {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    let clientDisconnected = false;
+
+    req.on('close', () => {
+      clientDisconnected = true;
+      console.log('Client disconnected');
+    });
+
+    let fullAiResponse = '';
+    let sentMetadata = false;
+    let streamData: any = null;
+
+    try {
+      const result = await this.chatService.sendMessage(createMessageDto, req, files?.files || []);
+      streamData = result;
+      // const stream = await result.model.stream([new HumanMessage(result.prompt)]);
+
+      for await (const chunk of result.stream) {
+        if (clientDisconnected || res.destroyed) {
+          console.log('Response destroyed or client disconnected, stopping stream');
+          break;
+        }
+
+        let token = '';
+        if (typeof chunk.content === 'string') {
+          token = chunk.content;
+        } else if (Array.isArray(chunk.content)) {
+          token = chunk.content
+            .map((part: any) => typeof part.text === 'string' ? part.text : '')
+            .join('');
+        }
+        // const event = { token };
+        // res.write(`data: ${JSON.stringify(event)}\n\n`);
+
+        if (!sentMetadata) {
+          const event = {
+            conversationId: result.conversationId,
+            userId: result.userId,
+            title: result.title,
+            token,
+            filesProcessed: files?.files?.length || 0
+          };
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+          sentMetadata = true;
+
+        } else {
+          const event = { token };
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+        }
+
+        // Flush the response to send data immediately
+        if (typeof (res as any).flush === 'function') {
+          (res as any).flush();
+        }
+
+        fullAiResponse += token;
+      }
+
+      // Send final "done" event if no client disconnection
+      if (!clientDisconnected && !res.destroyed) {
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        if (typeof (res as any).flush === 'function') {
+          (res as any).flush();
+        }
+      }
+
+      // Save message to database after streaming is complete
+      try {
+        await this.chatService.saveMessage(
+          createMessageDto.message,
+          fullAiResponse,
+          streamData.title,
+          streamData.userId,
+          streamData.conversationId,
+          result.filename || '',
+          result.size || '',
+          result.type || '',
+        );
+      } catch (saveError) {
+        console.error('Error saving message:', saveError);
+        if (!clientDisconnected && !res.destroyed) {
+          res.write(`data: ${JSON.stringify({ error: 'Failed to save message' })}\n\n`);
+        }
+      }
+
+    } catch (error) {
+      console.error('Streaming error:', error);
+      let errorMessage = 'Failed to process your message.';
+      if (error.message?.includes('invalid_api_key')) {
+        errorMessage = 'OpenAI API authentication failed';
+      } else if (error.message?.includes('rate_limit_exceeded') || error.status === 429) {
+        errorMessage = 'Rate limit exceeded. Please try again later.';
+      } else if (error.message?.includes('content_policy_violation')) {
+        errorMessage = 'Content was blocked by OpenAI filters.';
+      } else if (error.message?.includes('File type') && error.message?.includes('not allowed')) {
+        errorMessage = error.message;
+      }
+      if (!clientDisconnected && !res.destroyed) {
+        res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      }
+    } finally {
+      if (!clientDisconnected && !res.destroyed) {
+        res.end();
+      }
+    }
   }
 
-  @Public()
-  @Get('history')
-  @ApiOperation({ summary: 'Get conversation history' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'offset', required: false, type: Number })
-  @ApiResponse({
-    status: 200,
-    description: 'Conversation history retrieved successfully',
-    
-  })
-  async getHistory(@Query() getMessagesDto: GetMessagesDto): Promise<any> {
-    const result = await this.chatService.getMessages(getMessagesDto);
-    
-    return {
-      success: true,
-      data: result.messages.map(msg => ({
-        id: msg.id,
-        userMessage: msg.userMessage,
-        aiResponse: msg.aiResponse,
-        userId: msg.userId,
-        createdAt: msg.createdAt,
-        updatedAt: msg.updatedAt,
-      })),
-      pagination: {
-        limit: 50,
-        offset: 0,
-        total: result.total,
-      },
-    };
+  async getMessagesByConversation(conversationId: string, userId: string): Promise<Message[]> {
+    return this.messageRepository.find({
+      where: { conversationId },
+      order: { createdAt: 'ASC' },
+    });
   }
 
-  @Public()
-  @Get('history/:userId')
-  @ApiOperation({ summary: 'Get conversation history for specific user' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'offset', required: false, type: Number })
-  @ApiResponse({
-    status: 200,
-    description: 'User conversation history retrieved successfully',
-    type: MessagesListResponseDto,
-  })
-  async getUserHistory(
-    @Param('userId') userId: string,
-    @Query() getMessagesDto: GetMessagesDto,
-  ): Promise<MessagesListResponseDto> {
-    const result = await this.chatService.getUserMessages(userId, getMessagesDto);
-    
-    return {
-      success: true,
-      data: result.messages.map(msg => ({
-        id: msg.id,
-        userMessage: msg.userMessage,
-        aiResponse: msg.aiResponse,
-        userId: msg.userId,
-        createdAt: msg.createdAt,
-        updatedAt: msg.updatedAt,
-      })),
-      pagination: {
-        limit: 50,
-        offset: 0,
-        total: result.total,
-      },
-    };
+
+
+  @Get('user-conversations')
+  async getUserConversations(
+    @Request() req: any,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id;
+    console.log(userId)
+    if (!userId) {
+      res.status(400).json({ success: false, message: 'User ID is required' });
+      return;
+    }
+
+    const conversations = await this.chatService.getUniqueConversationsByUser(userId);
+
+    res.json({ success: true, conversations });
   }
 
-  @Public()
-  @Get('message/:id')
-  @ApiOperation({ summary: 'Get specific message by ID' })
-  @ApiParam({ name: 'id', description: 'Message ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Message retrieved successfully',
-    type: MessageResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Message not found',
-  })
-  async getMessage(@Param('id', ParseIntPipe) id: number): Promise<{
-    success: boolean;
-    data: MessageResponseDto;
-  }> {
-    const message = await this.chatService.getMessageById(id);
-    
-    return {
-      success: true,
-      data: {
-        id: message.id,
-        userMessage: message.userMessage,
-        aiResponse: message.aiResponse,
-        userId: message.userId,
-        createdAt: message.createdAt,
-        updatedAt: message.updatedAt,
-      },
-    };
+  @Get('get-suggestions')
+  async getSugggestions(
+    @Request() req: any,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id;
+    console.log(userId)
+    if (!userId) {
+      res.status(400).json({ success: false, message: 'User ID is required' });
+      return;
+    }
+
+    const suggestions = await this.chatService.getSuggetions();
+
+    res.json({ success: true, suggestions });
   }
+
+
+  @Post('create-conversation')
+  async createConversation(
+    @Param('conversationId') conversationId: string,
+    @Body() createMessageDto: CreateMessageDto,
+    @Request() req: any,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id;
+
+    // if (!conversationId) {
+    //   res.status(400).json({ success: false, message: 'conversationId is required' });
+    //   return;
+    // }
+
+    if (!createMessageDto?.message) {
+      res.status(400).json({ success: false, message: 'message is required' });
+      return;
+    }
+
+    const messages = await this.chatService.createNewConversation(
+      createMessageDto.message
+    );
+
+    res.json({ success: true, messages });
+  }
+
+  @Get('conversation/:conversationId')
+  async getConversationMessages(
+    @Param('conversationId') conversationId: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id;
+
+    if (!conversationId && !userId) {
+      res.status(400).json({ success: false, message: 'conversationId and userId are required' });
+      return;
+    }
+
+    const messages = await this.chatService.getMessagesByConversation(conversationId, String(userId));
+    res.json({ success: true, messages });
+  }
+
+
 }

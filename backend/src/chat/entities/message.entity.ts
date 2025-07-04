@@ -1,3 +1,4 @@
+import BaseEntity from '@/common/entities/BaseEntity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -10,9 +11,7 @@ import {
 @Entity('messages')
 @Index(['userId', 'createdAt'])
 @Index(['createdAt'])
-export class Message {
-  @PrimaryGeneratedColumn()
-  id: number;
+export class Message extends BaseEntity {
 
   @Column('text')
   userMessage: string;
@@ -26,9 +25,15 @@ export class Message {
   @Column({ nullable: true })
   conversationId?: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
+  @Column({ nullable: true })
+  title?: string;
 
-  @UpdateDateColumn()
-  updatedAt: Date;
+  @Column({ nullable: true })
+  fileName?: string;
+
+  @Column({ nullable: true })
+  fileSize?: string;
+
+  @Column({ nullable: true })
+  fileType?: string;
 }

@@ -188,9 +188,10 @@ export class TasksService implements OnModuleInit {
       //   content: document.content_html || '',
       //   additionalMetadata: {
       //     document_id: document.id,
+      //     document_type: document.type,
       //     processed_at: new Date().toISOString(),
       //     enabled: true,
-      //     source: 'Scraper',
+      //     source: 'Api',
       //   }
       // });
 }
@@ -221,6 +222,7 @@ export class TasksService implements OnModuleInit {
       //   content: document.content_html || '',
       //   additionalMetadata: {
       //     document_id: document.id,
+      //     document_type: document.type,
       //     processed_at: new Date().toISOString(),
       //     enabled: true,
       //     source: 'Scraper',
@@ -253,6 +255,7 @@ export class TasksService implements OnModuleInit {
       //   content: document.content_html || '',
       //   additionalMetadata: {
       //     document_id: document.id,
+      //     document_type: document.type,
       //     processed_at: new Date().toISOString(),
       //     enabled: true,
       //     source: 'Scraper',
@@ -281,6 +284,7 @@ export class TasksService implements OnModuleInit {
       //   content: document.content_html || '',
       //   additionalMetadata: {
       //     document_id: document.id,
+      //     document_type: document.type,
       //     processed_at: new Date().toISOString(),
       //     enabled: true,
       //     source: 'Scraper',
@@ -311,6 +315,7 @@ export class TasksService implements OnModuleInit {
       //   content: document.content_html || '',
       //   additionalMetadata: {
       //     document_id: document.id,
+      //     document_type: document.type,
       //     processed_at: new Date().toISOString(),
       //     enabled: true,
       //     source: 'Scraper',
@@ -341,6 +346,7 @@ export class TasksService implements OnModuleInit {
       //   content: document.content_html || '',
       //   additionalMetadata: {
       //     document_id: document.id,
+      //     document_type: document.type,
       //     processed_at: new Date().toISOString(),
       //     enabled: true,
       //     source: 'Scraper',
@@ -368,6 +374,7 @@ export class TasksService implements OnModuleInit {
       //   content: document.content_html || '',
       //   additionalMetadata: {
       //     document_id: document.id,
+      //     document_type: document.type,
       //     processed_at: new Date().toISOString(),
       //     enabled: true,
       //     source: 'Scraper',
@@ -399,6 +406,7 @@ export class TasksService implements OnModuleInit {
       //   content: document.content_html || '',
       //   additionalMetadata: {
       //     document_id: document.id,
+      //     document_type: document.type,
       //     processed_at: new Date().toISOString(),
       //     enabled: true,
       //     source: 'Scraper',

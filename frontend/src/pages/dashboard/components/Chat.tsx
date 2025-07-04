@@ -4,26 +4,22 @@ import type React from "react"
 
 import {
   Book,
-  Paperclip,
   ChevronDown,
-  FileText,
-  ChevronRight,
-  X,
   ChevronLeft,
+  ChevronRight,
   Copy,
+  FileDown,
+  FileText,
+  Paperclip,
   RotateCcw,
   ThumbsDown,
   ThumbsUp,
-  FileDown,
+  X,
 } from "lucide-react"
+
 import type { DropdownMenuCheckboxItemProps } from "@radix-ui/react-dropdown-menu"
+
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
@@ -32,22 +28,34 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { useState, useRef, useEffect } from "react"
-
-import { Swiper, SwiperSlide } from "swiper/react"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useEffect, useRef, useState } from "react"
 import { Mousewheel, Navigation, Scrollbar } from "swiper/modules"
+import { Swiper, SwiperSlide } from "swiper/react"
+
 // @ts-ignore
 import "swiper/css"
 // @ts-ignore
 import "swiper/css/navigation"
-import { cn } from "@/lib/utils"
+
 import { useIsMobile } from "@/hooks/use-mobile"
+import API from "@/lib/api"
+import { cn } from "@/lib/utils"
+import { useQueryClient } from "@tanstack/react-query"
+import { useNavigate, useParams } from "react-router-dom"
+import { set } from "date-fns"
 
 interface AttachedDocument {
   id: string
   name: string
   type: string
   size: string
+  file?: File // Add the actual file object
 }
 
 interface ChatMessage {
@@ -56,6 +64,7 @@ interface ChatMessage {
   content: string
   currentMessages?: any
   documents?: AttachedDocument[]
+  isStreaming?: boolean
 }
 
 const Chat = ({
@@ -70,11 +79,132 @@ const Chat = ({
   const [tempSelectedDocs, setTempSelectedDocs] = useState<AttachedDocument[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isSmallScreen, setIsSmallScreen] = useState(false)
+  const [conversationId, setConversationId] = useState<string>("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [isFetchingMessages, setIsFetchingMessages] = useState(false)
+  const [title, setTitle] = useState("")
+  const [isFirstMessage, setIsFirstMessage] = useState(false)
+  const [hasNavigatedToNewConversation, setHasNavigatedToNewConversation] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
+  const params = useParams()
+  const urlConversationId = params.conversationId;
+  const queryClient = useQueryClient();
+
+  // Ref for smooth scroll
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Ref to hold streaming content for assistant message
+  const streamingContentRef = useRef("");
+
+  // Fetch conversation messages when URL conversation ID changes
+  const fetchConversationMessages = async () => {
+    if (!urlConversationId) {
+      setMessages([])
+      setConversationId("")
+      setTitle("")
+      return
+    }
+
+    // Don't fetch messages if we just navigated to a new conversation that we created
+    if (hasNavigatedToNewConversation && conversationId === urlConversationId) {
+      setHasNavigatedToNewConversation(false)
+      return
+    }
+
+    if (!isFirstMessage) {
+      setIsFetchingMessages(true)
+    }
+    try {
+      const response = await API.get(`/chat/conversation/${urlConversationId}`)
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.data
+        setConversationId(urlConversationId)
+        if (data.title) {
+          setTitle(data.title)
+        }
+        // Update messages if available
+        if (data.messages && Array.isArray(data.messages)) {
+          const transformedMessages: ChatMessage[] = data.messages.flatMap((msg: any, index: number) => {
+            let transformedDocuments: AttachedDocument[] | undefined = undefined;
+            if (msg.documents && Array.isArray(msg.documents) && msg.documents.length > 0) {
+              transformedDocuments = msg.documents.map((doc: any, docIndex: number) => ({
+                id: `${msg.id}-doc-${docIndex}`,
+                name: doc.fileName || doc.name || `Document ${docIndex + 1}`,
+                type: doc.fileType || doc.type || "Document",
+                size: doc.fileSize
+                  ? (typeof doc.fileSize === 'number' ? `${(doc.fileSize / 1024).toFixed(1)} KB` : doc.fileSize)
+                  : doc.size || "Unknown size",
+              }));
+            } else if (msg.fileName && msg.fileType && msg.fileSize) {
+              transformedDocuments = [
+                {
+                  id: `${msg.id}-doc-0`,
+                  name: msg.fileName,
+                  type: msg.fileType?.split('/')[1],
+                  size: `${(msg?.fileSize / 1024).toFixed(1)} KB`,
+                },
+              ];
+            }
+            const userMsg: ChatMessage = {
+              id: `${msg.id}-user`,
+              role: "user",
+              content: msg.userMessage || "",
+              documents: transformedDocuments,
+              isStreaming: false,
+            };
+            const aiMsg: ChatMessage = {
+              id: `${msg.id}-assistant`,
+              role: "assistant",
+              content: msg.aiResponse || "",
+              documents: undefined,
+              isStreaming: false,
+            };
+            return [userMsg, aiMsg];
+          });
+          setMessages(transformedMessages)
+        } else {
+          setMessages([])
+        }
+      } else {
+        setMessages([])
+      }
+    } catch (error) {
+      setMessages([])
+    } finally {
+      setIsFirstMessage(false)
+      setIsFetchingMessages(false)
+    }
+  }
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 767px)") // sm breakpoint in Tailwind is 640px; md is 768px, so max-width 767px is sm and below
+    const fetchsuggestions = async () => {
+      const response = await API.get(`/chat/get-suggestions`)
+      setSuggestions(response.data.suggestions.titles)
+    }
+    fetchsuggestions()
+    // Only fetch messages if urlConversationId exists (not for new conversation)
+    if (urlConversationId) {
+      fetchConversationMessages()
+    } else {
+      // If it's a new conversation, clear messages
+      setMessages([])
+      setConversationId("")
+      setTitle("")
+    }
+  }, [urlConversationId]);
+
+  // Smooth scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)")
     const handleResize = () => setIsSmallScreen(mediaQuery.matches)
 
     handleResize()
@@ -86,7 +216,6 @@ const Chat = ({
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (files) {
-      // Calculate how many more files can be added
       const remainingSlots = 10 - tempSelectedDocs.length
       const filesToAdd = Math.min(files.length, remainingSlots)
 
@@ -97,13 +226,12 @@ const Chat = ({
           name: file.name,
           type: file.type.includes("pdf") ? "PDF" : "Document",
           size: `${(file.size / 1024).toFixed(1)} KB`,
+          file: file // Store the actual file object
         }))
 
-      // Add to both states simultaneously
       setSelectedDocuments([...selectedDocuments, ...newDocs])
       setTempSelectedDocs([...tempSelectedDocs, ...newDocs])
 
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
       }
@@ -113,46 +241,228 @@ const Chat = ({
   const removeDocument = (docId: string, isTemp = false) => {
     if (isTemp) {
       setTempSelectedDocs(tempSelectedDocs.filter((doc) => doc.id !== docId))
-      // Also remove from selectedDocuments if it exists there
       setSelectedDocuments(selectedDocuments.filter((doc) => doc.id !== docId))
     } else {
       setSelectedDocuments(selectedDocuments.filter((doc) => doc.id !== docId))
-      // Also remove from tempSelectedDocs if it exists there
       setTempSelectedDocs(tempSelectedDocs.filter((doc) => doc.id !== docId))
     }
   }
 
-  const handleSendMessage = () => {
-    if (message.trim() || selectedDocuments.length > 0) {
-      const newMessage: ChatMessage = {
-        id: Date.now().toString(),
-        role: "user",
-        content: message,
-        documents: selectedDocuments.length > 0 ? [...selectedDocuments] : undefined,
+  const handleSendMessage = async () => {
+    if (!message.trim() && selectedDocuments.length === 0) return;
+
+    setIsLoading(true);
+
+    const newMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: "user",
+      content: message,
+      documents: selectedDocuments.length > 0 ? [...selectedDocuments] : undefined,
+    };
+
+    // Use functional updates to avoid race conditions and message loss
+    const assistantMessageId = (Date.now() + 1).toString();
+    setMessages(prev => [
+      ...prev,
+      newMessage,
+      { id: assistantMessageId, role: "assistant", content: "", isStreaming: true },
+    ]);
+
+    setMessage("");
+    setSelectedDocuments([]);
+    setTempSelectedDocs([]);
+
+    try {
+      const currentConversationId = urlConversationId || conversationId;
+      const token = localStorage.getItem('authToken');
+      const baseURL = API.defaults?.baseURL || "";
+
+      // Create FormData to handle file uploads
+      const formData = new FormData();
+      formData.append('message', newMessage.content);
+
+      if (currentConversationId) {
+        formData.append('conversationId', currentConversationId);
       }
 
-      // Add user message first
-      const updatedMessages = [...messages, newMessage]
-      setMessages(updatedMessages)
+      if (title) {
+        formData.append('title', title);
+      }
 
-      // Clear input and selected documents
-      setMessage("")
-      setSelectedDocuments([])
-      setTempSelectedDocs([])
+      // Add files to FormData
+      if (newMessage.documents && newMessage.documents.length > 0) {
+        newMessage.documents.forEach((doc, index) => {
+          if (doc.file) {
+            formData.append(`files`, doc.file);
+          }
+        });
+      }
 
-      // Simulate AI response after delay
-      setTimeout(() => {
-        const aiResponse: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content:
-            "Thank you for your question. I've analyzed the provided documents and here's my response based on the legal information available.",
+      console.log(formData)
+
+      const response = await fetch(`${baseURL}/chat/message`, {
+        method: "POST",
+        headers: {
+          // Don't set Content-Type header when sending FormData
+          // The browser will set it automatically with the boundary
+          "Accept": "text/event-stream",
+          // "content-type": "multipart/form-data",
+          "Authorization": token ? `Bearer ${token}` : "",
+        },
+        body: formData, // Send FormData instead of JSON
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No stream reader available");
+      }
+
+      let hasNavigated = false;
+      streamingContentRef.current = "";
+      let buffer = "";
+
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+
+          if (done) {
+            console.log("Stream completed");
+            break;
+          }
+
+          const chunk = new TextDecoder().decode(value, { stream: true });
+          buffer += chunk;
+
+          // Split by newlines to process complete lines
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || ""; // Keep the last incomplete line in buffer
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const jsonStr = line.slice(6).trim();
+                if (jsonStr === "") continue;
+
+                const data = JSON.parse(jsonStr);
+                console.log(`Received chunk data:`, data);
+
+                // Handle conversation metadata (first chunk)
+                if (data.conversationId && !hasNavigated) {
+                  setConversationId(data.conversationId);
+                  if (!urlConversationId || urlConversationId !== data.conversationId) {
+                    setIsFirstMessage(true);
+                    setHasNavigatedToNewConversation(true); // Set flag before navigation
+                    navigate(`/chat/${data.conversationId}`);
+                    // Add this line to force refetch after navigation
+                    setTimeout(() => queryClient.invalidateQueries({ queryKey: ['conversations'] }), 500);
+                    hasNavigated = true;
+                  }
+                }
+
+                // Handle title update
+                if (data.title) {
+                  setTitle(data.title);
+                }
+
+                // Handle streaming tokens
+                if (data.token) {
+                  streamingContentRef.current += data.token;
+                  console.log("Current streaming content:", streamingContentRef.current);
+                  setMessages(prev => prev.map(msg =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, content: streamingContentRef.current, isStreaming: true }
+                      : msg
+                  ));
+                }
+
+                // Handle completion
+                if (data.done) {
+                  setMessages(prev =>
+                    prev.map(msg =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, isStreaming: false }
+                        : msg
+                    )
+                  );
+                  setIsLoading(false);
+                  // Only update the sidebar (conversations list), not the chat messages
+                  setTimeout(() => {
+                    queryClient.invalidateQueries({ queryKey: ['conversations'] });
+                  }, 300);
+                  return;
+                }
+
+                // Handle errors
+                if (data.error) {
+                  console.error("Server error:", data.error);
+                  setMessages(prev =>
+                    prev.map(msg =>
+                      msg.id === assistantMessageId
+                        ? {
+                          ...msg,
+                          content: `Error: ${data.error}`,
+                          isStreaming: false,
+                        }
+                        : msg
+                    )
+                  );
+                  setIsLoading(false);
+                  return;
+                }
+
+              } catch (parseError) {
+                console.warn("Failed to parse JSON:", parseError, "Line:", line);
+                // Continue processing other lines
+              }
+            }
+          }
         }
-        // Use functional update to ensure we get the latest state
-        setMessages((currentMessages: ChatMessage[]) => [...currentMessages, aiResponse])
-      }, 1000)
+      } finally {
+        reader.releaseLock();
+      }
+
+      // Ensure streaming state is cleared even if done event wasn't received
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg
+        )
+      );
+      setIsLoading(false);
+
+    } catch (error: any) {
+      console.error("Streaming error:", error);
+
+      let errorMessage = "Sorry, I encountered an error while processing your request. Please try again.";
+
+      if (error.message?.includes('Failed to fetch')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      } else if (error.message?.includes('HTTP error')) {
+        errorMessage = `Server error: ${error.message}`;
+      }
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? {
+              ...msg,
+              content: errorMessage,
+              isStreaming: false,
+            }
+            : msg
+        )
+      );
+      setIsLoading(false);
     }
-  }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setMessage(suggestion); // Set selected suggestion to the message input
+  };
+
 
   const renderMessage = (msg: ChatMessage) => {
     if (msg.role === "user") {
@@ -163,7 +473,7 @@ const Chat = ({
             <div className="mb-2 space-y-1 max-w-[80%] md:max-w-md">
               {msg.documents.map((doc) => (
                 <div key={doc.id} className="flex items-center gap-2 p-2 bg-gray-100 rounded text-xs border">
-                  <FileText className={`w-4 h-4 ${doc.type === "PDF" ? "text-blue-500" : "text-red-500"}`} />
+                  <FileText className={`w-4 h-4 ${doc.type === "PDF" || doc.type?.toLowerCase().includes('pdf') ? "text-blue-500" : "text-red-500"}`} />
                   <div className="flex flex-col">
                     <span className="font-medium truncate">{doc.name}</span>
                     <span className="text-gray-500">
@@ -185,82 +495,131 @@ const Chat = ({
     return (
       <div key={msg.id} className="rounded-lg py-4 md:py-6 mb-4">
         <div className="space-y-3 md:space-y-4">
-          <p className="text-gray-800 text-sm md:text-sm">{msg.content}</p>
+          <p className="text-gray-800 text-sm md:text-sm">
+            {msg.content}
+            {msg.isStreaming && !msg.content.trim() && (
+              <span className="inline-flex ml-2 align-middle">
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5"></span>
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5 [animation-delay:0.2s]"></span>
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5 [animation-delay:0.4s]"></span>
+              </span>
+            )}
+          </p>
         </div>
+        {/* Action buttons - only show when not streaming */}
+        {!msg.isStreaming && (
+          <div className="flex space-x-2 mt-3 md:mt-4">
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white text-gray-600 hover:bg-gray-200"
+            >
+              <ThumbsUp className="h-4 w-4 md:h-5 md:w-5" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white text-gray-600 hover:bg-gray-200"
+            >
+              <ThumbsDown className="h-4 w-4 md:h-5 md:w-5" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white text-gray-600 hover:bg-gray-200"
+              onClick={() => navigator.clipboard.writeText(msg.content)}
+            >
+              <Copy className="h-4 w-4 md:h-5 md:w-5" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white text-gray-600 hover:bg-gray-200"
+            >
+              <RotateCcw className="h-4 w-4 md:h-5 md:w-5" />
+            </Button>
+          </div>
+        )}
+      </div>
+    )
+  }
 
-        {/* Action buttons */}
-        <div className="flex space-x-2 mt-3 md:mt-4">
-          <Button
-            variant="secondary"
-            size="icon"
-            className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white text-gray-600 hover:bg-gray-200"
-          >
-            <ThumbsUp className="h-4 w-4 md:h-5 md:w-5" />
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white text-gray-600 hover:bg-gray-200"
-          >
-            <ThumbsDown className="h-4 w-4 md:h-5 md:w-5" />
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white text-gray-600 hover:bg-gray-200"
-          >
-            <Copy className="h-4 w-4 md:h-5 md:w-5" />
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white text-gray-600 hover:bg-gray-200"
-          >
-            <RotateCcw className="h-4 w-4 md:h-5 md:w-5" />
-          </Button>
-        </div>
+  // Show loading state when fetching messages
+  if (isFetchingMessages) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <p className="mt-2 text-sm text-gray-600">Loading conversation...</p>
       </div>
     )
   }
 
   return (
-    <div className={cn("w-full flex flex-col m-0 p-0 mt-5 md:mt-15", messages.length > 0 ? "h-[90vh]" : "")}>
+    <div
+      className={cn(
+        // Responsive container for chat area
+        "w-full flex flex-col m-0 p-0 mt-5 md:mt-15 min-w-0 max-w-full",
+        messages.length > 0 ? "h-[84vh]" : "",
+        // Responsive padding and centering
+        "px-2 sm:px-4 md:px-6 lg:px-8 xl:px-0"
+      )}
+      style={{ boxSizing: 'border-box' }}
+    >
       {/* Messages Section */}
       {messages.length > 0 && (
         <div
-          className="flex-1 overflow-y-auto pb-4"
+          className="flex-1 overflow-y-auto pb-4 w-full"
           style={{
             maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
           }}
         >
-          <div className="md:max-w-5xl  px-2 md:pl-8 flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px]">
-            <div className="w-full space-y-4 pt-6 md:pt-12">{messages.map(renderMessage)}</div>
+          <div className="w-full max-w-5xl px-2 md:pl-8 flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px]">
+            <div className="w-full space-y-4 pt-6 md:pt-12">
+              {messages.map(renderMessage)}
+              <div ref={messagesEndRef} />
+            </div>
           </div>
         </div>
       )}
 
+
       {/* Chat Input Section */}
       <div
         className={cn(
-          "mx-auto w-full max-w-5xl bg-background px-2 md:pl-8 flex-shrink-0 relative",
-          messages.length > 0 ? "pb-10" : "mt-auto",
+          // Responsive chat input section
+          "mx-auto w-full max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl bg-background px-2 md:pl-8 flex-shrink-0 relative min-w-0",
+          messages.length > 0 ? "pb-10" : "mt-auto"
         )}
       >
+
         {/* Suggestions */}
-        <div className="mb-4 hidden md:flex flex-wrap gap-2 sm:mt-3 z-10">
-          <Button className="rounded-sm text-muted-foreground hover:text-white bg-muted px-4 py-2 text-sm">
-            What's your checklist for incorporating a new startup?
-          </Button>
-          <Button className="rounded-sm text-muted-foreground hover:text-white bg-muted px-4 py-2 text-sm">
-            When should you recommend arbitration vs. litigation?
-          </Button>
+        <div
+          className={
+            cn(
+              "hidden md:flex h-14 flex-row overflow-x-auto gap-4 sm:mt-3 z-10 w-full transition-all duration-200 min-h-[3.5rem]"
+            )
+          }
+        >
+          {suggestions?.length > 0 && suggestions.map((suggestion, index) => (
+            <Button
+              key={index}
+              className="rounded-sm text-muted-foreground hover:text-white bg-muted px-4 py-2 text-sm"
+              onClick={() => handleSuggestionClick(suggestion)}
+            >
+              {suggestion}
+            </Button>
+          ))}
         </div>
 
-        {/* Message Input */}        <div
+
+        {/* Message Input */}
+        <div
           className={cn(
-            "bg-background mx-auto border rounded-md px-2 max-w-5xl overflow-y-auto relative flex flex-col",
+            // Responsive message input area
+            "bg-background mx-auto border rounded-md px-2 w-full max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl overflow-y-auto relative flex flex-col min-w-0",
             selectedDocuments.length > 0 ? "h-[180px] md:h-[160px]" : "h-[120px] md:h-[100px]",
+            "transition-all duration-200"
           )}
         >
           {/* Selected Documents Display */}
@@ -308,7 +667,6 @@ const Chat = ({
                 ))}
 
                 <div className="absolute top-0 right-0 mx-auto w-32 md:w-48 h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_38%,_rgba(250,251,253,1)_100%)] z-10"></div>
-
                 <div className="swiper-button-next absolute right-0 top-1/2 transform z-10 after:!content-none">
                   <Button
                     variant="ghost"
@@ -325,11 +683,19 @@ const Chat = ({
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="rounded-sm mb-7 flex-1 text-start px-1 py-2 bg-transparent outline-none border-none focus-visible:ring-[0px] shadow-none font-inter placeholder:text-muted-foreground text-sm md:text-sm"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault()
+                handleSendMessage()
+              }
+            }}
+            disabled={isLoading}
+            className="rounded-sm mb-7 flex-1 text-start px-1 py-2 bg-transparent outline-none border-none focus-visible:ring-0 shadow-none font-inter placeholder:text-muted-foreground text-sm md:text-sm disabled:opacity-50 resize-none min-h-[40px] max-h-[80px] w-full"
             placeholder="Ask Gavin a question..."
+            style={{ minWidth: 0 }}
           />
 
-          <div className="flex w-[96%] items-center justify-between absolute bottom-2 right-2">
+          <div className="flex w-full items-center justify-between absolute bottom-2 right-2 px-2 md:px-0">
             <div className="md:hidden flex items-center gap-2 mr-auto">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -341,10 +707,10 @@ const Chat = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" side="top" className="w-64 md:w-72">
-                  <DropdownMenuCheckboxItem checked={false} onCheckedChange={() => {}}>
+                  <DropdownMenuCheckboxItem checked={false} onCheckedChange={() => { }}>
                     Status Bar
                   </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={false} onCheckedChange={() => {}}>
+                  <DropdownMenuCheckboxItem checked={false} onCheckedChange={() => { }}>
                     Panel
                   </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
@@ -364,13 +730,13 @@ const Chat = ({
 
             <Button
               onClick={handleSendMessage}
-              className="rounded-sm ml-auto justify-self-end text-white hover:text-white bg-foreground hover:bg-gray-600 px-3 md:px-4 py-2 text-xs md:text-sm"
+              disabled={isLoading || (!message.trim() && selectedDocuments.length === 0)}
+              className="rounded-sm ml-auto justify-self-end text-white hover:text-white bg-foreground hover:bg-gray-600 px-3 md:px-4 py-2 text-xs md:text-sm disabled:opacity-50"
             >
-              Ask Gavin
+              {isLoading ? "Sending..." : "Ask Gavin"}
             </Button>
           </div>
         </div>
-
         {/* Document upload and knowledge source */}
         <div className="hidden md:flex md:flex-row py-3 items-stretch sm:items-center justify-between gap-3 sm:gap-0">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -425,7 +791,7 @@ const Chat = ({
               <Button
                 onClick={() => fileInputRef.current?.click()}
                 variant="outline"
-                size={"browse"}
+                size={"lg"}
                 className={`text-sm border-1 border-gray-800 ${tempSelectedDocs.length >= 10 ? " opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
                 disabled={tempSelectedDocs.length >= 10}
               >
@@ -466,11 +832,12 @@ const Chat = ({
               </div>
             </div>
           )}
+
           {tempSelectedDocs.length == 0 && (
             <div className="space-y-2 mt-4 flex items-center justify-end gap-3">
               <Button
                 variant={"outline"}
-                size={"brows"}
+                size={"sm"}
                 onClick={() => {
                   setSelectedDocuments([...selectedDocuments, ...tempSelectedDocs])
                   setTempSelectedDocs([])
@@ -480,7 +847,6 @@ const Chat = ({
               >
                 Back
               </Button>
-
               <div className="">
                 <input
                   ref={fileInputRef}
@@ -493,7 +859,7 @@ const Chat = ({
                 />
                 <Button
                   onClick={() => fileInputRef.current?.click()}
-                  size={"brows"}
+                  size={"sm"}
                   variant="outline"
                   className={`text-sm font-light border border-gray-800 bg-black text-white h-8 px-8 `}
                   disabled={tempSelectedDocs.length >= 10}
@@ -509,7 +875,7 @@ const Chat = ({
   )
 }
 
-type Checked = DropdownMenuCheckboxItemProps["checked"]
+type Checked = DropdownMenuCheckboxItemProps["checked"];
 
 export function DropdownMenuCheckboxes() {
   const [showStatusBar, setShowStatusBar] = useState<Checked>(true)

@@ -189,7 +189,7 @@ export function UsersTable() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium">{user.fullName}</div>
+                            <div className="font-medium">{user?.fullName}</div>
                             <div className="text-sm text-muted-foreground mt-1">
                               {user.isEmailVerified ? (
                                 <Badge variant="secondary" className="text-xs">

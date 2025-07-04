@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon,FileUp, HomeIcon, Scale, BookOpen, Wrench, CalendarClock } from "lucide-react"
+import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon, FileUp, HomeIcon, Scale, BookOpen, Wrench, CalendarClock } from "lucide-react"
 import type React from "react"
 
 import {
@@ -15,10 +15,20 @@ import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { AppSidebarHeader } from "./AppSidebarHeader"
 import { useAuth } from "@/context/Auth.context"
-import { NavLink } from "react-router-dom"
+import { NavLink, useNavigate } from "react-router-dom"
+import { useConversationsQuery, useCreateConversationMutation } from "./hook"
+import { useEffect, useState } from "react"
+
+// Define Conversation type if not imported from elsewhere
+type Conversation = {
+  conversationid: string
+  title: string
+  // Add other fields as needed
+}
 
 export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { setOpenMobile, setOpen } = useSidebar()
+  
   const { user } = useAuth()
 
   const handleSidebarClose = () => {
@@ -29,21 +39,53 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
   return (
     <Sidebar {...props}>
       <AppSidebarHeader />
-      {user?.role === "admin" ? <AdminSidebar onNavClick={handleSidebarClose} /> : <UserSidebar onNavClick={handleSidebarClose} />}
+      {user?.role === "admin" ? (
+        <AdminSidebar onNavClick={handleSidebarClose} />
+      ) : (
+        <UserSidebar onNavClick={handleSidebarClose} />
+      )}
     </Sidebar>
   )
 }
 
 function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
+  const { data: conversationsData, isLoading, error } = useConversationsQuery()
+  const createConversationMutation = useCreateConversationMutation()
+  // const [ recentChats , setRecentChats] = useState<Conversation[]>([])
+const navigate = useNavigate()
+
+
+// useEffect(()=>{
+// setRecentChats(conversationsData?.conversations || [])
+
+// },[conversationsData])
+  
+  const recentChats = conversationsData?.conversations || []
+  // setRecentChats(conversationsData?.conversations || [])
+
+  const handleNewChat = async () => {
+    try {
+      navigate('/')
+      onNavClick()
+    } catch (error) {
+      console.error("Failed to create new chat:", error)
+    }
+  }
+
   return (
     <>
       <SidebarContent className="md:pt-4">
         <SidebarGroup className="py-0">
           <SidebarMenu>
             <SidebarMenuItem className="hidden md:block">
-              <Button variant="outline" className="w-full justify-start gap-2 h-12" onClick={onNavClick}>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2 h-12" 
+                onClick={handleNewChat}
+                disabled={createConversationMutation.isPending}
+              >
                 <PlusIcon size={18} />
-                <span>New Chat</span>
+                <span>{createConversationMutation.isPending ? "Creating..." : "New Chat"}</span>
               </Button>
             </SidebarMenuItem>
 
@@ -59,17 +101,39 @@ function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
 
               <CollapsibleContent>
                 <SidebarMenu>
-                  {recentChats.map((chat) => (
-                    <SidebarMenuItem key={chat.title} className="px-2">
-                      <SidebarMenuButton className="gap-2 py-5 relative" onClick={onNavClick}>
-                        <FileText size={18} />
-                        <span className="truncate" style={{
-                          textOverflow: "clip",
-                        }}>{chat.title}</span>
-                        <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
+                  {isLoading ? (
+                    <SidebarMenuItem className="px-2">
+                      <SidebarMenuButton className="gap-2 py-5 relative">
+                        <span className="truncate">Loading...</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  ))}
+                  ) : error ? (
+                    <SidebarMenuItem className="px-2">
+                      <SidebarMenuButton className="gap-2 py-5 relative">
+                        <span className="truncate text-red-500">Error loading chats</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ) : recentChats.length === 0 ? (
+                    <SidebarMenuItem className="px-2">
+                      <SidebarMenuButton className="gap-2 py-5 relative">
+                        <span className="truncate text-muted-foreground">No recent chats</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ) : (
+                    recentChats.map((chat) => (
+                      <SidebarMenuItem key={chat.conversationid} className="px-2">
+                        <NavLink to={`/chat/${chat.conversationid}`} onClick={onNavClick}>
+                          <SidebarMenuButton className="gap-2 py-5 relative">
+                            <FileText size={18} />
+                            <span className="truncate" style={{
+                              textOverflow: "clip",
+                            }}>{chat.title}</span>
+                            <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
+                          </SidebarMenuButton>
+                        </NavLink>
+                      </SidebarMenuItem>
+                    ))
+                  )}
                 </SidebarMenu>
               </CollapsibleContent>
             </Collapsible>
@@ -102,14 +166,6 @@ function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
     </>
   )
 }
-
-const recentChats = [
-  { title: "ASCII String conversion" },
-  { title: "Learn about GSOC" },
-  { title: "DFS and BFS" },
-  { title: "Pain points for an e-commerce asd;fljasdf  asd" },
-  { title: "Array Multiplication" },
-]
 
 function AdminSidebar({ onNavClick }: { onNavClick: () => void }) {
   return (
