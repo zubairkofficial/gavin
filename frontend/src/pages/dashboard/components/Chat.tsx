@@ -16,7 +16,7 @@ import {
   ThumbsUp,
   X,
 } from "lucide-react"
-
+import ReactMarkdown from "react-markdown"
 import type { DropdownMenuCheckboxItemProps } from "@radix-ui/react-dropdown-menu"
 
 import { Button } from "@/components/ui/button"
@@ -194,6 +194,9 @@ const Chat = ({
       setConversationId("")
       setTitle("")
     }
+
+    queryClient.invalidateQueries({ queryKey: ['conversations'] });
+
   }, [urlConversationId]);
 
   // Smooth scroll to bottom when messages change
@@ -496,14 +499,17 @@ const Chat = ({
       <div key={msg.id} className="rounded-lg py-4 md:py-6 mb-4">
         <div className="space-y-3 md:space-y-4">
           <p className="text-gray-800 text-sm md:text-sm">
+            <ReactMarkdown>
             {msg.content}
-            {msg.isStreaming && !msg.content.trim() && (
+            </ReactMarkdown>
+            {msg.isStreaming && !msg.content.trim() && <span className="inline-block w-4 h-4 bg-gray-400 ml-1 animate-pulse" />}
+            {/* {msg.isStreaming && !msg.content.trim() && (
               <span className="inline-flex ml-2 align-middle">
                 <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5"></span>
                 <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5 [animation-delay:0.2s]"></span>
                 <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5 [animation-delay:0.4s]"></span>
               </span>
-            )}
+            )} */}
           </p>
         </div>
         {/* Action buttons - only show when not streaming */}

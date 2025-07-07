@@ -67,6 +67,7 @@
     "puppeteer": "^24.10.1",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "react-markdown": "^10.1.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "simple-git": "^3.28.0",

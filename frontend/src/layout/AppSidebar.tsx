@@ -48,7 +48,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
   )
 }
 
-function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
+export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
   const { data: conversationsData, isLoading, error } = useConversationsQuery()
   const createConversationMutation = useCreateConversationMutation()
   // const [ recentChats , setRecentChats] = useState<Conversation[]>([])
