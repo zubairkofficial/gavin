@@ -417,7 +417,7 @@ export class ChatService {
       console.log('context before using in the prompt :', context);
 
       const greetings = [
-        'hi', 'hello', 'hey', 'how are you', 'can you help', 'help me', 'assist me', 'can you please help', 'good morning', 'good afternoon', 'good evening',
+        // 'hi', 'hello', 'hey', 'how are you', 'can you help', 'help me', 'assist me', 'can you please help', 'good morning', 'good afternoon', 'good evening',
         // 'welcome', 'greetings', 'what can you do', 'what can you help with', 'how can you assist', 'can you assist me', 'can you help me',
         // 'can you answer my question', 'can you provide information', 'can you give me advice', 'can you explain something', 'can you clarify something',
         // 'hy'
