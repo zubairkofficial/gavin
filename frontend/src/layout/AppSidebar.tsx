@@ -1,5 +1,6 @@
 import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon, FileUp, HomeIcon, Scale, BookOpen, Wrench, CalendarClock } from "lucide-react"
 import type React from "react"
+import { useLocation } from "react-router-dom"
 
 import {
   Sidebar,
@@ -23,6 +24,7 @@ import { useEffect, useState } from "react"
 type Conversation = {
   conversationid: string
   title: string
+  createdat?: string // Use optional chaining if createdAt might be missing
   // Add other fields as needed
 }
 
@@ -53,6 +55,8 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
   const createConversationMutation = useCreateConversationMutation()
   // const [ recentChats , setRecentChats] = useState<Conversation[]>([])
 const navigate = useNavigate()
+const location = useLocation()
+console.log("conversationsData", conversationsData)
 
 
 // useEffect(()=>{
@@ -60,7 +64,16 @@ const navigate = useNavigate()
 
 // },[conversationsData])
   
-  const recentChats = conversationsData?.conversations || []
+  // const recentChats = (conversationsData?.conversations || [])
+   const recentChats = (conversationsData?.conversations || [])
+    .slice() // create a shallow copy to avoid mutating original
+    .sort((a, b) => {
+      // If createdAt is missing, treat as oldest
+      const aTime = a.createdat ? new Date(a.createdat).getTime() : 0
+      const bTime = b.createdat ? new Date(b.createdat).getTime() : 0
+      return bTime - aTime // descending order
+    })
+  // .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   // setRecentChats(conversationsData?.conversations || [])
 
   const handleNewChat = async () => {
@@ -120,19 +133,34 @@ const navigate = useNavigate()
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ) : (
-                    recentChats.map((chat) => (
-                      <SidebarMenuItem key={chat.conversationid} className="px-2">
-                        <NavLink to={`/chat/${chat.conversationid}`} onClick={onNavClick}>
-                          <SidebarMenuButton className="gap-2 py-5 relative">
-                            <FileText size={18} />
-                            <span className="truncate" style={{
-                              textOverflow: "clip",
-                            }}>{chat.title}</span>
-                            <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
-                          </SidebarMenuButton>
-                        </NavLink>
-                      </SidebarMenuItem>
-                    ))
+                    recentChats.map((chat) => {
+                      const isActive = location.pathname === `/chat/${chat.conversationid}`
+                      return (
+                        <SidebarMenuItem key={chat.conversationid} className="px-2">
+                          <NavLink
+                            to={`/chat/${chat.conversationid}`}
+                            onClick={onNavClick}
+                            className={({ isActive: navActive }) =>
+                              [
+                                "block",
+                                isActive || navActive
+                                  ? "bg-muted text-foreground font-semibold"
+                                  : "hover:bg-muted/60",
+                                "rounded-md transition-colors"
+                              ].join(" ")
+                            }
+                          >
+                            <SidebarMenuButton className="gap-2 py-5 relative">
+                              <FileText size={18} />
+                              <span className="truncate" style={{
+                                textOverflow: "clip",
+                              }}>{chat.title}</span>
+                              <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
+                            </SidebarMenuButton>
+                          </NavLink>
+                        </SidebarMenuItem>
+                      )
+                    })
                   )}
                 </SidebarMenu>
               </CollapsibleContent>

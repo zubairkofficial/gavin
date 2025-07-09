@@ -46,13 +46,13 @@ import { UpdateCaseDto } from './dto/update.case.dto';
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadsDir = path.join(process.cwd(), 'uploads');
-    
+
     // Ensure uploads directory exists
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
       console.log('📁 Created uploads directory:', uploadsDir);
     }
-    
+
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
@@ -61,10 +61,10 @@ const storage = multer.diskStorage({
     const randomSuffix = Math.round(Math.random() * 1E9);
     const fileExtension = path.extname(file.originalname);
     const baseName = path.basename(file.originalname, fileExtension);
-    
+
     // Create unique filename: originalname_timestamp_random.ext
     const uniqueFileName = `${baseName}${fileExtension}`;
-    
+
     console.log('💾 Storing file as:', uniqueFileName);
     cb(null, uniqueFileName);
   }
@@ -90,10 +90,10 @@ export class DocumentsController {
     private OpenServiceRegulation: OpenAIServiceRegulation,
     private OpenAICaseService: OpenAIStatuteService,
     private embeddingService: EmbeddingService,
-  ) {}
+  ) { }
 
   @Post('/upload')
-  @UseInterceptors(FileInterceptor('file', { 
+  @UseInterceptors(FileInterceptor('file', {
     storage,
     fileFilter: (req, file, cb) => {
       // Validate file types at multer level
@@ -138,8 +138,8 @@ export class DocumentsController {
     // File is automatically saved to uploads folder by multer
     const filePath = file.path;
     const uploadsDir = path.join(process.cwd(), 'uploads');
-const relativeToUploads = path.relative(uploadsDir, filePath).replace(/\\/g, '/');
-    
+    const relativeToUploads = path.relative(uploadsDir, filePath).replace(/\\/g, '/');
+
     console.log('💾 File stored at:', {
       fullPath: filePath,
       relativePath: relativeToUploads,
@@ -148,12 +148,12 @@ const relativeToUploads = path.relative(uploadsDir, filePath).replace(/\\/g, '/'
 
     // Update DTO with file information
     createDocumentDto.fileName = file.originalname;
-createDocumentDto.filePath = relativeToUploads;
+    createDocumentDto.filePath = relativeToUploads;
 
     try {
       // Extract and process text from the stored file
       const fullText = await this.extractTextFromFile(file, filePath);
-      
+
       // Validate extracted text
       if (!fullText || fullText.length < 10) {
         throw new BadRequestException('Could not extract sufficient text from document');
@@ -170,7 +170,7 @@ createDocumentDto.filePath = relativeToUploads;
     } catch (error) {
       // Clean up uploaded file on error
       this.cleanupTempFile(filePath);
-      
+
       if (error instanceof BadRequestException) {
         throw error;
       } else {
@@ -252,61 +252,61 @@ createDocumentDto.filePath = relativeToUploads;
   }
 
 
-@Post('/scrape/url')
-async scrapeUrl(
-  @Body() createDocumentDto: CreateDocumentDto,
-  @Request() req: any,
-) {
+  @Post('/scrape/url')
+  async scrapeUrl(
+    @Body() createDocumentDto: CreateDocumentDto,
+    @Request() req: any,
+  ) {
 
-  console.log(`the url ${createDocumentDto.filePath} , and the type is ${createDocumentDto.type}`)
-  if (!createDocumentDto.filePath || !createDocumentDto.type) {
-    throw new BadRequestException('Both url and type are required');
+    console.log(`the url ${createDocumentDto.filePath} , and the type is ${createDocumentDto.type}`)
+    if (!createDocumentDto.filePath || !createDocumentDto.type) {
+      throw new BadRequestException('Both url and type are required');
+    }
+
+    console.log(`🌐 Scrape request received:  ${createDocumentDto.filePath} , ${createDocumentDto.type}`);
+
+
+
+    createDocumentDto.source_url = 'scraper'
+
+    try {
+      const response = await axios.get(createDocumentDto.filePath);
+      if (response.status < 200 || response.status >= 300) {
+        throw new BadRequestException(`Failed to fetch URL: ${response.statusText}`);
+      }
+      const html = response.data;
+
+      // Parse and extract text using Cheerio
+      const cheerio = require('cheerio');
+      const $ = cheerio.load(html);
+
+      // Extract visible text from the body
+      let fullText = $('body').text();
+
+      // Sanitize the extracted text
+      fullText = this.sanitizeText(fullText);
+
+      // Validate extracted text
+      if (!fullText || fullText.length < 10) {
+        throw new BadRequestException('Could not extract sufficient text from the URL');
+      }
+
+      console.log('📄 URL text extraction successful:', {
+        textLength: fullText.length,
+        firstChars: fullText.substring(0, 100),
+      })
+
+      // Process document based on type
+      return await this.processDocumentByType(createDocumentDto, fullText, req.user?.id);
+
+    } catch (error) {
+      console.error('❌ URL scraping error:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Failed to scrape URL: ${error.message}`);
+    }
   }
-
-  console.log(`🌐 Scrape request received:  ${createDocumentDto.filePath} , ${createDocumentDto.type}` );
-
- 
-
-  createDocumentDto.source_url = 'scraper'
-
-  try {
-    const response = await axios.get(createDocumentDto.filePath);
-    if (response.status < 200 || response.status >= 300) {
-      throw new BadRequestException(`Failed to fetch URL: ${response.statusText}`);
-    }
-    const html = response.data;
-
-    // Parse and extract text using Cheerio
-    const cheerio = require('cheerio');
-    const $ = cheerio.load(html);
-
-    // Extract visible text from the body
-    let fullText = $('body').text();
-
-    // Sanitize the extracted text
-    fullText = this.sanitizeText(fullText);
-
-    // Validate extracted text
-    if (!fullText || fullText.length < 10) {
-      throw new BadRequestException('Could not extract sufficient text from the URL');
-    }
-
-    console.log('📄 URL text extraction successful:', {
-      textLength: fullText.length,
-      firstChars: fullText.substring(0, 100),
-    })
-
-    // Process document based on type
-    return await this.processDocumentByType(createDocumentDto, fullText, req.user?.id);
-
-  } catch (error) {
-    console.error('❌ URL scraping error:', error);
-    if (error instanceof BadRequestException) {
-      throw error;
-    }
-    throw new BadRequestException(`Failed to scrape URL: ${error.message}`);
-  }
-}
 
   private async processDocumentByType(dto: CreateDocumentDto, fullText: string, userId: string) {
     const documentType = dto.type?.toLowerCase();
@@ -332,18 +332,18 @@ async scrapeUrl(
   private async handleRegulation(dto: CreateDocumentDto, fullText: string, userId: string) {
     try {
       console.log('📋 Processing regulation for user:', userId);
-      
+
       const analysisResults = await this.OpenServiceRegulation.analyzeRegulations(fullText);
 
       if (!analysisResults || !analysisResults[0]) {
         throw new BadRequestException('Failed to analyze regulation content');
       }
-      
+
       const analysis = analysisResults[0];
       const regulation = new Regulation();
       regulation.content_html = fullText;
       regulation.title = dto.title || analysis.title;
-      regulation.fileName = dto.fileName || dto.filePath?.split('//')[1]?.substring(0,20);
+      regulation.fileName = dto.fileName || dto.filePath?.split('//')[1]?.substring(0, 20);
       regulation.filePath = dto.filePath;
       regulation.userId = userId;
       regulation.type = dto.type;
@@ -401,14 +401,20 @@ async scrapeUrl(
   private async handleContract(dto: CreateDocumentDto, fullText: string, userId: string) {
     try {
       console.log('📄 Processing contract for user:', userId);
-      
+
       const geminiResults = await this.OpenAIService.analyzeDocumentClauses(fullText, -1);
+
+      let filePath = dto.filePath;
+
+      // if (!filePath.startsWith('http://') && !filePath.startsWith('https://')) {
+      //   filePath = `${process.env.BASE_URL}/static/files${filePath}`;
+      // }
 
       const contract = new Contract();
       contract.type = dto.type;
       contract.title = dto.title;
       contract.userId = userId;
-      contract.fileName = dto.fileName || dto.filePath?.split('//')[1]?.substring(0,20) ;
+      contract.fileName = dto.fileName || dto.filePath?.split('//')[1]?.substring(0, 20);
       contract.filePath = dto.filePath;
       contract.jurisdiction = dto.jurisdiction || 'Unknown';
       contract.content_html = fullText;
@@ -507,7 +513,7 @@ async scrapeUrl(
   private async handleStatute(dto: CreateDocumentDto, fullText: string, userId: string) {
     try {
       console.log('⚖️ Processing statute for user:', userId);
-      
+
       const analysisResults = await this.OpenAICaseService.analyzeStatuteDocument(fullText);
 
       if (!analysisResults || !analysisResults.statute_info) {
@@ -516,14 +522,14 @@ async scrapeUrl(
       }
 
       const analysis = analysisResults.statute_info;
-      
+
       const StatuteEntity = new Statute();
       StatuteEntity.content_html = fullText;
       StatuteEntity.title = dto.title;
       StatuteEntity.userId = userId;
       StatuteEntity.type = dto.type || 'statute';
-      StatuteEntity.source_url =dto.source_url || 'Upload';
-      StatuteEntity.fileName = dto.fileName || dto.filePath?.split('//')[1]?.substring(0,20);
+      StatuteEntity.source_url = dto.source_url || 'Upload';
+      StatuteEntity.fileName = dto.fileName || dto.filePath?.split('//')[1]?.substring(0, 20);
       StatuteEntity.filePath = dto.filePath;
       StatuteEntity.court = analysis.court;
       StatuteEntity.jurisdiction = dto.jurisdiction || '';
@@ -539,12 +545,12 @@ async scrapeUrl(
       await this.embeddingService.processDocument({
         documentId: savedStatute.id,
         content: fullText,
-        additionalMetadata: {  
+        additionalMetadata: {
           document_id: savedStatute.id,
           document_type: savedStatute.type,
           processed_at: new Date().toISOString(),
           enabled: true,
-          source : dto.source || 'Upload',
+          source: dto.source || 'Upload',
         }
       });
 
@@ -607,13 +613,13 @@ async scrapeUrl(
           title: true,
           fileName: true,
           filePath: true,
-          isEnabled:true,
+          isEnabled: true,
           jurisdiction: true,
           source: true,
           createdAt: true,
         },
         order: {
-          createdAt: 'DESC', 
+          createdAt: 'DESC',
         },
       });
       return {
@@ -636,14 +642,14 @@ async scrapeUrl(
           name: true,
           fileName: true,
           filePath: true,
-          type:true,
-          isEnabled:true,
+          type: true,
+          isEnabled: true,
           jurisdiction: true,
           source_url: true,
           createdAt: true,
         },
         order: {
-          createdAt: 'DESC', 
+          createdAt: 'DESC',
         },
       });
       return {
@@ -668,17 +674,17 @@ async scrapeUrl(
           filePath: true,
           jurisdiction: true,
           type: true,
-          code:true,
+          code: true,
           court: true,
-          source_url:true,
+          source_url: true,
           citation: true,
           holding_summary: true,
           decision_date: true,
-          isEnabled:true,
+          isEnabled: true,
           createdAt: true,
         },
         order: {
-          createdAt: 'DESC', 
+          createdAt: 'DESC',
         },
       });
       return {
@@ -701,18 +707,18 @@ async scrapeUrl(
           createdAt: true,
           updatedAt: true,
           type: true,
-          isEnabled:true,
+          isEnabled: true,
           jurisdiction: true,
           citation: true,
           title: true,
-          source_url:true,
+          source_url: true,
           fileName: true,
           filePath: true,
           section: true,
           subject_area: true,
         },
         order: {
-          createdAt: 'DESC', 
+          createdAt: 'DESC',
         },
       });
       return {
@@ -732,7 +738,7 @@ async scrapeUrl(
   ) {
     try {
       console.log('🛠 Raw Body:', updateContractDto);
-      
+
       if (!updateContractDto || Object.keys(updateContractDto).length === 0) {
         throw new BadRequestException('Update data is required');
       }
@@ -747,7 +753,7 @@ async scrapeUrl(
       if (updateContractDto.title !== undefined) updates.title = updateContractDto.title;
       if (updateContractDto.jurisdiction !== undefined) updates.jurisdiction = updateContractDto.jurisdiction;
       if (updateContractDto.source !== undefined) updates.source = updateContractDto.source;
-      updates.updatedAt = new Date(); 
+      updates.updatedAt = new Date();
 
       Object.assign(contract, updates);
       const updatedContract = await this.contractRepository.save(contract);
@@ -772,7 +778,7 @@ async scrapeUrl(
   ) {
     try {
       console.log('🛠 Raw Body:', updateCasetDto);
-      
+
       if (!updateCasetDto || Object.keys(updateCasetDto).length === 0) {
         throw new BadRequestException('Update data is required');
       }
@@ -786,7 +792,7 @@ async scrapeUrl(
       const updates: Partial<Case> = {};
       if (updateCasetDto.jurisdiction !== undefined) updates.jurisdiction = updateCasetDto.jurisdiction;
       if (updateCasetDto.case_type !== undefined) updates.case_type = updateCasetDto.case_type;
-      updates.updatedAt = new Date(); 
+      updates.updatedAt = new Date();
 
       Object.assign(contract, updates);
       const updatedContract = await this.caseRepository.save(contract);
@@ -812,7 +818,7 @@ async scrapeUrl(
   ) {
     try {
       console.log('🛠 Raw Body:', updateStatuteDto);
-      
+
       if (!updateStatuteDto || Object.keys(updateStatuteDto).length === 0) {
         throw new BadRequestException('Update data is required');
       }
@@ -830,7 +836,7 @@ async scrapeUrl(
       if (updateStatuteDto.citation !== undefined) updates.citation = updateStatuteDto.citation;
       if (updateStatuteDto.holding_summary !== undefined) updates.holding_summary = updateStatuteDto.holding_summary;
       if (updateStatuteDto.decision_date !== undefined) updates.decision_date = updateStatuteDto.decision_date;
-      updates.updatedAt = new Date(); 
+      updates.updatedAt = new Date();
 
       Object.assign(statute, updates);
       const updatedStatute = await this.statuteRepository.save(statute);
@@ -856,7 +862,7 @@ async scrapeUrl(
   ) {
     try {
       console.log('🛠 Raw Body:', updateRegulationDto);
-      
+
       if (!updateRegulationDto || Object.keys(updateRegulationDto).length === 0) {
         throw new BadRequestException('Update data is required');
       }
@@ -896,15 +902,15 @@ async scrapeUrl(
   @Put('/metadata/statute/:id')
   async updateMetadata(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() newMetadata: Record<string ,  boolean>,
+    @Body() newMetadata: Record<string, boolean>,
     @Request() req: any
   ) {
     try {
       console.log('📋 Updating metadata for document:', id);
 
-      const document = await this.statuteRepository.findOne({where: {id}})
-      if (!document){
-        return {message : 'document not fount'}
+      const document = await this.statuteRepository.findOne({ where: { id } })
+      if (!document) {
+        return { message: 'document not fount' }
       }
       document.isEnabled = !document.isEnabled
       console.log(document.isEnabled)
@@ -913,7 +919,10 @@ async scrapeUrl(
       await this.dataSource
         .createQueryBuilder()
         .update('document_embeddings')
-        .set({ metadata: JSON.stringify(newMetadata) })
+        .set({
+          metadata: () =>
+            `jsonb_set(metadata, '{enabled}', '${document.isEnabled}'::jsonb)`
+        })
         .where("metadata->>'document_id' = :id", { id })
         .execute();
 
@@ -928,26 +937,26 @@ async scrapeUrl(
 
     } catch (error) {
       console.error('Error updating document metadata:', error);
-      
+
       if (error?.code === '22P02') {
         throw new BadRequestException('Invalid UUID format');
       }
-      
+
       throw new BadRequestException(`Failed to update document metadata: ${error.message}`);
     }
   }
   @Put('/metadata/case/:id')
   async updateCaseMetadata(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() newMetadata: Record<string ,  boolean>,
+    @Body() newMetadata: Record<string, boolean>,
     @Request() req: any
   ) {
     try {
       console.log('📋 Updating metadata for document:', id);
 
-      const document = await this.caseRepository.findOne({where: {id}})
-      if (!document){
-        return {message : 'document not fount'}
+      const document = await this.caseRepository.findOne({ where: { id } })
+      if (!document) {
+        return { message: 'document not fount' }
       }
       document.isEnabled = !document.isEnabled
       console.log(document.isEnabled)
@@ -956,7 +965,10 @@ async scrapeUrl(
       await this.dataSource
         .createQueryBuilder()
         .update('document_embeddings')
-        .set({ metadata: JSON.stringify(newMetadata) })
+        .set({
+          metadata: () =>
+            `jsonb_set(metadata, '{enabled}', '${document.isEnabled}'::jsonb)`
+        })
         .where("metadata->>'document_id' = :id", { id })
         .execute();
 
@@ -971,11 +983,11 @@ async scrapeUrl(
 
     } catch (error) {
       console.error('Error updating document metadata:', error);
-      
+
       if (error?.code === '22P02') {
         throw new BadRequestException('Invalid UUID format');
       }
-      
+
       throw new BadRequestException(`Failed to update document metadata: ${error.message}`);
     }
   }
@@ -983,15 +995,15 @@ async scrapeUrl(
   @Put('/metadata/regulation/:id')
   async updateMetaRegulation(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() newMetadata: Record<string ,  boolean>,
+    @Body() newMetadata: Record<string, boolean>,
     @Request() req: any
   ) {
     try {
       console.log('📋 Updating metadata for document:', id);
 
-      const document = await this.regulationRepository.findOne({where: {id}})
-      if (!document){
-        return {message : 'document not fount'}
+      const document = await this.regulationRepository.findOne({ where: { id } })
+      if (!document) {
+        return { message: 'document not fount' }
       }
       document.isEnabled = !document.isEnabled
       console.log(document.isEnabled)
@@ -1000,7 +1012,64 @@ async scrapeUrl(
       await this.dataSource
         .createQueryBuilder()
         .update('document_embeddings')
-        .set({ metadata: JSON.stringify(newMetadata) })
+        .set({
+          metadata: () =>
+            `jsonb_set(metadata, '{enabled}', '${document.isEnabled}'::jsonb)`
+        })
+        .where("metadata->>'document_id' = :id", { id })
+        .execute();
+
+
+      console.log(
+        id,
+        req.user?.id,
+        newMetadata
+      )
+
+      return {
+        success: true,
+        data: {
+          id,
+          userId: req.user?.id,
+          metadata: newMetadata
+        },
+      };
+
+    } catch (error) {
+      console.error('Error updating document metadata:', error);
+
+      if (error?.code === '22P02') {
+        throw new BadRequestException('Invalid UUID format');
+      }
+
+      throw new BadRequestException(`Failed to update document metadata: ${error.message}`);
+    }
+  }
+
+  @Put('/metadata/contract/:id')
+  async updateMetacontract(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() newMetadata: Record<string, boolean>,
+    @Request() req: any
+  ) {
+    try {
+      console.log('📋 Updating metadata for document:', id);
+
+      const document = await this.contractRepository.findOne({ where: { id } })
+      if (!document) {
+        return { message: 'document not fount' }
+      }
+      document.isEnabled = !document.isEnabled
+      console.log(document.isEnabled)
+      this.contractRepository.save(document)
+
+      await this.dataSource
+        .createQueryBuilder()
+        .update('document_embeddings')
+        .set({
+          metadata: () =>
+            `jsonb_set(metadata, '{enabled}', '${document.isEnabled}'::jsonb)`
+        })
         .where("metadata->>'document_id' = :id", { id })
         .execute();
 
@@ -1015,58 +1084,11 @@ async scrapeUrl(
 
     } catch (error) {
       console.error('Error updating document metadata:', error);
-      
+
       if (error?.code === '22P02') {
         throw new BadRequestException('Invalid UUID format');
       }
-      
-      throw new BadRequestException(`Failed to update document metadata: ${error.message}`);
-    }
-  }
 
-  @Put('/metadata/contract/:id')
-  async updateMetacontract(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() newMetadata: Record<string ,  boolean>,
-    @Request() req: any
-  ) {
-    try {
-      console.log('📋 Updating metadata for document:', id);
-
-      const document = await this.contractRepository.findOne({where: {id}})
-      if (!document){
-        return {message : 'document not fount'}
-      }
-      document.isEnabled = !document.isEnabled
-      console.log(document.isEnabled)
-      this.contractRepository.save(document)
-
-       await this.dataSource
-      .createQueryBuilder()
-      .update('document_embeddings')
-      .set({
-        metadata: () =>
-          `jsonb_set(metadata, '{enabled}', '${document.isEnabled}'::jsonb)`
-      })
-      .where("metadata->>'document_id' = :id", { id })
-      .execute();
-
-      return {
-        success: true,
-        data: {
-          id,
-          userId: req.user?.id,
-          metadata: newMetadata
-        },
-      };
-
-    } catch (error) {
-      console.error('Error updating document metadata:', error);
-      
-      if (error?.code === '22P02') {
-        throw new BadRequestException('Invalid UUID format');
-      }
-      
       throw new BadRequestException(`Failed to update document metadata: ${error.message}`);
     }
   }
@@ -1166,7 +1188,7 @@ async scrapeUrl(
 
 
 
-  
+
 
 
 }

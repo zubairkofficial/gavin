@@ -30,4 +30,11 @@ export class CreateMessageDto {
   @IsOptional()
   @IsString()
   isComplete?: string;
+
+  @IsOptional()
+  regenerate?: boolean;
+
+  @IsOptional()
+  @IsString()
+  assistantMsgId?: string;
 }

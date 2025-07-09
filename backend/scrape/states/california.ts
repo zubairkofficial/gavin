@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer , {Browser } from 'puppeteer';
 import * as cheerio from 'cheerio';
 import axios from 'axios';
 
@@ -13,75 +13,156 @@ export interface ExtractedContent {
 }
 
 export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent> {
-    let browser: import('puppeteer').Browser | null = null;
+    let browser: Browser | undefined ;
     let code: string = '';
     let section: string = '';
     
     try {
         console.log("Starting California codes scraping...");
 
-        // Launch browser with more robust options
-        browser = await puppeteer.launch({
-            headless: true,
-            timeout: 0,
-            args: [
-                '--start-maximized',
-                '--disable-http2',
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-web-security',
-                '--disable-features=VizDisplayCompositor'
-            ]
-        });
+        // Function to launch browser and setup initial page
+        const setupBrowser = async () => {
+            if (browser) {
+                await browser.close();
+            }
 
-        const page = await browser.newPage();
-        
-        // Set longer timeout and add user agent
-        page.setDefaultTimeout(60000);
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-        
-        console.log("Navigating to California codes page...");
+            browser = await puppeteer.launch({
+                headless: true,
+                timeout: 0,
+                args: [
+                    '--start-maximized',
+                    '--disable-http2',
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-web-security',
+                    '--disable-features=VizDisplayCompositor'
+                ]
+            });
 
-        await page.goto('https://leginfo.legislature.ca.gov/faces/codes.xhtml', {
-            waitUntil: 'networkidle0',
-            timeout: 60000
-        });
+            const page = await browser.newPage();
+            
+            // Set longer timeout and add user agent
+            page.setDefaultTimeout(60000);
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            
+            console.log("Navigating to California codes page...");
 
-        // Navigate to search tab
-        await page.waitForSelector('a[id="j_idt121:textsearchtab"]', { timeout: 30000 });
-        await page.click('a[id="j_idt121:textsearchtab"]');
+            await page.goto('https://leginfo.legislature.ca.gov/faces/codes.xhtml', {
+                waitUntil: 'networkidle0',
+                timeout: 60000
+            });
 
-        // Select code categories
-        console.log("Selecting code categories...");
-        await page.waitForSelector('label[for="codeSearchForm:j_idt118:5:selectCode1"]', { timeout: 30000 });
-        await page.click('label[for="codeSearchForm:j_idt118:5:selectCode1"]');
-        await page.click('label[for="codeSearchForm:j_idt118:2:selectCode1"]');
-        await page.click('label[for="codeSearchForm:j_idt118:3:selectCode1"]');
+            // Navigate to search tab
+            await page.waitForSelector('a[id="j_idt121:textsearchtab"]', { timeout: 30000 });
+            await page.click('a[id="j_idt121:textsearchtab"]');
 
-        await page.waitForSelector('label[for="codeSearchForm:j_idt124:7:selectCode2"]', { timeout: 30000 });
-        await page.click('label[for="codeSearchForm:j_idt124:7:selectCode2"]');
-        await page.waitForSelector('label[for="codeSearchForm:j_idt124:3:selectCode2"]', { timeout: 30000 });
-        await page.click('label[for="codeSearchForm:j_idt124:3:selectCode2"]');
-        await page.click('label[for="codeSearchForm:j_idt124:6:selectCode2"]');
-        await page.click('label[for="codeSearchForm:j_idt130:4:selectCode3"]');
-        await page.click('label[for="codeSearchForm:j_idt118:8:selectCode1"]');
-        await page.click('label[for="codeSearchForm:j_idt130:0:selectCode3"]');
+            // Select code categories
+            console.log("Selecting code categories...");
+            await page.waitForSelector('label[for="codeSearchForm:j_idt118:5:selectCode1"]', { timeout: 30000 });
+            await page.click('label[for="codeSearchForm:j_idt118:5:selectCode1"]');
+            await page.click('label[for="codeSearchForm:j_idt118:2:selectCode1"]');
+            await page.click('label[for="codeSearchForm:j_idt118:3:selectCode1"]');
 
-        // Execute search
-        console.log("Executing search...");
-        await page.click('input[id="codeSearchForm:execute_search"]');
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Increased wait time
-        await page.waitForSelector('span[title="Sections Returned"]', { timeout: 30000 });
+            await page.waitForSelector('label[for="codeSearchForm:j_idt124:7:selectCode2"]', { timeout: 30000 });
+            await page.click('label[for="codeSearchForm:j_idt124:7:selectCode2"]');
+            await page.waitForSelector('label[for="codeSearchForm:j_idt124:3:selectCode2"]', { timeout: 30000 });
+            await page.click('label[for="codeSearchForm:j_idt124:3:selectCode2"]');
+            await page.click('label[for="codeSearchForm:j_idt124:6:selectCode2"]');
+            await page.click('label[for="codeSearchForm:j_idt130:4:selectCode3"]');
+            await page.click('label[for="codeSearchForm:j_idt118:8:selectCode1"]');
+            await page.click('label[for="codeSearchForm:j_idt130:0:selectCode3"]');
+
+            // Execute search
+            console.log("Executing search...");
+            await page.click('input[id="codeSearchForm:execute_search"]');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await page.waitForSelector('span[title="Sections Returned"]', { timeout: 30000 });
+
+            return page;
+        };
+
+        // Function to navigate to a specific page number
+        const navigateToPage = async (page: import('puppeteer').Page, targetPageNumber: number) => {
+            console.log(`Navigating to page ${targetPageNumber}...`);
+            
+            // Navigate through pages to reach the target page
+            let currentPage = 1;
+            while (currentPage < targetPageNumber) {
+                // Check for CAPTCHA before clicking next
+                const currentUrl = page.url();
+                if (currentUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
+                    console.log("CAPTCHA detected! Restarting browser...");
+                    await browser?.close();
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                    
+                    // Restart browser and navigate back to target page
+                    const newPage = await setupBrowser();
+                    const newUrl = page.url();
+                    if (newUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
+                        console.error("Still getting CAPTCHA after restart. Stopping scraper.");
+                        break;
+                    }
+                    return  page = await navigateToPage(newPage, targetPageNumber);
+                }
+
+                const preNavCheck = await page.evaluate(() => {
+                    const nextBtn = document.querySelector('input[id="datanavform:nextTen"]');
+                    return {
+                        hasNextBtn: !!nextBtn,
+                        nextBtnDisabled: nextBtn ? nextBtn.hasAttribute('disabled') : true
+                    };
+                });
+
+                if (!preNavCheck.hasNextBtn || preNavCheck.nextBtnDisabled) {
+                    console.log(`Cannot navigate to page ${targetPageNumber}, reached end at page ${currentPage}`);
+                    break;
+                }
+
+                await page.click('input[id="datanavform:nextTen"]');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 })
+                    .catch(() => new Promise(resolve => setTimeout(resolve, 3000)));
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                currentPage++;
+            }
+
+            return page;
+        };
+
+        // Initial browser setup
+        let page = await setupBrowser();
 
         console.log("Search completed, starting content extraction...");
 
         // Process pages and extract content immediately
         let pageCount = 1;
         let consecutiveEmptyPages = 0;
-        const maxConsecutiveEmptyPages = 3; // Allow for some temporary empty pages
+        const maxConsecutiveEmptyPages = 3;
 
         while (consecutiveEmptyPages < maxConsecutiveEmptyPages) {
             console.log(`Processing page ${pageCount}...`);
+
+            // Check for CAPTCHA at the beginning of each page processing
+            const currentUrl = page.url();
+            if (currentUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
+                console.log("CAPTCHA detected! Restarting browser and resuming from page", pageCount);
+                await browser?.close();
+                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                
+                // Restart browser and navigate back to current page
+               const  newPage = await setupBrowser();
+                page = await navigateToPage(page, pageCount);
+                
+                // Re-check the URL after navigation
+                const newUrl = page.url();
+                if (newUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
+                    console.error("Still getting CAPTCHA after restart. Stopping scraper.");
+                    break;
+                }
+
+                return page
+            }
 
             // Wait for content to load and add retry mechanism
             let retryCount = 0;
@@ -98,7 +179,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     if (retryCount >= 3) {
                         console.warn(`Failed to load content for page ${pageCount} after 3 retries`);
-                        html = await page.content(); // Get whatever content is available
+                        html = await page.content();
                     }
                 }
             }
@@ -144,7 +225,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                 console.log('Page debug info:', pageInfo);
                 
             } else {
-                consecutiveEmptyPages = 0; // Reset counter if we found links
+                consecutiveEmptyPages = 0;
             }
 
             // Process each link immediately and yield content
@@ -158,7 +239,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                 
                 try {
                     const response = await axios.get(link, {
-                        timeout: 15000, // Increased timeout
+                        timeout: 15000,
                         headers: {
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                         }
@@ -186,8 +267,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                         console.warn(`⚠ No content found for link: ${link}`);
                     }
 
-                    // Respectful delay
-                    await new Promise(resolve => setTimeout(resolve, 800)); // Slightly increased delay
+                    await new Promise(resolve => setTimeout(resolve, 800));
 
                 } catch (error) {
                     console.error(`✗ Error processing link ${link}:`, (error as Error).message);
@@ -195,11 +275,34 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                 }
             }
 
-            // Enhanced next page detection and navigation
+            // Enhanced next page detection and navigation with CAPTCHA check
             let hasNextPage = false;
             
             try {
-                // First, verify we're still on a valid results page
+                // Check for CAPTCHA before attempting navigation
+                const currentUrl = page.url();
+                if (currentUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
+                    console.log("CAPTCHA detected during navigation! Restarting browser...");
+
+                    
+                    await browser?.close();
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                    
+                    // Restart browser and navigate to next page
+                    page = await setupBrowser();
+                    page = await navigateToPage(page, pageCount + 1);
+                    
+                    const newUrl = page.url();
+                    if (newUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
+                        console.error("Still getting CAPTCHA after restart during navigation. Stopping scraper.");
+                        break;
+                    }
+                    
+                    hasNextPage = true;
+                    pageCount++;
+                    continue;
+                }
+
                 const preNavCheck = await page.evaluate(() => {
                     const sectionsSpan = document.querySelector('span[title="Sections Returned"]');
                     const tableMain = document.querySelector('.table_main');
@@ -216,31 +319,43 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                 
                 if (!preNavCheck.hasValidPage) {
                     console.error('Lost valid results page! Current URL:', preNavCheck.currentUrl);
-                    break; // Exit the loop as we've lost the session
+                    break;
                 }
                 
                 if (preNavCheck.hasNextBtn && !preNavCheck.nextBtnDisabled) {
                     console.log(`Moving to page ${pageCount + 1}...`);
                     
-                    // Use a more reliable navigation approach
                     try {
-                        // Click the next button and wait for response
                         await page.click('input[id="datanavform:nextTen"]');
                         console.log('Next button clicked, waiting for page update...');
                         
-                        // Wait for the page to start updating (network activity)
                         await new Promise(resolve => setTimeout(resolve, 1000));
                         
-                        // Wait for network to be idle (Puppeteer method)
                         await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 })
                             .catch(() => new Promise(resolve => setTimeout(resolve, 3000)));
                         
-                        console.log('Network activity settled, waiting for DOM updates...');
+                        console.log('Network activity settled, checking for CAPTCHA...');
                         
-                        // Additional wait for DOM updates and JavaScript execution
+                        // Check for CAPTCHA after navigation
+                        const postNavUrl = page.url();
+                        if (postNavUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
+                            console.log("CAPTCHA detected after navigation! Restarting browser...");
+                            await browser?.close();
+                            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                            
+                            // Restart browser and navigate to next page
+                            page = await setupBrowser();
+                            page = await navigateToPage(page, pageCount + 1);
+                            
+                            const finalUrl = page.url();
+                            if (finalUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
+                                console.error("Still getting CAPTCHA after restart post-navigation. Stopping scraper.");
+                                break;
+                            }
+                        }
+                        
                         await new Promise(resolve => setTimeout(resolve, 3000));
                         
-                        // Verify the navigation was successful
                         const postNavCheck = await page.evaluate(() => {
                             const sectionsSpan = document.querySelector('span[title="Sections Returned"]');
                             const tableMain = document.querySelector('.table_main');
@@ -261,7 +376,6 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                             console.log(`Successfully navigated to page ${pageCount}`);
                         } else if (postNavCheck.hasValidPage && postNavCheck.linkCount === 0) {
                             console.log('Valid page but no links - might be end of results');
-                            // Continue to check if this is truly the end
                         } else {
                             console.error('Navigation failed - lost valid page structure');
                             break;
@@ -270,7 +384,6 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                     } catch (navError) {
                         console.error('Navigation error:', (navError as Error).message);
                         
-                        // Try to recover by checking current page state
                         const recoveryCheck = await page.evaluate(() => {
                             return {
                                 url: window.location.href,
@@ -293,7 +406,6 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                 } else {
                     console.log("No enabled next page button found");
                     
-                    // Final diagnostic information
                     const finalPageInfo = await page.evaluate(() => {
                         const buttons = Array.from(document.querySelectorAll('input[type="submit"], input[type="button"]'));
                         const sectionsSpan = document.querySelector('span[title="Sections Returned"]');
@@ -336,10 +448,10 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
         console.error("Error during scraping:", error);
         throw error;
     } finally {
-        if (browser) {
+   
             console.log("Closing browser...");
-            await browser.close();
-        }
+            await browser?.close();
+        
     }
 }
 

@@ -1,13 +1,16 @@
+import { ConfigService } from "@nestjs/config";
 import axios from "axios";
 
 // Create SEC API axios instance
 const secApi = axios.create({
     baseURL: 'https://api.sec-api.io',
     headers: {
-        'Authorization': process.env.SEC_API_KEY,
+        'Authorization': 'a554113b8c7bad1273b72637824a10b3e3c87eae0b90e43bb308b97e774ea512',
         'Content-Type': 'application/json'
     }
 });
+
+console.log(process.env.SEC_API_KEY)
 
 export async function scrapeSecAPI() {
     const contractTypes = [
@@ -73,6 +76,7 @@ export async function scrapeSecAPI() {
                     formTypes: contract.commonFormTypes,
                     page
                 });
+                console.log(response.data)
                 results[contract.contractType].filings.push(...response.data.filings);
             }
         }
@@ -86,3 +90,9 @@ export async function scrapeSecAPI() {
         console.error("Error fetching SEC API data:", error);
     }
 }
+
+
+(async ()=>{
+   const data  = scrapeSecAPI()
+   console.log(data)
+})()

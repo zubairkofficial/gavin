@@ -67,6 +67,7 @@ interface ChatMessage {
   isStreaming?: boolean
 }
 
+
 const Chat = ({
   messages,
   setMessages,
@@ -74,22 +75,25 @@ const Chat = ({
   messages: ChatMessage[]
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>
 }) => {
-  const [message, setMessage] = useState<string>("")
-  const [selectedDocuments, setSelectedDocuments] = useState<AttachedDocument[]>([])
-  const [tempSelectedDocs, setTempSelectedDocs] = useState<AttachedDocument[]>([])
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [isSmallScreen, setIsSmallScreen] = useState(false)
-  const [conversationId, setConversationId] = useState<string>("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [isFetchingMessages, setIsFetchingMessages] = useState(false)
-  const [title, setTitle] = useState("")
-  const [isFirstMessage, setIsFirstMessage] = useState(false)
-  const [hasNavigatedToNewConversation, setHasNavigatedToNewConversation] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const isMobile = useIsMobile()
-  const navigate = useNavigate()
-  const params = useParams()
+  const [message, setMessage] = useState<string>("");
+  const [citation, setcitation] = useState<string>("");
+  const [selectedDocuments, setSelectedDocuments] = useState<AttachedDocument[]>([]);
+  const [tempSelectedDocs, setTempSelectedDocs] = useState<AttachedDocument[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const [conversationId, setConversationId] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isFetchingMessages, setIsFetchingMessages] = useState(false);
+  const [title, setTitle] = useState("");
+  const [isFirstMessage, setIsFirstMessage] = useState(false);
+  const [hasNavigatedToNewConversation, setHasNavigatedToNewConversation] = useState(false);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const params = useParams();
   const urlConversationId = params.conversationId;
   const queryClient = useQueryClient();
 
@@ -98,6 +102,13 @@ const Chat = ({
 
   // Ref to hold streaming content for assistant message
   const streamingContentRef = useRef("");
+
+  // Cleanup copy timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   // Fetch conversation messages when URL conversation ID changes
   const fetchConversationMessages = async () => {
@@ -331,7 +342,7 @@ const Chat = ({
       try {
         while (true) {
           const { value, done } = await reader.read();
-
+          console.log(`Received chunk:`, value, `Done:`, done);
           if (done) {
             console.log("Stream completed");
             break;
@@ -390,7 +401,9 @@ const Chat = ({
                         ? { ...msg, isStreaming: false }
                         : msg
                     )
+                    
                   );
+
                   setIsLoading(false);
                   // Only update the sidebar (conversations list), not the chat messages
                   setTimeout(() => {
@@ -467,6 +480,171 @@ const Chat = ({
   };
 
 
+
+  const handleCopy = (msgId: string, content: string) => {
+    navigator.clipboard.writeText(content);
+    setCopiedMsgId(msgId);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => setCopiedMsgId(null), 1500);
+  };
+
+  // Regenerate functionality
+  const handleRegenerate = async (assistantMsgId: string) => {
+    // Find the assistant message index
+    const assistantIndex = messages.findIndex(msg => msg.id === assistantMsgId);
+    if (assistantIndex === -1 || assistantIndex === 0) return;
+
+    // The user message is usually just before the assistant message
+    const userMsg = messages[assistantIndex - 1];
+    if (!userMsg || userMsg.role !== "user") return;
+
+    // Remove the old assistant message and insert a new streaming one
+    const newAssistantId = `${Date.now()}-regen`;
+    setMessages(prev => {
+      const newMsgs = [...prev];
+      newMsgs.splice(assistantIndex, 1, {
+        id: newAssistantId,
+        role: "assistant",
+        content: "",
+        isStreaming: true,
+      });
+      return newMsgs;
+    });
+
+    // Send the user message again (reuse logic similar to handleSendMessage)
+    await sendMessageForRegenerate(userMsg, newAssistantId);
+  };
+
+  // Helper for regeneration streaming
+  const sendMessageForRegenerate = async (userMsg: ChatMessage, assistantMessageId: string) => {
+    setIsLoading(true);
+    const currentConversationId = urlConversationId || conversationId;
+    const token = localStorage.getItem('authToken');
+    const baseURL = API.defaults?.baseURL || "";
+
+    // Create FormData to handle file uploads
+    const formData = new FormData();
+    formData.append('message', userMsg.content);
+    if (currentConversationId) {
+      formData.append('conversationId', currentConversationId);
+    }
+    if (title) {
+      formData.append('title', title);
+    }
+    // Add files to FormData
+    if (userMsg.documents && userMsg.documents.length > 0) {
+      userMsg.documents.forEach((doc) => {
+        if (doc.file) {
+          formData.append('files', doc.file);
+        }
+      });
+    }
+
+    // Append regeneration parameters
+    formData.append('regenerate', 'true');
+    formData.append('assistantMsgId', assistantMessageId);
+    
+    // This is the id of the old assistant message being replaced
+    console.log('form data:', formData);
+    try {
+      const response = await fetch(`${baseURL}/chat/message`, {
+        method: "POST",
+        headers: {
+          "Accept": "text/event-stream",
+          "Authorization": token ? `Bearer ${token}` : "",
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No stream reader available");
+      }
+
+      let buffer = "";
+      streamingContentRef.current = "";
+
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          const chunk = new TextDecoder().decode(value, { stream: true });
+          buffer += chunk;
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const jsonStr = line.slice(6).trim();
+                if (jsonStr === "") continue;
+                const data = JSON.parse(jsonStr);
+                // Handle streaming tokens
+                if (data.token) {
+                  streamingContentRef.current += data.token;
+                  setMessages(prev => prev.map(msg =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, content: streamingContentRef.current, isStreaming: true }
+                      : msg
+                  ));
+                }
+                // Handle completion
+                if (data.done) {
+                  setMessages(prev =>
+                    prev.map(msg =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, isStreaming: false }
+                        : msg
+                    )
+                  );
+                  setIsLoading(false);
+                  setTimeout(() => {
+                    queryClient.invalidateQueries({ queryKey: ['conversations'] });
+                  }, 300);
+                  return;
+                }
+                // Handle errors
+                if (data.error) {
+                  setMessages(prev =>
+                    prev.map(msg =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, content: `Error: ${data.error}`, isStreaming: false }
+                        : msg
+                    )
+                  );
+                  setIsLoading(false);
+                  return;
+                }
+              } catch (parseError) {
+                // Ignore parse errors for incomplete lines
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg
+        )
+      );
+      setIsLoading(false);
+    } catch (error) {
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === assistantMessageId
+            ? { ...msg, content: "Error regenerating response.", isStreaming: false }
+            : msg
+        )
+      );
+      setIsLoading(false);
+    }
+  };
+
   const renderMessage = (msg: ChatMessage) => {
     if (msg.role === "user") {
       return (
@@ -492,15 +670,31 @@ const Chat = ({
             <p className="text-gray-800 text-sm md:text-sm">{msg.content}</p>
           </div>
         </div>
-      )
+      );
     }
 
     return (
       <div key={msg.id} className="rounded-lg py-4 md:py-6 mb-4">
         <div className="space-y-3 md:space-y-4">
           <p className="text-gray-800 text-sm md:text-sm">
-            <ReactMarkdown>
+            {/* <ReactMarkdown>
             {msg.content}
+            </ReactMarkdown> */}
+            <ReactMarkdown
+              components={{
+                a: ({ href, children }) => (
+                  <a
+                    href={href}
+                    target="_blank" // Open in new tab
+                    rel="noopener noreferrer" // Security best practice
+                    style={{ textDecoration: 'underline' }} // Underline the link
+                  >
+                    {children}
+                  </a>
+                ),
+              }}
+            >
+              {msg.content}
             </ReactMarkdown>
             {msg.isStreaming && !msg.content.trim() && <span className="inline-block w-4 h-4 bg-gray-400 ml-1 animate-pulse" />}
             {/* {msg.isStreaming && !msg.content.trim() && (
@@ -532,23 +726,30 @@ const Chat = ({
             <Button
               variant="secondary"
               size="icon"
-              className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white text-gray-600 hover:bg-gray-200"
-              onClick={() => navigator.clipboard.writeText(msg.content)}
+              className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white text-gray-600 hover:bg-gray-200 relative"
+              onClick={() => handleCopy(msg.id, msg.content)}
             >
               <Copy className="h-4 w-4 md:h-5 md:w-5" />
+              {copiedMsgId === msg.id && (
+                <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 shadow z-50 whitespace-nowrap">
+                  Text copied
+                </span>
+              )}
             </Button>
             <Button
               variant="secondary"
               size="icon"
               className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white text-gray-600 hover:bg-gray-200"
+              onClick={() => handleRegenerate(msg.id)}
+              disabled={isLoading}
             >
               <RotateCcw className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
           </div>
         )}
       </div>
-    )
-  }
+    );
+  };
 
   // Show loading state when fetching messages
   if (isFetchingMessages) {
@@ -603,7 +804,7 @@ const Chat = ({
         <div
           className={
             cn(
-              "hidden md:flex h-14 flex-row overflow-x-auto gap-4 sm:mt-3 z-10 w-full transition-all duration-200 min-h-[3.5rem]"
+              "hidden md:flex  h-14 flex-row overflow-x-auto gap-4 sm:mt-3 z-10  transition-all duration-200 min-h-[3.5rem]"
             )
           }
         >

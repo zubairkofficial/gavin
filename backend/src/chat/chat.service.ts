@@ -4,7 +4,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage } from '@langchain/core/messages';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { v4 as uuidv4 } from 'uuid';
-import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
+import { DistanceStrategy, PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Message } from './entities/message.entity';
 import { getRepository, Repository } from 'typeorm';
@@ -23,6 +23,7 @@ import { createWorker } from 'tesseract.js';
 import * as pdfParse from 'pdf-parse';
 import * as mammoth from 'mammoth';
 import { fi } from 'zod/dist/types/v4/locales';
+import { fileURLToPath } from 'url';
 
 @Injectable()
 export class ChatService {
@@ -77,10 +78,11 @@ export class ChatService {
         contentColumnName: "content",
         metadataColumnName: "metadata",
       },
+      distanceStrategy: "euclidean" as DistanceStrategy,
     };
 
     this.vectorStore = new PGVectorStore(
-      new OpenAIEmbeddings({ openAIApiKey: openAiApiKey }),
+      new OpenAIEmbeddings({ model: "text-embedding-ada-002", openAIApiKey: openAiApiKey }),
       PG_CONFIG
     );
   }
@@ -90,6 +92,8 @@ export class ChatService {
     stream: any,
     conversationId: string,
     userId?: string,
+    fileContent?: string,
+    documentContext?: string,
     title?: string
     filename: string,
     size: string,
@@ -99,7 +103,6 @@ export class ChatService {
     if (!message) throw new BadRequestException('Message cannot be empty');
 
     console.log(files, 'files in chat service')
-
     const file = files[0];
     const fileName = file?.originalname;
     const fileSize = file?.size;
@@ -143,7 +146,7 @@ export class ChatService {
       let chatHistoryContext = '';
       if (previousMessages.length > 0) {
         chatHistoryContext = previousMessages
-          .map(msg => `User: ${msg.userMessage}\nAI: ${msg.aiResponse}`)
+          .map(msg => `User: ${msg.userMessage}\nAI: ${msg.aiResponse}  \n ${msg.fileContent}`)
           .join('\n');
       }
 
@@ -157,10 +160,54 @@ export class ChatService {
 
       // Use the vector store as retriever
       let relevantDocs: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
+      let enabledDocs: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
+      // let filteredDoc: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
       try {
-        relevantDocs = await this.vectorStore.similaritySearch(message, 5, {
-          filter: { enabled: "true" }
+        const enabledDocsWithScores = await this.vectorStore.similaritySearchWithScore(message, 7, {
+          filter: { enabled: true }
         });
+        enabledDocs = enabledDocsWithScores.map(([doc, _score]) => doc);
+        console.log('documnet that we got from similarity',enabledDocsWithScores)
+
+        const sortedDocs = enabledDocsWithScores.sort((a, b) => a[1] - b[1]);
+        const topScore = sortedDocs[0][1];
+        const topDocs = sortedDocs.filter(([_, score]) => score === topScore).map(([doc]) => doc);
+
+        const bestDoc = sortedDocs[0][0];
+
+       
+
+        // console.log(relevantDocs, 'relevantDocs')
+        relevantDocs = [bestDoc];
+         console.log('Top scoring document(s):', relevantDocs);
+
+
+        // console.log('enabledDocs:', enabledDocs.length, 'relevantDocs:', relevantDocs.length);
+        // Simple keyword-based filter (can be improved)
+        // console.log('Relevant docs found:', enabledDocs.length);
+        // console.log(message)
+
+
+        // const messageKeywords = message.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+        // const filteredDocs = enabledDocs.filter(doc =>
+        //   messageKeywords.some(keyword => doc.pageContent.toLowerCase().includes(keyword))
+        // );
+        // const topDoc = filteredDocs[0] ? [filteredDocs[0]] : [];
+
+        // console.log(topDoc, 'topDoc')
+        // console.log('Relevant docs before filtering:', filteredDocs.length);
+        // console.log('Message keywords:', filteredDocs);
+
+        // relevantDocs = filteredDocs;
+        // filteredDoc = filteredDocs
+        // const strictlyRelevantDocs = relevantDocs.filter(doc =>
+        //   messageKeywords.some(keyword =>
+        //     doc.pageContent.toLowerCase().includes(keyword)
+        //   )
+        // );
+        // console.log('Strictly relevant docs:', strictlyRelevantDocs.length);
+
+        // console.log('Filtered docs based on message keywords:', filteredDocs.length);
         if (relevantDocs.length > 0) {
           console.log('Relevant docs found:', relevantDocs.length);
         } else {
@@ -170,36 +217,69 @@ export class ChatService {
         console.log('Error retrieving relevant docs:', err);
       }
 
+      // If there are no enabled docs after filtering, do not answer (unless fileContent is present)
+      // if ((!enabledDocs || enabledDocs.length === 0) && !fileContent) {
+      //   throw new BadRequestException('No enabled documents found for this query.');
+      // }
+
       // Build prompt with context from relevant docs and buffer memory
       let context = '';
-      context += fileContent ? `File Content:\n${fileContent}\n` : '';
       let documentContext = '';
-
-      if (chatHistoryContext) {
-        context += chatHistoryContext + '\n';
-      }
-
+      // Only include citations if relevantDocs found and not just file upload
+      context += fileContent ? `File Content:\n${fileContent}\n` : '';
       if (relevantDocs.length > 0) {
+        console.log(relevantDocs.length , 'relevantDocs.length chcekin on line 242')
+        
+        const disableDocs = enabledDocs.filter(doc => doc.metadata && doc.metadata.enabled === false);
+        const enable = enabledDocs.filter(doc => doc.metadata && doc.metadata.enabled === true);
+        console.log('Enabled docs:', enable.length, 'Disabled docs:', disableDocs.length);
+
+        if (enable.length === 0) {
+          // No enabled docs, skip processing
+          console.log('No enabled documents found, skipping context/documentContext processing.');
+          // Optionally, you can return early or handle fileContent/chatHistoryContext here
+         // <-- Add this if you want to skip further processing
+        } else {
+          if (chatHistoryContext) {
+          context += chatHistoryContext + '\n';
+        }
+
         const enabledDocs = relevantDocs;
-
-        for (const doc of enabledDocs) {
-          console.log('document id for the current using chunk is ', doc.metadata.document_id);
-
+        let metaid: string | null = null;
+        const seenIds = new Set<string>();
+          // Only process enabled docs
+          for (const doc of relevantDocs) {
+          if (seenIds.has(doc.metadata.document_id)) continue;
+          seenIds.add(doc.metadata.document_id);
           try {
+            console.log('Processing document:', doc.metadata.document_id, 'Type:', doc.metadata.document_type);
             if (doc.metadata.document_type === 'contract') {
               const document = await this.contractRepository
                 .createQueryBuilder('c')
                 .select([
                   'c.jurisdiction',
                   'c.title',
+                  'c.fileName',
+                  'c.filePath',
                   'c.isEnabled',
                 ])
                 .where('c.id = :id', { id: doc.metadata.document_id })
                 .getOne();
-
-              console.log('document that we got on the base of id', document);
               if (document) {
-                documentContext += `Contract: ${document.title || 'N/A'} (Jurisdiction: ${document.jurisdiction || 'N/A'})\n`;
+                let filePath = document.filePath || '';
+                let finalPath = '';
+                if (!document.filePath.startsWith('http://') && !document.filePath.startsWith('https://')) {
+                  filePath = `${process.env.BASE_URL}/static/files/${filePath}`;
+                  finalPath = filePath;
+                } else {
+                  finalPath =` <${filePath || '#'} >`;
+                }
+                documentContext += [
+                  document.title ? ` \n\n [*Reference:* ${document.title}](${finalPath})` : `\n\n **Reference:** [${document.fileName}](${filePath})`,
+                  document.jurisdiction ? `**Jurisdiction:** ${document.jurisdiction}` : '',
+                ]
+                  .filter(Boolean)
+                  .join(', ') + '\n';
               }
             } else if (doc.metadata.document_type === 'regulation') {
               const document = await this.regulationRepository
@@ -209,14 +289,29 @@ export class ChatService {
                   'c.title',
                   'c.isEnabled',
                   'c.citation',
+                  'c.fileName',
+                  'c.filePath',
                   'c.subject_area',
                   'c.summary',
                 ])
                 .where('c.id = :id', { id: doc.metadata.document_id })
                 .getOne();
-
               if (document) {
-                documentContext += `Regulation: ${document.title || 'N/A'} (Citation: ${document.citation || 'N/A'}, Subject: ${document.subject_area || 'N/A'})\n`;
+                let filePath = document.filePath || '';
+                let finalPath = '';
+                if (!filePath.startsWith('http://') && !filePath.startsWith('https://')) {
+                  filePath =` ${process.env.BASE_URL}/static/files/${filePath}`;
+                  finalPath = filePath;
+                } else {
+                  finalPath = filePath;
+                }
+                documentContext += [
+                  document.title ? `\n\n [**Reference:** ${document.title}](${finalPath})` : `\n\n **Reference:** [${document.fileName}](${filePath})`,
+                  document.citation ? `**Citation:** ${document.citation}` : '',
+                  document.subject_area ? `**Subject:** ${document.subject_area}` : '',
+                ]
+                  .filter(Boolean)
+                  .join(', ') + '\n';
               }
             } else if (doc.metadata.document_type === 'case') {
               const document = await this.caseRepository
@@ -226,14 +321,32 @@ export class ChatService {
                   'c.court',
                   'c.decision_date',
                   'c.citation',
+                  'c.name',
+                  'c.filePath',
                   'c.case_type',
                   'c.holding_summary',
                 ])
                 .where('c.id = :id', { id: doc.metadata.document_id })
                 .getOne();
 
+              if (!document) console.log('No document found for case ID:', doc.metadata.document_id);
               if (document) {
-                documentContext += `Case: ${document.citation || 'N/A'} (Court: ${document.court || 'N/A'}, Date: ${document.decision_date || 'N/A'})\n`;
+                let filePath = document.filePath || '';
+                let finalPath = '';
+                if (!filePath.startsWith('http://') && !filePath.startsWith('https://')) {
+                  filePath = `${process.env.BASE_URL}/static/files/${filePath}`;
+                  finalPath = filePath;
+                } else {
+                  finalPath = `<${filePath || '#'} target="_blank">`;
+                }
+                console.log(document, 'document in case')
+                documentContext += [
+                  document.court ? `\n\n [**Reference:** ${document.court}](${finalPath})` : `\n\n **Reference:** [${document.name}](${filePath})`,
+                  document.citation ? `**Citation:** ${document.citation}` : '',
+                  document.decision_date ? `**Decision Date:** ${document.decision_date}` : '',
+                ]
+                  .filter(Boolean)
+                  .join(', ') + '\n';
               }
             } else if (doc.metadata.document_type === 'statute') {
               const document = await this.statuteRepository
@@ -241,66 +354,188 @@ export class ChatService {
                 .select([
                   'c.jurisdiction',
                   'c.title',
+                  'c.filePath',
+                  'c.fileName',
                   'c.code',
                   'c.section',
                   'c.holding_summary',
                 ])
                 .where('c.id = :id', { id: doc.metadata.document_id })
                 .getRawOne();
-
               if (document) {
-                documentContext += `Statute: ${document.c_title || 'N/A'} (Code: ${document.c_code || 'N/A'}, Section: ${document.c_section || 'N/A'})\n`;
+                let filePath = document.c_filePath || '';
+                let finalPath = '';
+                if (!filePath.startsWith('http://') && !filePath.startsWith('https://')) {
+                  filePath = `${process.env.BASE_URL}/static/files/${filePath}`;
+                  finalPath = filePath;
+                } else {
+                  finalPath = `<${filePath || '#'} >`;
+                }
+                documentContext += [
+                  document.c_title ? `\n\n [**Reference:** ${document.c_title}](${finalPath})` : `\n\n **Reference:** [${document.c_fileName}](${filePath})`,
+                  document.c_code ? `**Code:** ${document.c_code}` : '',
+                  document.c_section ?` **Section:** ${document.c_section}` : ''
+                ]
+                  .filter(Boolean)
+                  .join(', ') + '\n';
               }
             }
           } catch (docError) {
             console.error(`Error fetching document ${doc.metadata.document_id}:`, docError);
           }
         }
-
-        const disableDocs = relevantDocs.filter(doc => doc.metadata && doc.metadata.status === false);
-        console.log('Enabled docs:', enabledDocs.length, 'Disabled docs:', disableDocs.length);
-
-        context += enabledDocs.map(doc => doc.pageContent).join('\n');
+          context += enable
+            .map(doc => doc.pageContent)
+            .join('\n');
+        }
       }
 
-      const prompt = context
-        ? `Use the following information to answer the question.
+      // else if (fileContent) {
+      //   // Only file uploaded, no citations
+      //   context += File Content:\n${fileContent}\n;
+      //   documentContext = '';
+      // } else if (chatHistoryContext) {
+      //   context += chatHistoryContext + '\n';
+      //   // documentContext = '';
+      // }
 
-        Document Context:
-        ${documentContext}
 
-        Instructions:
-        - First, try to find the answer **only** from the Document Context above.
-        - If you cannot find sufficient information in the Document Context, then refer to the Context below.
-        - If you still do not find the answer in either, just say: "I did not have knowledge about that."
+      // console.log('chatHistoryContext:', context);
 
-        Context:
+      // Follow-up detection logic
+      const followUpIndicators = [
+        'explain more', 'tell me more', 'expand on this', 'clarify', 'give more details',
+        'what does that mean', 'elaborate', 'refer back', 'continue', 'go on', 'can you elaborate',
+        'can you clarify', 'can you explain', 'add more', 'further details', 'more information',
+        'continue previous', 'follow up', 'as above', 'as before', 'as previously discussed'
+      ];
+      function isFollowUpQuestion(message) {
+        return followUpIndicators.some(indicator => message.toLowerCase().includes(indicator));
+      }
+
+
+      console.log('context before using in the prompt :', context);
+
+      const greetings = [
+        'hi', 'hello', 'hey', 'how are you', 'can you help', 'help me', 'assist me', 'can you please help', 'good morning', 'good afternoon', 'good evening',
+        // 'welcome', 'greetings', 'what can you do', 'what can you help with', 'how can you assist', 'can you assist me', 'can you help me',
+        // 'can you answer my question', 'can you provide information', 'can you give me advice', 'can you explain something', 'can you clarify something',
+        // 'hy'
+      ];
+
+      const lowerMsg = message.toLowerCase();
+      const isGreeting = greetings.some(greet => lowerMsg.includes(greet));
+
+      let prompt: string;
+
+      if (isGreeting) {
+        prompt = `
+          👋 Hello! Welcome to your AI-powered legal assistant.
+
+          I can help you:
+          - Answer legal questions about corporate law, contracts, regulations, and case law.
+          - Review and summarize your legal documents.
+          - Suggest contract clauses and provide citation-aware responses.
+          - Guide you through legal research in jurisdictions like Delaware, New York, California, and Texas.
+
+          Just type your question or upload a document to get started!
+        `;
+      } else if(fileContent){
+        prompt = `
+        Use the following file context to ans  to answer the question:
+        fileContent Context:
         ${context}
+        
+        Previous Chat History:
+        ${chatHistoryContext}
+        
+        Instructions:
+        - *Context Understanding*: Check if this is a follow-up question by analyzing the chat history and current question context.
+        - *For New Questions*: Use Document Context first, then chat history for additional context
+        - If you do not find an answer in the Document Context or chat history, respond with: "I did not have knowledge about that."
+        - Provide the answer in a concise manner and include proper citations.
+        - *Reasoning Requirement*: Always inject reasoning into responses by explaining the logical process, why the information is relevant, and how conclusions were reached. Make the AI's decision-making process transparent and clear (e.g., why a certain statute applies, how legal principles connect, what factors influenced the analysis).
+
+        *Response Structure*:
+        When providing the answer, ensure that it is concise and well-structured:
+        1. *Answer*: For follow-up questions, reference the previous discussion ("As mentioned earlier..." or "Building on the previous answer...") and provide the requested additional details
+        2. *Reasoning*: Inject reasoning into the response by explaining the logical process behind the answer. Detail why this information is relevant, how it connects to the previous conversation, and what makes this explanation comprehensive. Always explain the AI's logic and decision-making process clearly (e.g., why a certain statute applies, how legal principles connect, what factors led to this conclusion).
+        
 
         Question:
         ${message}
         `
-        : `Use the following Document Context to answer the question.
-
+      }else {
+        prompt = context
+          ? `
+        Use the following information to answer the question:
         Document Context:
         ${documentContext}
-
+       
+        Instructions: 
+        - If the chat history include citation, please remove it and use chat history context to answer the question without citation.
+        - If chat history context have any refernce than ignore it and use the chat hostory without any citation.
+        Previous Chat History:
+        ${chatHistoryContext}
+             
+        *Answer Priority Order*:
+        2. *For New Questions*: Use Document Context first, then chat history for additional context
+        3. If unable to find relevant information in either source, respond with: "I did not have knowledge about that."
+        
+        *Response Structure*:
+        When providing the answer, ensure that it is concise and well-structured:
+        1. *Answer*: For follow-up questions, reference the previous discussion ("As mentioned earlier..." or "Building on the previous answer...") and provide the requested additional details
+        2. *Reasoning*: Inject reasoning into the response by explaining the logical process behind the answer. Detail why this information is relevant, how it connects to the previous conversation, and what makes this explanation comprehensive. Always explain the AI's logic and decision-making process clearly (e.g., why a certain statute applies, how legal principles connect, what factors led to this conclusion).
+        
+        
+        Context:
+        ${context}
+        Question:
+        ${message}
+        `
+          : `
+        Use the following Document Context to answer the question:
+        Document Context:
+        ${documentContext}
+        
+        Previous Chat History:
+        ${chatHistoryContext}
+        
         Instructions:
-        - If you do not find an answer in the Document Context, just say: "I did not have knowledge about that."
+        - *Context Understanding*: Check if this is a follow-up question by analyzing the chat history and current question context.
+        - *For New Questions*: Use Document Context first, then chat history for additional context
+        - If you do not find an answer in the Document Context or chat history, respond with: "I did not have knowledge about that."
+        - Provide the answer in a concise manner and include proper citations.
+        - *Reasoning Requirement*: Always inject reasoning into responses by explaining the logical process, why the information is relevant, and how conclusions were reached. Make the AI's decision-making process transparent and clear (e.g., why a certain statute applies, how legal principles connect, what factors influenced the analysis).
+        
+         *Response Structure*:
+        When providing the answer, ensure that it is concise and well-structured:
+        1. *Answer*: For follow-up questions, reference the previous discussion ("As mentioned earlier..." or "Building on the previous answer...") and provide the requested additional details
+        2. *Reasoning*: Inject reasoning into the response by explaining the logical process behind the answer. Detail why this information is relevant, how it connects to the previous conversation, and what makes this explanation comprehensive. Always explain the AI's logic and decision-making process clearly (e.g., why a certain statute applies, how legal principles connect, what factors led to this conclusion).
+        
 
         Question:
         ${message}`;
 
+      }  
       const stream = await this.model.stream([new HumanMessage(prompt)]);
+
       const finalTitle = conTitle || title;
 
-      // console.log(stream)
+      if(fileContent){
+        documentContext = ''
+      }
+
+      // Optionally, you can reconstruct the stream if needed, or just return the chunks as response
+      // If you need to return the original stream, you may need to handle this logic differently
 
       return {
-        stream : stream,
+        stream : stream, // or stream, if you want to keep streaming
         prompt,
+        documentContext,
         conversationId: convId,
         userId,
+        fileContent,
         title: finalTitle,
         filename: fileName,
         size: fileSize,
@@ -323,7 +558,8 @@ export class ChatService {
     conversationId: string,
     filename: string,
     size: string,
-    type: string
+    type: string,
+    fileContent?: string
 
   ): Promise<void> {
     try {
@@ -336,6 +572,7 @@ export class ChatService {
       messageEntity.fileName = filename;
       messageEntity.fileSize = size;
       messageEntity.fileType = type;
+      messageEntity.fileContent = fileContent || '';
 
       await this.messageRepository.save(messageEntity);
       console.log('Message saved successfully');
@@ -359,11 +596,11 @@ export class ChatService {
     const completion = await this.model.invoke([
       {
         role: 'system',
-        content: `You are a creative storyteller.`
+        content: `You are a creative storyteller`
       },
       {
         role: 'user',
-        content: `Create a short title of maximum 4 words based on this message: "${message}".`
+        content: `Create a short title of maximum 4 words based on this message: ${message}`
       }
     ])
 
@@ -418,7 +655,7 @@ export class ChatService {
       },
       {
         role: 'user',
-        content: `Generate a list of 3 diverse, creative template suggestions for an AI-powered personal assistant chatbot. The suggestions should align with the features and categories the bot can handle, based on the user's natural language input.`
+        content: `Generate a list of 3 diverse, creative template suggestions for an AI-powered personal assistant chatbot. The suggestions should align with the features and categories the bot can handle, based on the user's natural language input`
       }
     ]);
 
@@ -433,19 +670,21 @@ export class ChatService {
     return completion;
   }
 
-async getUniqueConversationsByUser(userId: string): Promise<{ conversationId: string; title: string }[]> {
-  return this.messageRepository
-    .createQueryBuilder('m')
-    .select([
-      'DISTINCT ON (m.conversationId) m.conversationId AS conversationId',
-      'm.title AS title'
-    ])
-    .where('m.userId = :userId', { userId })
-    .andWhere('m.deletedAt IS NULL')
-    .orderBy('m.conversationId')           // must match DISTINCT ON
-    .addOrderBy('m.createdAt', 'ASC')     // then order by latest message in each conversation
-    .getRawMany();
-}
+  async getUniqueConversationsByUser(
+    userId: string
+  ): Promise<{ conversationId: string; title: string; createdAt: Date }[]> {
+    return this.messageRepository
+      .createQueryBuilder('m')
+      .select([
+        'DISTINCT ON (m.conversationId) m.conversationId AS conversationId',
+        'm.title AS title',
+        'm.createdAt AS createdAt'
+      ])
+      .where('m.userId = :userId', { userId })
+      .andWhere('m.deletedAt IS NULL')
+      .orderBy('m.conversationId, m.createdAt', 'ASC')
+      .getRawMany();
+  }
 
 
 

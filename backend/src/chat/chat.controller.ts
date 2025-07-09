@@ -102,7 +102,28 @@ export class ChatController {
     let sentMetadata = false;
     let streamData: any = null;
 
+
     try {
+
+      // --- Regenerate logic: delete most recent assistant message if needed ---
+      if (createMessageDto.regenerate && createMessageDto.conversationId) {
+        try {
+          // Find the most recent assistant message in this conversation
+          const lastAssistantMsg = await this.messageRepository.findOne({
+            where: { conversationId: createMessageDto.conversationId,  },
+            order: { createdAt: 'DESC' },
+          });
+          if (lastAssistantMsg) {
+            console.log('Regenerating message, deleting most recent assistant message with ID:', lastAssistantMsg.id);
+            await this.messageRepository.delete({ id: lastAssistantMsg.id });
+          } else {
+            console.log('No assistant message found to delete for conversation:', createMessageDto.conversationId);
+          }
+        } catch (deleteError) {
+          console.error('Error deleting most recent assistant message:', deleteError);
+        }
+      }
+
       const result = await this.chatService.sendMessage(createMessageDto, req, files?.files || []);
       streamData = result;
       // const stream = await result.model.stream([new HumanMessage(result.prompt)]);
@@ -114,6 +135,10 @@ export class ChatController {
         }
 
         let token = '';
+        // if(typeof chunk.content === 'string' &&  chunk.content.includes('I did not have knowledge about that.')) {
+        //   result.documentContext = ''
+        //   console.log('No relevant documents found, skipping document context');
+        // }
         if (typeof chunk.content === 'string') {
           token = chunk.content;
         } else if (Array.isArray(chunk.content)) {
@@ -147,10 +172,35 @@ export class ChatController {
 
         fullAiResponse += token;
       }
+       if(fullAiResponse.includes('I did not have knowledge about that.')) {
+        result.documentContext = '';
+        console.log('removing the document context beacause no response was found');
+      }
+
+       if (!clientDisconnected && !res.destroyed && result.documentContext) {
+        const citationTokens = [
+          "\n\n **Citation** : ",
+          result.documentContext
+        ];
+        
+        for (const citationToken of citationTokens) {
+          if (clientDisconnected || res.destroyed) break;
+          
+          const event = { token: citationToken };
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+          
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
+          
+          fullAiResponse += citationToken;
+        }
+      }
+     
 
       // Send final "done" event if no client disconnection
       if (!clientDisconnected && !res.destroyed) {
-        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true , documentContext : result.documentContext })}\n\n`);
         if (typeof (res as any).flush === 'function') {
           (res as any).flush();
         }
@@ -167,6 +217,7 @@ export class ChatController {
           result.filename || '',
           result.size || '',
           result.type || '',
+          result.fileContent || ''
         );
       } catch (saveError) {
         console.error('Error saving message:', saveError);

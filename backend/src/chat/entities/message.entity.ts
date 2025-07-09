@@ -36,4 +36,7 @@ export class Message extends BaseEntity {
 
   @Column({ nullable: true })
   fileType?: string;
+
+  @Column({ nullable: true })
+  fileContent?: string;
 }

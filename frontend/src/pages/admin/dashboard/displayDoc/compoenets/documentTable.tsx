@@ -641,7 +641,7 @@ export default function DocumentsTable() {
                         <TableRow key={statute.id}>
                           <TableCell className="font-medium">{index + 1 + startIndex}</TableCell>
                           <TableCell className="font-medium">{statute.fileName?.split("?")[0] || "--"}</TableCell>
-                          <TableCell className="font-medium">{statute.title.slice(0, 30) || "--"}</TableCell>
+                          <TableCell className="font-medium">{statute.title?.slice(0, 30) || "--"}</TableCell>
                           <TableCell className="font-medium">{statute.source_url || "--"}</TableCell>
                           <TableCell>{statute.citation?.slice(0, 30) || "--"}</TableCell>
                           <TableCell>{statute.code?.slice(0, 15) || "--"}</TableCell>

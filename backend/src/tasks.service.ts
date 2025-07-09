@@ -183,17 +183,17 @@ export class TasksService implements OnModuleInit {
 
       const document = await this.caseRepository.save(cases);
 
-      // await this.embeddingService.processDocument({
-      //   documentId: document.id,
-      //   content: document.content_html || '',
-      //   additionalMetadata: {
-      //     document_id: document.id,
-      //     document_type: document.type,
-      //     processed_at: new Date().toISOString(),
-      //     enabled: true,
-      //     source: 'Api',
-      //   }
-      // });
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          document_type: document.type,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Api',
+        }
+      });
 }
     
 
@@ -217,17 +217,17 @@ export class TasksService implements OnModuleInit {
 
       const document = await this.statuteRepository.save(statute);
 
-      // await this.embeddingService.processDocument({
-      //   documentId: document.id,
-      //   content: document.content_html || '',
-      //   additionalMetadata: {
-      //     document_id: document.id,
-      //     document_type: document.type,
-      //     processed_at: new Date().toISOString(),
-      //     enabled: true,
-      //     source: 'Scraper',
-      //   }
-      // });
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          document_type: document.type,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Scraper',
+        }
+      });
     }
 
 
@@ -250,17 +250,17 @@ export class TasksService implements OnModuleInit {
 
       const document = await this.statuteRepository.save(statute);
 
-      // await this.embeddingService.processDocument({
-      //   documentId: document.id,
-      //   content: document.content_html || '',
-      //   additionalMetadata: {
-      //     document_id: document.id,
-      //     document_type: document.type,
-      //     processed_at: new Date().toISOString(),
-      //     enabled: true,
-      //     source: 'Scraper',
-      //   }
-      // });
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          document_type: document.type,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Scraper',
+        }
+      });
     }
 
 
@@ -279,17 +279,17 @@ export class TasksService implements OnModuleInit {
 
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      // await this.embeddingService.processDocument({
-      //   documentId: document.id,
-      //   content: document.content_html || '',
-      //   additionalMetadata: {
-      //     document_id: document.id,
-      //     document_type: document.type,
-      //     processed_at: new Date().toISOString(),
-      //     enabled: true,
-      //     source: 'Scraper',
-      //   }
-      // });
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          document_type: document.type,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Scraper',
+        }
+      });
 
 
     }
@@ -310,17 +310,17 @@ export class TasksService implements OnModuleInit {
       // Save to database
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      // await this.embeddingService.processDocument({
-      //   documentId: document.id,
-      //   content: document.content_html || '',
-      //   additionalMetadata: {
-      //     document_id: document.id,
-      //     document_type: document.type,
-      //     processed_at: new Date().toISOString(),
-      //     enabled: true,
-      //     source: 'Scraper',
-      //   }
-      // });
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          document_type: document.type,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Scraper',
+        }
+      });
     }
 
     for await (const sectionData of runNewYorkCodeScraper()) {
@@ -341,17 +341,17 @@ export class TasksService implements OnModuleInit {
       // Save to database
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      // await this.embeddingService.processDocument({
-      //   documentId: document.id,
-      //   content: document.content_html || '',
-      //   additionalMetadata: {
-      //     document_id: document.id,
-      //     document_type: document.type,
-      //     processed_at: new Date().toISOString(),
-      //     enabled: true,
-      //     source: 'Scraper',
-      //   }
-      // });
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          document_type: document.type,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Scraper',
+        }
+      });
     }
 
 
@@ -369,17 +369,17 @@ export class TasksService implements OnModuleInit {
 
       const document = await this.regulationRepository.save(RegulationEntity);
 
-      // await this.embeddingService.processDocument({
-      //   documentId: document.id,
-      //   content: document.content_html || '',
-      //   additionalMetadata: {
-      //     document_id: document.id,
-      //     document_type: document.type,
-      //     processed_at: new Date().toISOString(),
-      //     enabled: true,
-      //     source: 'Scraper',
-      //   }
-      // });
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          document_type: document.type,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Scraper',
+        }
+      });
     }
 
     console.log('Scraping US Codes...');
@@ -401,17 +401,17 @@ export class TasksService implements OnModuleInit {
       // Save to database
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      // await this.embeddingService.processDocument({
-      //   documentId: document.id,
-      //   content: document.content_html || '',
-      //   additionalMetadata: {
-      //     document_id: document.id,
-      //     document_type: document.type,
-      //     processed_at: new Date().toISOString(),
-      //     enabled: true,
-      //     source: 'Scraper',
-      //   }
-      // });
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          document_type: document.type,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Scraper',
+        }
+      });
     }
   }
 }

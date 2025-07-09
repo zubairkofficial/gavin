@@ -7,8 +7,8 @@ import API from "@/lib/api"
 export interface Conversation {
   conversationid: string
   title: string
-  createdAt: string
-  updatedAt: string
+  createdat: string
+  updatedat: string
   // Add other properties as needed based on your API response
 }
 
@@ -39,14 +39,13 @@ export function useCreateConversationMutation() {
       if (response.status !== 200 && response.status !== 201) {
         console.log(response.data)
         throw new Error("Failed to create conversation")
-        
       }
       console.log(response.data)
       return response.data
     },
     onSuccess: () => {
-      // Invalidate and refetch conversations data
-      queryClient.invalidateQueries({ queryKey: ["conversations"] })
+      // Refetch conversations immediately for sidebar update
+      queryClient.refetchQueries({ queryKey: ["conversations"] })
     },
   })
 }
