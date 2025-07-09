@@ -648,7 +648,7 @@ const Chat = ({
   const renderMessage = (msg: ChatMessage) => {
     if (msg.role === "user") {
       return (
-        <div key={msg.id} className="flex flex-col items-end mb-4">
+        <div key={msg.id} className="flex flex-col items-end ">
           {/* Documents displayed above the message */}
           {msg.documents && msg.documents.length > 0 && (
             <div className="mb-2 space-y-1 max-w-[80%] md:max-w-md">
@@ -674,8 +674,8 @@ const Chat = ({
     }
 
     return (
-      <div key={msg.id} className="rounded-lg py-4 md:py-6 mb-4">
-        <div className="space-y-3 md:space-y-4">
+      <div key={msg.id} className="rounded-lg p-3  mb-4">
+        <div className="space-y-3 ">
           <p className="text-gray-800 text-sm md:text-sm">
             {/* <ReactMarkdown>
             {msg.content}
@@ -765,8 +765,8 @@ const Chat = ({
     <div
       className={cn(
         // Responsive container for chat area
-        "w-full flex flex-col m-0 p-0 mt-5 md:mt-15 min-w-0 max-w-full",
-        messages.length > 0 ? "h-[84vh]" : "",
+        "w-full max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-4xl flex flex-col m-0 p-0 min-w-0 ",
+        messages.length > 0 ? "h-[84vh] " : "",
         // Responsive padding and centering
         "px-2 sm:px-4 md:px-6 lg:px-8 xl:px-0"
       )}
@@ -775,14 +775,14 @@ const Chat = ({
       {/* Messages Section */}
       {messages.length > 0 && (
         <div
-          className="flex-1 overflow-y-auto pb-4 w-full"
+          className="flex-1 pb-4 w-full "
           style={{
             maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
           }}
         >
           <div className="w-full max-w-5xl px-2 md:pl-8 flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px]">
-            <div className="w-full space-y-4 pt-6 md:pt-12">
+            <div className="w-full space-y-4 pt-3 pb-[200px]">
               {messages.map(renderMessage)}
               <div ref={messagesEndRef} />
             </div>
@@ -795,8 +795,8 @@ const Chat = ({
       <div
         className={cn(
           // Responsive chat input section
-          "mx-auto w-full max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl bg-background px-2 md:pl-8 flex-shrink-0 relative min-w-0",
-          messages.length > 0 ? "pb-10" : "mt-auto"
+          "mx-auto w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-4xl bg-background px-2 sm:px-4 md:pl-8 flex-shrink-0 min-w-0",
+          messages.length > 0 ? "pb-3 fixed bottom-10 md:bottom-0" : "mt-auto"
         )}
       >
 
@@ -804,7 +804,7 @@ const Chat = ({
         <div
           className={
             cn(
-              "hidden md:flex  h-14 flex-row overflow-x-auto gap-4 sm:mt-3 z-10  transition-all duration-200 min-h-[3.5rem]"
+              "hidden md:flex   h-14 flex-row overflow-x-auto gap-4 sm:mt-3 z-10  transition-all duration-200 min-h-[3.5rem]"
             )
           }
         >
@@ -824,7 +824,7 @@ const Chat = ({
         <div
           className={cn(
             // Responsive message input area
-            "bg-background mx-auto border rounded-md px-2 w-full max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl overflow-y-auto relative flex flex-col min-w-0",
+            "bg-background mx-auto border rounded-md px-2 w-full  md:max-w-3xl lg:max-w-4xl xl:max-w-5xl overflow-y-auto relative flex flex-col min-w-0",
             selectedDocuments.length > 0 ? "h-[180px] md:h-[160px]" : "h-[120px] md:h-[100px]",
             "transition-all duration-200"
           )}
@@ -897,12 +897,12 @@ const Chat = ({
               }
             }}
             disabled={isLoading}
-            className="rounded-sm mb-7 flex-1 text-start px-1 py-2 bg-transparent outline-none border-none focus-visible:ring-0 shadow-none font-inter placeholder:text-muted-foreground text-sm md:text-sm disabled:opacity-50 resize-none min-h-[40px] max-h-[80px] w-full"
+            className="rounded-sm  flex-1 text-start p-1  bg-transparent outline-none border-none focus-visible:ring-0 shadow-none font-inter placeholder:text-muted-foreground text-sm md:text-sm disabled:opacity-50 resize-none min-h-[30px] max-h-[40px] w-full"
             placeholder="Ask Gavin a question..."
             style={{ minWidth: 0 }}
           />
 
-          <div className="flex w-full items-center justify-between absolute bottom-2 right-2 px-2 md:px-0">
+          <div className="flex w-full items-center justify-between absolute bottom-0 right-2 px-2 md:px-0">
             <div className="md:hidden flex items-center gap-2 mr-auto">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -938,7 +938,7 @@ const Chat = ({
             <Button
               onClick={handleSendMessage}
               disabled={isLoading || (!message.trim() && selectedDocuments.length === 0)}
-              className="rounded-sm ml-auto justify-self-end text-white hover:text-white bg-foreground hover:bg-gray-600 px-3 md:px-4 py-2 text-xs md:text-sm disabled:opacity-50"
+              className="rounded-sm ml-auto justify-self-end text-white hover:text-white bg-foreground hover:bg-gray-600 px-3 md:px-4 mb-1  text-xs md:text-sm disabled:opacity-50"
             >
               {isLoading ? "Sending..." : "Ask Gavin"}
             </Button>

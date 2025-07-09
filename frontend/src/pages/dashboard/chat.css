@@ -1,0 +1,28 @@
+/* Custom scrollbar to position on the left side */
+.custom-scrollbar-left {
+  scrollbar-width: thin;
+  scrollbar-color: #4B5563 #F3F4F6; /* Adjust colors as per your design */
+}
+
+/* For webkit browsers */
+.custom-scrollbar-left::-webkit-scrollbar {
+  width: 8px;
+   position: fixed;
+  right: 0;
+}
+
+.custom-scrollbar-left::-webkit-scrollbar-track {
+  background: #F3F4F6; /* Background of the track */
+}
+
+.custom-scrollbar-left::-webkit-scrollbar-thumb {
+  background-color: #4B5563; /* Scrollbar thumb color */
+  border-radius: 4px;
+ 
+
+}
+
+.custom-scrollbar-left::-webkit-scrollbar-thumb:hover {
+  background-color: #6B7280; /* Hover color for the thumb */
+}
+
