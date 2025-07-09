@@ -102,22 +102,22 @@ export class ChatService {
     const { message, conversationId, title } = createMessageDto;
     if (!message) throw new BadRequestException('Message cannot be empty');
 
-    console.log(files, 'files in chat service')
+    // console.log(files, 'files in chat service')
     const file = files[0];
     const fileName = file?.originalname;
     const fileSize = file?.size;
     const fileType = file?.mimetype;
-    console.log('File details:', {
-      fileName,
-      fileSize,
-      fileType,
-    });
+    // console.log('File details:', {
+    //   fileName,
+    //   fileSize,
+    //   fileType,
+    // });
 
     let fileContent = '';
     if (files && files.length > 0) {
       fileContent = await parseUploadedFile(files);
       // You can now use fileContent as needed
-      console.log('Extracted file content:', fileContent);
+      // console.log('Extracted file content:', fileContent);
     }
 
 
@@ -140,7 +140,7 @@ export class ChatService {
         conTitle = messages.title;
       }
 
-      console.log('Previous messages:', previousMessages);
+      // console.log('Previous messages:', previousMessages);
 
       // Build chat history string
       let chatHistoryContext = '';
@@ -156,7 +156,7 @@ export class ChatService {
         outputKey: 'output',
       });
 
-      console.log('User ID:', userId);
+      // console.log('User ID:', userId);
 
       // Use the vector store as retriever
       let relevantDocs: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
@@ -167,7 +167,7 @@ export class ChatService {
           filter: { enabled: true }
         });
         enabledDocs = enabledDocsWithScores.map(([doc, _score]) => doc);
-        console.log('documnet that we got from similarity',enabledDocsWithScores)
+        // console.log('documnet that we got from similarity',enabledDocsWithScores)
 
         const sortedDocs = enabledDocsWithScores.sort((a, b) => a[1] - b[1]);
         const topScore = sortedDocs[0][1];
@@ -179,7 +179,7 @@ export class ChatService {
 
         // console.log(relevantDocs, 'relevantDocs')
         relevantDocs = [bestDoc];
-         console.log('Top scoring document(s):', relevantDocs);
+        //  console.log('Top scoring document(s):', relevantDocs);
 
 
         // console.log('enabledDocs:', enabledDocs.length, 'relevantDocs:', relevantDocs.length);
@@ -209,12 +209,12 @@ export class ChatService {
 
         // console.log('Filtered docs based on message keywords:', filteredDocs.length);
         if (relevantDocs.length > 0) {
-          console.log('Relevant docs found:', relevantDocs.length);
+          // console.log('Relevant docs found:', relevantDocs.length);
         } else {
-          console.log('No relevant docs found');
+          // console.log('No relevant docs found');
         }
       } catch (err) {
-        console.log('Error retrieving relevant docs:', err);
+        // console.log('Error retrieving relevant docs:', err);
       }
 
       // If there are no enabled docs after filtering, do not answer (unless fileContent is present)
@@ -228,15 +228,15 @@ export class ChatService {
       // Only include citations if relevantDocs found and not just file upload
       context += fileContent ? `File Content:\n${fileContent}\n` : '';
       if (relevantDocs.length > 0) {
-        console.log(relevantDocs.length , 'relevantDocs.length chcekin on line 242')
+        // console.log(relevantDocs.length , 'relevantDocs.length chcekin on line 242')
         
         const disableDocs = enabledDocs.filter(doc => doc.metadata && doc.metadata.enabled === false);
         const enable = enabledDocs.filter(doc => doc.metadata && doc.metadata.enabled === true);
-        console.log('Enabled docs:', enable.length, 'Disabled docs:', disableDocs.length);
+        // console.log('Enabled docs:', enable.length, 'Disabled docs:', disableDocs.length);
 
         if (enable.length === 0) {
           // No enabled docs, skip processing
-          console.log('No enabled documents found, skipping context/documentContext processing.');
+          // console.log('No enabled documents found, skipping context/documentContext processing.');
           // Optionally, you can return early or handle fileContent/chatHistoryContext here
          // <-- Add this if you want to skip further processing
         } else {
@@ -252,7 +252,7 @@ export class ChatService {
           if (seenIds.has(doc.metadata.document_id)) continue;
           seenIds.add(doc.metadata.document_id);
           try {
-            console.log('Processing document:', doc.metadata.document_id, 'Type:', doc.metadata.document_type);
+            // console.log('Processing document:', doc.metadata.document_id, 'Type:', doc.metadata.document_type);
             if (doc.metadata.document_type === 'contract') {
               const document = await this.contractRepository
                 .createQueryBuilder('c')
@@ -329,7 +329,7 @@ export class ChatService {
                 .where('c.id = :id', { id: doc.metadata.document_id })
                 .getOne();
 
-              if (!document) console.log('No document found for case ID:', doc.metadata.document_id);
+              // if (!document) console.log('No document found for case ID:', doc.metadata.document_id);
               if (document) {
                 let filePath = document.filePath || '';
                 let finalPath = '';
@@ -339,7 +339,7 @@ export class ChatService {
                 } else {
                   finalPath = `<${filePath || '#'} target="_blank">`;
                 }
-                console.log(document, 'document in case')
+                // console.log(document, 'document in case')
                 documentContext += [
                   document.court ? `\n\n [**Reference:** ${document.court}](${finalPath})` : `\n\n **Reference:** [${document.name}](${filePath})`,
                   document.citation ? `**Citation:** ${document.citation}` : '',
@@ -414,7 +414,7 @@ export class ChatService {
       }
 
 
-      console.log('context before using in the prompt :', context);
+      // console.log('context before using in the prompt :', context);
 
       const greetings = [
         // 'hi', 'hello', 'hey', 'how are you', 'can you help', 'help me', 'assist me', 'can you please help', 'good morning', 'good afternoon', 'good evening',
@@ -575,7 +575,7 @@ export class ChatService {
       messageEntity.fileContent = fileContent || '';
 
       await this.messageRepository.save(messageEntity);
-      console.log('Message saved successfully');
+      // console.log('Message saved successfully');
     } catch (saveError) {
       console.error('Error saving message:', saveError);
       throw saveError;
@@ -605,7 +605,7 @@ export class ChatService {
     ])
 
     const aiResponse = completion.content;
-    console.log(aiResponse)
+    // console.log(aiResponse)
 
     // const messages = new Message();
     // messages.conversationId = conId;

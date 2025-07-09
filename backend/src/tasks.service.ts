@@ -45,10 +45,10 @@ export class TasksService implements OnModuleInit {
 
   async onModuleInit() {
     const crons = await this.cronRepository.find();
-    console.log('Fetched Cron Jobs:', crons);
+    // console.log('Fetched Cron Jobs:', crons);
 
     for (const cron of crons) {
-      console.log(`Checking cron expression: ${cron.cronExpresion}`);
+      // console.log(`Checking cron expression: ${cron.cronExpresion}`);
 
       if (!this.isValidCronExpression(cron.cronExpresion)) {
         this.logger.error(`Invalid cron expression: ${cron.cronExpresion}`);
@@ -136,9 +136,9 @@ export class TasksService implements OnModuleInit {
     }
 
     const result = await this.cronRepository.delete( { jobName :  jobName })
-    console.log(result)
+    // console.log(result)
     if (!result) {
-      console.log( `Deleted job from scheduler, but no record found in DB for '${jobName}'.`);
+      // console.log( `Deleted job from scheduler, but no record found in DB for '${jobName}'.`);
     }
 
     this.schedulerRegistry.deleteCronJob(jobName);
@@ -159,14 +159,14 @@ export class TasksService implements OnModuleInit {
 
      for await (const data of scrapeCourtListener()) {
       //   console.log(data); // Each plain_text as soon as it's available
-        console.log('='.repeat(60))
-        console.log('scraping started')
-        console.log('te all data of ',data.text)
-        console.log(data.filePath)
-        console.log(data.id)
-        console.log(data.type)
-        console.log(data.pageCount)
-        console.log(data.opinions_cited)
+        // console.log('='.repeat(60))
+        // console.log('scraping started')
+        // console.log('te all data of ',data.text)
+        // console.log(data.filePath)
+        // console.log(data.id)
+        // console.log(data.type)
+        // console.log(data.pageCount)
+        // console.log(data.opinions_cited)
       // console.log(data.text)   
 
 
@@ -382,7 +382,7 @@ export class TasksService implements OnModuleInit {
       });
     }
 
-    console.log('Scraping US Codes...');
+    // console.log('Scraping US Codes...');
 
     for await (const parsedData of openBrowser()) {
       const StatuteEntity = new Statute();
