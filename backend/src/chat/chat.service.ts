@@ -436,8 +436,6 @@ export class ChatService {
         ${context ? `Context:\n${context}\n` : ''}
 
         if ${fileContent} just use the file content and chat history context to answer the question.
-        Previous conversation:
-        ${chatHistoryContext ? chatHistoryContext : 'No previous conversation.'}
 
         Instructions:
         - *Context Understanding*: Check if this is a follow-up question by analyzing the chat history and current question context.
