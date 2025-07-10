@@ -1,3 +1,4 @@
+import {  ChevronLeft, ChevronRight } from "lucide-react";
 import React from "react";
 
 interface CitationTooltipProps {
@@ -114,7 +115,7 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({ msgId, msgContent, ci
                                                     setCurrentCitationIndex(groupStartIndex + Math.max(0, groupCitationIndex - 1));
                                                 }}
                                             >
-                                                <span>{"<"}</span>
+                                                <ChevronLeft className="cursor-pointer"/>
                                             </button>
                                             <button
                                                 className="p-1 disabled:opacity-30"
@@ -124,7 +125,7 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({ msgId, msgContent, ci
                                                     setCurrentCitationIndex(groupStartIndex + Math.min(groupCitations.length - 1, groupCitationIndex + 1));
                                                 }}
                                             >
-                                                <span>{">"}</span>
+                                                <ChevronRight className="cursor-pointer"/>
                                             </button>
                                         </div>
                                         <span className="font-semibold text-xs">
