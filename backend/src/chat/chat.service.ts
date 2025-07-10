@@ -426,98 +426,33 @@ export class ChatService {
       const lowerMsg = message.toLowerCase();
       const isGreeting = greetings.some(greet => lowerMsg.includes(greet));
 
-      let prompt: string;
+      
 
-      if (isGreeting) {
-        prompt = `
-          👋 Hello! Welcome to your AI-powered legal assistant.
-
-          I can help you:
-          - Answer legal questions about corporate law, contracts, regulations, and case law.
-          - Review and summarize your legal documents.
-          - Suggest contract clauses and provide citation-aware responses.
-          - Guide you through legal research in jurisdictions like Delaware, New York, California, and Texas.
-
-          Just type your question or upload a document to get started!
-        `;
-      } else if(fileContent){
-        prompt = `
-        Use the following file context to ans  to answer the question:
-        fileContent Context:
-        ${context}
-        
-        Previous Chat History:
-        
-        
-        Instructions:
-        - *Context Understanding*: Check if this is a follow-up question by analyzing the chat history and current question context.
-        - *For New Questions*: Use Document Context first, then chat history for additional context
-        - If you do not find an answer in the Document Context or chat history, respond with: "I did not have knowledge about that."
-        - Provide the answer in a concise manner and include proper citations.
-        - *Reasoning Requirement*: Always inject reasoning into responses by explaining the logical process, why the information is relevant, and how conclusions were reached. Make the AI's decision-making process transparent and clear (e.g., why a certain statute applies, how legal principles connect, what factors influenced the analysis).
-
-        *Response Structure*:
-        When providing the answer, ensure that it is concise and well-structured:
-        1. *Answer*: For follow-up questions, reference the previous discussion ("As mentioned earlier..." or "Building on the previous answer...") and provide the requested additional details
-        2. *Reasoning*: Inject reasoning into the response by explaining the logical process behind the answer. Detail why this information is relevant, how it connects to the previous conversation, and what makes this explanation comprehensive. Always explain the AI's logic and decision-making process clearly (e.g., why a certain statute applies, how legal principles connect, what factors led to this conclusion).
-        
-
-        Question:
-        ${message}
-        `
-      }else {
-        prompt = context
-          ? `
+      let prompt = `
         Use the following information to answer the question:
-        Document Context:
-        ${documentContext}
-       
-        Instructions: 
-        - If the chat history include citation, please remove it and use chat history context to answer the question without citation.
-        - If chat history context have any refernce than ignore it and use the chat hostory without any citation.
-        Previous Chat History:
-      
-             
-        *Answer Priority Order*:
-        2. *For New Questions*: Use Document Context first, then chat history for additional context
-        3. If unable to find relevant information in either source, respond with: "I did not have knowledge about that."
-        
-        *Response Structure*:
-        When providing the answer, ensure that it is concise and well-structured:
-        1. *Answer*: For follow-up questions, reference the previous discussion ("As mentioned earlier..." or "Building on the previous answer...") and provide the requested additional details
-        2. *Reasoning*: Inject reasoning into the response by explaining the logical process behind the answer. Detail why this information is relevant, how it connects to the previous conversation, and what makes this explanation comprehensive. Always explain the AI's logic and decision-making process clearly (e.g., why a certain statute applies, how legal principles connect, what factors led to this conclusion).
-        
-        
-        Context:
-        ${context}
-        Question:
-        ${message}
-        `
-          : `
-        Use the following Document Context to answer the question:
-        Document Context:
-        ${documentContext}
-        
-        Previous Chat History:
-      
-        
+
+        ${documentContext ? `Document Context:\n${documentContext}\n` : ''}
+        ${fileContent ? `File Content:\n${fileContent}\n` : ''}
+        ${context ? `Context:\n${context}\n` : ''}
+
+        Previous conversation:
+        ${chatHistoryContext ? `Chat History:\n${chatHistoryContext}\n` : ''}
+
         Instructions:
         - *Context Understanding*: Check if this is a follow-up question by analyzing the chat history and current question context.
-        - *For New Questions*: Use Document Context first, then chat history for additional context
-        - If you do not find an answer in the Document Context or chat history, respond with: "I did not have knowledge about that."
-        - Provide the answer in a concise manner and include proper citations.
+        - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
+        - If you do not find an answer in the Document Context, File Content, or chat history, respond with: "I did not have knowledge about that."
+        - Provide the answer in a concise manner and include proper citations if available.
         - *Reasoning Requirement*: Always inject reasoning into responses by explaining the logical process, why the information is relevant, and how conclusions were reached. Make the AI's decision-making process transparent and clear (e.g., why a certain statute applies, how legal principles connect, what factors influenced the analysis).
-        
-         *Response Structure*:
+
+        *Response Structure*:
         When providing the answer, ensure that it is concise and well-structured:
-        1. *Answer*: For follow-up questions, reference the previous discussion ("As mentioned earlier..." or "Building on the previous answer...") and provide the requested additional details
+        1. *Answer*: For follow-up questions, reference the previous discussion ("As mentioned earlier..." or "Building on the previous answer...") and provide the requested additional details.
         2. *Reasoning*: Inject reasoning into the response by explaining the logical process behind the answer. Detail why this information is relevant, how it connects to the previous conversation, and what makes this explanation comprehensive. Always explain the AI's logic and decision-making process clearly (e.g., why a certain statute applies, how legal principles connect, what factors led to this conclusion).
-        
 
         Question:
-        ${message}`;
-
-      }  
+        ${message}
+        `;
       const stream = await this.model.stream([new HumanMessage(prompt)]);
 
       const finalTitle = conTitle || title;
