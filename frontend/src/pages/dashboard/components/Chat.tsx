@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
+import CitationTooltip from "./CitationTooltip";
 import type { DropdownMenuCheckboxItemProps } from "@radix-ui/react-dropdown-menu"
 
 import { Button } from "@/components/ui/button"
@@ -42,7 +43,7 @@ import { Swiper, SwiperSlide } from "swiper/react"
 import "swiper/css"
 // @ts-ignore
 import "swiper/css/navigation"
-import  urlMetadata from 'url-metadata';
+import urlMetadata from 'url-metadata';
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import API from "@/lib/api"
@@ -678,12 +679,14 @@ const Chat = ({
     return (
       <div key={msg.id} className="rounded-lg p-3  mb-4">
         <div className="space-y-3 ">
-          <p className="text-gray-800  text-[14px] leading-[22px]">
+          <p className="text-gray-800  text-[14px] leading-[22px] ">
             {/* <ReactMarkdown>
             {msg.content}
             </ReactMarkdown> */}
             <ReactMarkdown
+
               components={{
+                 
                 a: ({ href, children }) => (
                   <a
                     href={href}
@@ -696,127 +699,18 @@ const Chat = ({
                   </a>
 
                 ),
-              
+
               }}
             >
               {msg.content.split('Citation00 :')[0]}
             </ReactMarkdown>
-            {(() => {
-              // Safely extract citation part
-              let citationPart = "";
-              const content = msg.content.split('Citation00 :')
-              const splitContent = msg.content.split('Citation00 :');
-              if (splitContent.length > 1 && splitContent[1]) {
-                citationPart = splitContent[1].trim();
-              }
-              if (!citationPart) return null;
-
-              try {
-                if (citationPart.startsWith('--')) {
-                  citationPart = citationPart.slice(2);
-                }
-                const citations = JSON.parse(citationPart);
-                if (!Array.isArray(citations) || citations.length === 0) return null;
-
-                // Use citationIndexes state to track current index per message
-                const currentCitationIndex = citationIndexes[msg.id] ?? 0;
-                const setCurrentCitationIndex = (idx: number) => {
-                  setCitationIndexes(prev => ({ ...prev, [msg.id]: idx }));
-                };
-
-                const c = citations[currentCitationIndex];
-                let hostname = '';
-                let fullPath = c.reference || '';
-                let imgPath ='';
-
-                try {
-                  const cleanPath = fullPath.replace(/^<|>$/g, '').replace(/ target="_blank"$/, '');
-                  if (cleanPath.startsWith('http')) {
-                    const url = new URL(cleanPath.trim());
-                    hostname = url.hostname;
-                    fullPath = url.href;
-                    imgPath = url.protocol + hostname + '/favicon.ico'; // Default image path, can be customized
-                  } else {
-                    hostname = cleanPath.split('/')[2] || cleanPath;
-                    
-                    fullPath = cleanPath;
-                    // imgPath
-                  }
-                  // (async  function () {
-                  //     try {
-                  //       const options = {
-                  //         mode : 'no-cors',
-                  //       }
-                  //       const url = `${fullPath}`;
-                  //       const content = await fetch(url);
-                  //       const metadata = await urlMetadata(null , {
-                  //         parseResponseObject: content
-                  //       });
-                  //       console.log(metadata);
-
-                  //     } catch (err) {
-                  //       console.log(err);
-                  //     }
-                  //   })();
-                } catch { /* ignore */ }
-
-                return (
-                  <div className="mt-2 mr-60">
-                    <div className="relative group border border-gray-400 rounded bg-black p-3 w-fit h-7 flex justify-center items-center text-white px-3 py-2 mb-2 cursor-pointer transition-shadow hover:shadow-lg ">
-                      {/* Show only one field, e.g. code or title */}
-                      {c.code || c.title || c.citation || c.subject_area || c.fileName || "Reference"}
-                      {/* Tooltip on hover */}
-                      {c.reference && (
-                        <div className="absolute  z-50 rounded-md  -translate-x-1/2 bottom-full left-full ml-30 mb-2 hidden group-hover:flex flex-col text-left justify-start min-w-[350px] max-w-xs bg-white text-gray-900 border border-gray-300  shadow-lg text-xs">
-                          {/* Arrow and navigation */}
-                          <div className="flex items-center  rounded-t-md justify-between w-full  bg-gray-100 p-2">
-                            <div>
-                              <button
-                                className="p-1 disabled:opacity-30"
-                                disabled={currentCitationIndex === 0}
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setCurrentCitationIndex(Math.max(0, currentCitationIndex - 1));
-                                }}
-                              >
-                                <ChevronLeft color="black" className="cursor-pointer"/>
-                              </button>
-
-                              <button
-                                className="p-1 disabled:opacity-30"
-                                disabled={currentCitationIndex === citations.length - 1}
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setCurrentCitationIndex(Math.min(citations.length - 1, currentCitationIndex + 1));
-                                }}
-                              >
-                                <ChevronRight color="black" className="cursor-pointer"/>
-                              </button>
-                            </div>
-                            <span className="font-semibold text-xs">
-                              {currentCitationIndex + 1} / {citations.length}
-                            </span>
-                          </div>
-                          <div className="px-3 my-5">
-                            <div className="flex items-center  mb-2 gap-2">
-                              <img src={imgPath} alt="icon" className="h-[22px]  w-[22px] rounded-lg border-amber-200" />
-                            <div className="font-semibold">{hostname}</div>
-                            </div>
-
-                            <div className="break-all text-gray-700"><a href={fullPath} target="_blank" rel="noopener noreferrer">
-                              {fullPath}
-                            </a></div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              } catch (err) {
-                console.error('Citation JSON parse error:', err, citationPart);
-                return null;
-              }
-            })()}
+            {/* Citation Tooltip extracted as a component */}
+            <CitationTooltip
+              msgId={msg.id}
+              msgContent={msg.content}
+              citationIndexes={citationIndexes}
+              setCitationIndexes={setCitationIndexes}
+            />
 
 
 
@@ -900,11 +794,11 @@ const Chat = ({
       {/* Messages Section */}
       {messages.length > 0 && (
         <div
-          className="flex-1 pb-4 w-full "
-          style={{
-            maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
-          }}
+          className="flex-1 pb-2 w-full "
+        // style={{
+        //   maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
+        //   WebkitMaskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
+        // }}
         >
           <div className="w-full max-w-5xl px-2 md:pl-8 flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px]">
             <div className="w-full space-y-4 pt-3 pb-[200px]">
@@ -916,6 +810,8 @@ const Chat = ({
       )}
 
 
+
+
       {/* Chat Input Section */}
       <div
         className={cn(
@@ -924,6 +820,18 @@ const Chat = ({
           messages.length > 0 ? "pb-3 fixed bottom-10 md:bottom-0" : "mt-auto absolute sm:bottom-0  md:bottom-40",
         )}
       >
+        <div
+          style={{
+            position: "absolute",
+            top: -50,
+            left: 0,
+            right: 0,
+            height: "62px",
+            pointerEvents: "none",
+            zIndex: 99,
+            background: "linear-gradient(to top, rgba(250,251,253,1) 0%, rgba(250,251,253,0) 100%)"
+          }}
+        />
 
         {/* Suggestions */}
         <div

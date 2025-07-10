@@ -110,7 +110,7 @@ export class ChatController {
         try {
           // Find the most recent assistant message in this conversation
           const lastAssistantMsg = await this.messageRepository.findOne({
-            where: { conversationId: createMessageDto.conversationId,  },
+            where: { conversationId: createMessageDto.conversationId, },
             order: { createdAt: 'DESC' },
           });
           if (lastAssistantMsg) {
@@ -172,35 +172,54 @@ export class ChatController {
 
         fullAiResponse += token;
       }
-       if(fullAiResponse.includes('I did not have knowledge about that.')) {
-        result.documentContext = '';
+      if (fullAiResponse.includes('I did not have knowledge about that.')) {
+        result.documentContext = [];
         console.log('removing the document context beacause no response was found');
       }
 
-       if (!clientDisconnected && !res.destroyed && result.documentContext) {
-        const citationTokens = [
-          "\n\n **Citation** : ",
-          result.documentContext
-        ];
-        
-        for (const citationToken of citationTokens) {
-          if (clientDisconnected || res.destroyed) break;
-          
-          const event = { token: citationToken };
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
-          
-          if (typeof (res as any).flush === 'function') {
-            (res as any).flush();
-          }
-          
-          fullAiResponse += citationToken;
+      if (!clientDisconnected && !res.destroyed && result.documentContext) {
+        // 1. Send the citation label as a chunk
+        const citationLabel = "";
+        res.write(`data: ${JSON.stringify({ token: citationLabel })}\n\n`);
+        if (typeof (res as any).flush === 'function') {
+          (res as any).flush();
         }
+        fullAiResponse += citationLabel;
+        console.log(`\n\n Citation00 : --${JSON.stringify(result.documentContext)}`)
+        console.log(`\n\n Citation00 : --${(result.documentContext)}`)
+
+        // 2. Wrap document context in <citation> and send as JSON
+        const citationJson = `\n\n Citation00 : --${JSON.stringify(result.documentContext)}`;
+        res.write(`data: ${JSON.stringify({ token: citationJson })}\n\n`);
+        if (typeof (res as any).flush === 'function') {
+          (res as any).flush();
+        }
+        fullAiResponse += citationJson;
       }
-     
+      //  if (!clientDisconnected && !res.destroyed && result.documentContext) {
+      //   const citationTokens = [
+      //     "\n\n **Citation** : ",
+      //     result.documentContext
+      //   ];
+
+      //   for (const citationToken of citationTokens) {
+      //     if (clientDisconnected || res.destroyed) break;
+
+      //     const event = { token: citationToken };
+      //     res.write(`data: ${JSON.stringify(event)}\n\n`);
+
+      //     if (typeof (res as any).flush === 'function') {
+      //       (res as any).flush();
+      //     }
+
+      //     fullAiResponse += citationToken;
+      //   }
+      // }
+
 
       // Send final "done" event if no client disconnection
       if (!clientDisconnected && !res.destroyed) {
-        res.write(`data: ${JSON.stringify({ done: true , documentContext : result.documentContext })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true, documentContext: result.documentContext })}\n\n`);
         if (typeof (res as any).flush === 'function') {
           (res as any).flush();
         }

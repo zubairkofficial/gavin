@@ -93,7 +93,7 @@ export class ChatService {
     conversationId: string,
     userId?: string,
     fileContent?: string,
-    documentContext?: string,
+    documentContext?: any[],
     title?: string
     filename: string,
     size: string,
@@ -170,16 +170,15 @@ export class ChatService {
         // console.log('documnet that we got from similarity',enabledDocsWithScores)
 
         const sortedDocs = enabledDocsWithScores.sort((a, b) => a[1] - b[1]);
-        const topScore = sortedDocs[0][1];
-        const topDocs = sortedDocs.filter(([_, score]) => score === topScore).map(([doc]) => doc);
+        const top3DocsWithScores = sortedDocs.slice(0, 3); // Get top 3
+const bestDoc = top3DocsWithScores.map(([doc]) => doc);
+// const bestDoc = sortedDocs[0][0];
 
-        const bestDoc = sortedDocs[0][0];
 
-       
 
-        // console.log(relevantDocs, 'relevantDocs')
-        relevantDocs = [bestDoc];
-        //  console.log('Top scoring document(s):', relevantDocs);
+// console.log(relevantDocs, 'relevantDocs')
+relevantDocs = bestDoc;
+//  console.log('Top scoring document(s):', relevantDocs);
 
 
         // console.log('enabledDocs:', enabledDocs.length, 'relevantDocs:', relevantDocs.length);
@@ -224,12 +223,12 @@ export class ChatService {
 
       // Build prompt with context from relevant docs and buffer memory
       let context = '';
-      let documentContext = '';
+      let documentContext: Array<{ title: string; reference: string; jurisdiction?: string; citation?: string; subject_area?: string; code?: string; decision_date?: string; name?: string; case_type?: string; }> = [];
       // Only include citations if relevantDocs found and not just file upload
       context += fileContent ? `File Content:\n${fileContent}\n` : '';
       if (relevantDocs.length > 0) {
         // console.log(relevantDocs.length , 'relevantDocs.length chcekin on line 242')
-        
+
         const disableDocs = enabledDocs.filter(doc => doc.metadata && doc.metadata.enabled === false);
         const enable = enabledDocs.filter(doc => doc.metadata && doc.metadata.enabled === true);
         // console.log('Enabled docs:', enable.length, 'Disabled docs:', disableDocs.length);
@@ -238,7 +237,7 @@ export class ChatService {
           // No enabled docs, skip processing
           // console.log('No enabled documents found, skipping context/documentContext processing.');
           // Optionally, you can return early or handle fileContent/chatHistoryContext here
-         // <-- Add this if you want to skip further processing
+          // <-- Add this if you want to skip further processing
         } else {
           if (chatHistoryContext) {
           context += chatHistoryContext + '\n';
@@ -274,12 +273,17 @@ export class ChatService {
                 } else {
                   finalPath =` <${filePath || '#'} >`;
                 }
-                documentContext += [
-                  document.title ? ` \n\n [*Reference:* ${document.title}](${finalPath})` : `\n\n **Reference:** [${document.fileName}](${filePath})`,
-                  document.jurisdiction ? `**Jurisdiction:** ${document.jurisdiction}` : '',
-                ]
-                  .filter(Boolean)
-                  .join(', ') + '\n';
+                // documentContext += [
+                //   document.title ? ` \n\n [*Reference:* ${document.title}](${finalPath})` : `\n\n **Reference:** [${document.fileName}](${filePath})`,
+                //   document.jurisdiction ? `**Jurisdiction:** ${document.jurisdiction}` : '',
+                // ]
+                //   .filter(Boolean)
+                //   .join(', ') + '\n';
+                documentContext.push({
+                  title: document.title || '',
+                  reference: finalPath,
+                  jurisdiction: document.jurisdiction || '',
+                })
               }
             } else if (doc.metadata.document_type === 'regulation') {
               const document = await this.regulationRepository
@@ -305,13 +309,20 @@ export class ChatService {
                 } else {
                   finalPath = filePath;
                 }
-                documentContext += [
-                  document.title ? `\n\n [**Reference:** ${document.title}](${finalPath})` : `\n\n **Reference:** [${document.fileName}](${filePath})`,
-                  document.citation ? `**Citation:** ${document.citation}` : '',
-                  document.subject_area ? `**Subject:** ${document.subject_area}` : '',
-                ]
-                  .filter(Boolean)
-                  .join(', ') + '\n';
+                // documentContext += [
+                //   document.title ? `\n\n [**Reference:** ${document.title}](${finalPath})` : `\n\n **Reference:** [${document.fileName}](${filePath})`,
+                //   document.citation ? `**Citation:** ${document.citation}` : '',
+                //   document.subject_area ? `**Subject:** ${document.subject_area}` : '',
+                // ]
+                //   .filter(Boolean)
+                //   .join(', ') + '\n';
+
+                documentContext.push({
+                  title: document.title || '',
+                  reference: finalPath,
+                  citation: document.citation || '',
+                  subject_area: document.subject_area || '',
+                })
               }
             } else if (doc.metadata.document_type === 'case') {
               const document = await this.caseRepository
@@ -340,13 +351,21 @@ export class ChatService {
                   finalPath = `<${filePath || '#'} target="_blank">`;
                 }
                 // console.log(document, 'document in case')
-                documentContext += [
-                  document.court ? `\n\n [**Reference:** ${document.court}](${finalPath})` : `\n\n **Reference:** [${document.name}](${filePath})`,
-                  document.citation ? `**Citation:** ${document.citation}` : '',
-                  document.decision_date ? `**Decision Date:** ${document.decision_date}` : '',
-                ]
-                  .filter(Boolean)
-                  .join(', ') + '\n';
+                // documentContext += [
+                //   document.court ? `\n\n [**Reference:** ${document.court}](${finalPath})` : `\n\n **Reference:** [${document.name}](${filePath})`,
+                //   document.citation ? `**Citation:** ${document.citation}` : '',
+                //   document.decision_date ? `**Decision Date:** ${document.decision_date}` : '',
+                // ]
+                //   .filter(Boolean)
+                //   .join(', ') + '\n';
+                documentContext.push({
+                  title: document.court || '',
+                  reference: finalPath,
+                  citation: document.citation || '',
+                  decision_date: document.decision_date || '',
+                  name: document.name || '',
+                  case_type: document.case_type || '',
+                })
               }
             } else if (doc.metadata.document_type === 'statute') {
               const document = await this.statuteRepository
@@ -371,13 +390,18 @@ export class ChatService {
                 } else {
                   finalPath = `<${filePath || '#'} >`;
                 }
-                documentContext += [
-                  document.c_title ? `\n\n [**Reference:** ${document.c_title}](${finalPath})` : `\n\n **Reference:** [${document.c_fileName}](${filePath})`,
-                  document.c_code ? `**Code:** ${document.c_code}` : '',
-                  document.c_section ?` **Section:** ${document.c_section}` : ''
-                ]
-                  .filter(Boolean)
-                  .join(', ') + '\n';
+                // documentContext += [
+                //   document.c_title ? `\n\n [**Reference:** ${document.c_title}](${finalPath})` : `\n\n **Reference:** [${document.c_fileName}](${filePath})`,
+                //   document.c_code ? `**Code:** ${document.c_code}` : '',
+                //   document.c_section ?` **Section:** ${document.c_section}` : ''
+                // ]
+                //   .filter(Boolean)
+                //   .join(', ') + '\n';
+                documentContext.push({
+                  title: document.c_title || '',
+                  reference: finalPath,
+                  code: document.c_code || '',
+                })
               }
             }
           } catch (docError) {
@@ -446,9 +470,10 @@ export class ChatService {
 
         *Response Structure*:
         When providing the answer, ensure that it is concise and well-structured:
-        1. *Answer*: For follow-up questions, reference the previous discussion ("As mentioned earlier..." or "Building on the previous answer...") and provide the requested additional details.
-        2. *Reasoning*: Inject reasoning into the response by explaining the logical process behind the answer. Detail why this information is relevant, how it connects to the previous conversation, and what makes this explanation comprehensive. Always explain the AI's logic and decision-making process clearly (e.g., why a certain statute applies, how legal principles connect, what factors led to this conclusion).
+        1. **Answer**: For follow-up questions, reference the previous discussion ("As mentioned earlier..." or "Building on the previous answer...") and provide the requested additional details.
+        2. **Reasoning**: Inject reasoning into the response by explaining the logical process behind the answer. Detail why this information is relevant, how it connects to the previous conversation, and what makes this explanation comprehensive. Always explain the AI's logic and decision-making process clearly (e.g., why a certain statute applies, how legal principles connect, what factors led to this conclusion).
 
+        in the message response and answer please don't add the citation .
         Question:
         ${message}
         `;
@@ -456,15 +481,15 @@ export class ChatService {
 
       const finalTitle = conTitle || title;
 
-      if(fileContent){
-        documentContext = ''
+      if (fileContent) {
+        documentContext = []
       }
 
       // Optionally, you can reconstruct the stream if needed, or just return the chunks as response
       // If you need to return the original stream, you may need to handle this logic differently
 
       return {
-        stream : stream, // or stream, if you want to keep streaming
+        stream: stream, // or stream, if you want to keep streaming
         prompt,
         documentContext,
         conversationId: convId,
