@@ -42,12 +42,13 @@ import { Swiper, SwiperSlide } from "swiper/react"
 import "swiper/css"
 // @ts-ignore
 import "swiper/css/navigation"
+import  urlMetadata from 'url-metadata';
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import API from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
-import { useNavigate, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { set } from "date-fns"
 
 interface AttachedDocument {
@@ -85,6 +86,7 @@ const Chat = ({
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isFetchingMessages, setIsFetchingMessages] = useState(false);
+  const [citationIndexes, setCitationIndexes] = useState<{ [msgId: string]: number }>({});
   const [title, setTitle] = useState("");
   const [isFirstMessage, setIsFirstMessage] = useState(false);
   const [hasNavigatedToNewConversation, setHasNavigatedToNewConversation] = useState(false);
@@ -401,7 +403,7 @@ const Chat = ({
                         ? { ...msg, isStreaming: false }
                         : msg
                     )
-                    
+
                   );
 
                   setIsLoading(false);
@@ -543,7 +545,7 @@ const Chat = ({
     // Append regeneration parameters
     formData.append('regenerate', 'true');
     formData.append('assistantMsgId', assistantMessageId);
-    
+
     // This is the id of the old assistant message being replaced
     console.log('form data:', formData);
     try {
@@ -676,11 +678,11 @@ const Chat = ({
     return (
       <div key={msg.id} className="rounded-lg p-3  mb-4">
         <div className="space-y-3 ">
-          <p className="text-gray-800  text-sm md:text-sm ">
+          <p className="text-gray-800  text-[14px] leading-[22px]">
             {/* <ReactMarkdown>
             {msg.content}
             </ReactMarkdown> */}
-            <ReactMarkdown 
+            <ReactMarkdown
               components={{
                 a: ({ href, children }) => (
                   <a
@@ -688,15 +690,137 @@ const Chat = ({
                     target="_blank" // Open in new tab
                     rel="noopener noreferrer" // Security best practice
                     // backgroundColor : 'white', border : '1px solid #d1d5db' , borderRadius : '2px', margin : '5px' , padding: '5px' , color: 'black'
-                    style={{ textDecoration: 'underline' ,  }} // Underline the link
+                    style={{ textDecoration: 'underline', }} // Underline the link
                   >
                     {children}
                   </a>
+
                 ),
+              
               }}
             >
-              {msg.content}
+              {msg.content.split('Citation00 :')[0]}
             </ReactMarkdown>
+            {(() => {
+              // Safely extract citation part
+              let citationPart = "";
+              const content = msg.content.split('Citation00 :')
+              const splitContent = msg.content.split('Citation00 :');
+              if (splitContent.length > 1 && splitContent[1]) {
+                citationPart = splitContent[1].trim();
+              }
+              if (!citationPart) return null;
+
+              try {
+                if (citationPart.startsWith('--')) {
+                  citationPart = citationPart.slice(2);
+                }
+                const citations = JSON.parse(citationPart);
+                if (!Array.isArray(citations) || citations.length === 0) return null;
+
+                // Use citationIndexes state to track current index per message
+                const currentCitationIndex = citationIndexes[msg.id] ?? 0;
+                const setCurrentCitationIndex = (idx: number) => {
+                  setCitationIndexes(prev => ({ ...prev, [msg.id]: idx }));
+                };
+
+                const c = citations[currentCitationIndex];
+                let hostname = '';
+                let fullPath = c.reference || '';
+                let imgPath ='';
+
+                try {
+                  const cleanPath = fullPath.replace(/^<|>$/g, '').replace(/ target="_blank"$/, '');
+                  if (cleanPath.startsWith('http')) {
+                    const url = new URL(cleanPath.trim());
+                    hostname = url.hostname;
+                    fullPath = url.href;
+                    imgPath = url.protocol + hostname + '/favicon.ico'; // Default image path, can be customized
+                  } else {
+                    hostname = cleanPath.split('/')[2] || cleanPath;
+                    
+                    fullPath = cleanPath;
+                    // imgPath
+                  }
+                  // (async  function () {
+                  //     try {
+                  //       const options = {
+                  //         mode : 'no-cors',
+                  //       }
+                  //       const url = `${fullPath}`;
+                  //       const content = await fetch(url);
+                  //       const metadata = await urlMetadata(null , {
+                  //         parseResponseObject: content
+                  //       });
+                  //       console.log(metadata);
+
+                  //     } catch (err) {
+                  //       console.log(err);
+                  //     }
+                  //   })();
+                } catch { /* ignore */ }
+
+                return (
+                  <div className="mt-2 mr-60">
+                    <div className="relative group border border-gray-400 rounded bg-black p-3 w-fit h-7 flex justify-center items-center text-white px-3 py-2 mb-2 cursor-pointer transition-shadow hover:shadow-lg ">
+                      {/* Show only one field, e.g. code or title */}
+                      {c.code || c.title || c.citation || c.subject_area || c.fileName || "Reference"}
+                      {/* Tooltip on hover */}
+                      {c.reference && (
+                        <div className="absolute  z-50 rounded-md  -translate-x-1/2 bottom-full left-full ml-30 mb-2 hidden group-hover:flex flex-col text-left justify-start min-w-[350px] max-w-xs bg-white text-gray-900 border border-gray-300  shadow-lg text-xs">
+                          {/* Arrow and navigation */}
+                          <div className="flex items-center  rounded-t-md justify-between w-full  bg-gray-100 p-2">
+                            <div>
+                              <button
+                                className="p-1 disabled:opacity-30"
+                                disabled={currentCitationIndex === 0}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setCurrentCitationIndex(Math.max(0, currentCitationIndex - 1));
+                                }}
+                              >
+                                <ChevronLeft color="black" className="cursor-pointer"/>
+                              </button>
+
+                              <button
+                                className="p-1 disabled:opacity-30"
+                                disabled={currentCitationIndex === citations.length - 1}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setCurrentCitationIndex(Math.min(citations.length - 1, currentCitationIndex + 1));
+                                }}
+                              >
+                                <ChevronRight color="black" className="cursor-pointer"/>
+                              </button>
+                            </div>
+                            <span className="font-semibold text-xs">
+                              {currentCitationIndex + 1} / {citations.length}
+                            </span>
+                          </div>
+                          <div className="px-3 my-5">
+                            <div className="flex items-center  mb-2 gap-2">
+                              <img src={imgPath} alt="icon" className="h-[22px]  w-[22px] rounded-lg border-amber-200" />
+                            <div className="font-semibold">{hostname}</div>
+                            </div>
+
+                            <div className="break-all text-gray-700"><a href={fullPath} target="_blank" rel="noopener noreferrer">
+                              {fullPath}
+                            </a></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              } catch (err) {
+                console.error('Citation JSON parse error:', err, citationPart);
+                return null;
+              }
+            })()}
+
+
+
+
             {msg.isStreaming && !msg.content.trim() && <span className="inline-block w-4 h-4 bg-gray-400 ml-1 animate-pulse" />}
             {/* {msg.isStreaming && !msg.content.trim() && (
               <span className="inline-flex ml-2 align-middle">
