@@ -19,6 +19,7 @@ import { useAuth } from "@/context/Auth.context"
 import { NavLink, useNavigate } from "react-router-dom"
 import { useConversationsQuery, useCreateConversationMutation } from "./hook"
 import { useEffect, useState } from "react"
+// import '../pages/admin/dashboard/chat.css' // Import your custom styles for the chat
 
 // Define Conversation type if not imported from elsewhere
 type Conversation = {
@@ -93,7 +94,7 @@ console.log("conversationsData", conversationsData)
             <SidebarMenuItem className="hidden md:block">
               <Button 
                 variant="outline" 
-                className="w-full justify-start gap-2 h-12" 
+                className="w-full justify-start gap-2 h-12 custom-scrollbar-left" 
                 onClick={handleNewChat}
                 disabled={createConversationMutation.isPending}
               >
