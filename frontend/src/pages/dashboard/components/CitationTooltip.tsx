@@ -65,15 +65,29 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({ msgId, msgContent, ci
             runningIndex += group.length;
         }
 
-        // Render all groups in one line, each group is a clickable/hoverable chip
-        // Track hovered group for tooltip display
-        const [hoveredGroup, setHoveredGroup] = React.useState<string | null>(null);
+        // Add at the top of the component
+        const [openGroup, setOpenGroup] = React.useState<string | null>(null);
+        const [locked, setLocked] = React.useState(false);
+        const tooltipRef = React.useRef<HTMLDivElement>(null);
+
+        // Close on outside click
+        React.useEffect(() => {
+            if (!locked) return;
+            const handleClick = (e: MouseEvent) => {
+                if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
+                    setOpenGroup(null);
+                    setLocked(false);
+                }
+            };
+            document.addEventListener("mousedown", handleClick);
+            return () => document.removeEventListener("mousedown", handleClick);
+        }, [locked]);
+
         return (
-            <div className="mt-2 mr-60 flex flex-row gap-2">
+            <div className="mt-2 mr-60 flex flex-row gap-2" ref={tooltipRef}>
                 {Object.entries(groupedCitations).map(([hostname, group]) => {
                     const { c } = group[0];
-                    // Tooltip only opens on hover
-                    const isTooltipOpen = hoveredGroup === hostname;
+                    const isTooltipOpen = openGroup === hostname;
                     const groupStartIndex = citations.findIndex((cit: any) => {
                         let h = '';
                         try {
@@ -88,16 +102,22 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({ msgId, msgContent, ci
                         return h === hostname;
                     });
                     const groupCitations = group;
-                    // Always show first citation in group unless hovered (then show current index for that group)
                     const groupCitationIndex = isTooltipOpen && currentGroup && currentGroup[0].hostname === hostname ? currentGroupIndex : 0;
                     const { fullPath, imgPath } = group[groupCitationIndex] || group[0];
-                    //   const titel = c.title || c.subject_area || c.fileName || "Reference";
                     return (
                         <div
                             key={hostname}
-                            className="relative group border border-gray-400 rounded bg-black p-3 text-sm md:text-base w-fit h-7 flex justify-center items-center text-white px-3 py-2 mb-2 cursor-pointer transition-shadow hover:shadow-lg whitespace-nowrap  "
-                            onMouseEnter={() => setHoveredGroup(hostname)}
-                            onMouseLeave={() => setHoveredGroup(null)}
+                            className="relative group border border-gray-400 rounded bg-black p-3 text-sm md:text-base w-fit h-7 flex justify-center items-center text-white px-3 py-2 mb-2 cursor-pointer transition-shadow hover:shadow-lg whitespace-nowrap"
+                            onClick={e => {
+                                e.stopPropagation();
+                                if (openGroup === hostname && locked) {
+                                    setOpenGroup(null);
+                                    setLocked(false);
+                                } else {
+                                    setOpenGroup(hostname);
+                                    setLocked(true);
+                                }
+                            }}
                         >
 
 
