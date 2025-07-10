@@ -43,7 +43,6 @@ import { Swiper, SwiperSlide } from "swiper/react"
 import "swiper/css"
 // @ts-ignore
 import "swiper/css/navigation"
-import urlMetadata from 'url-metadata';
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import API from "@/lib/api"
