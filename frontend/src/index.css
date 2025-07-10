@@ -142,3 +142,9 @@
   /* your styles here */
   display: block !important;
 }
+
+.custom-inline{
+  display: inline-block;
+  margin-left: 4px;
+  vertical-align: middle;
+}

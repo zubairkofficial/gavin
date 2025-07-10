@@ -677,9 +677,10 @@ const Chat = ({
     }
 
     return (
-      <div key={msg.id} className="rounded-lg p-3  mb-4">
+      <div key={msg.id} className="rounded-lg p-3  mb-4  custom-inline" >
         <div className="space-y-3 ">
           <p className="text-gray-800  text-[14px] leading-[22px] ">
+            <span style={{display: 'inline-block'}}>
             {/* <ReactMarkdown>
             {msg.content}
             </ReactMarkdown> */}
@@ -705,12 +706,13 @@ const Chat = ({
               {msg.content.split('Citation00 :')[0]}
             </ReactMarkdown>
             {/* Citation Tooltip extracted as a component */}
-            <CitationTooltip
+              <CitationTooltip
               msgId={msg.id}
               msgContent={msg.content}
               citationIndexes={citationIndexes}
               setCitationIndexes={setCitationIndexes}
             />
+            
 
 
 
@@ -723,6 +725,7 @@ const Chat = ({
                 <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5 [animation-delay:0.4s]"></span>
               </span>
             )} */}
+            </span>
           </p>
         </div>
         {/* Action buttons - only show when not streaming */}
