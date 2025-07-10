@@ -18,8 +18,8 @@ export default function Home() {
     <main className="h-[86vh] w-full mx-auto    flex flex-col items-center">
       <div className="flex-1 flex flex-col items-center  w-full font-inter overflow-y-auto scrollbar-left-0 custom-scrollbar-left">
         {!messages.length && (
-          <div className="flex-1 md:flex-none flex flex-col items-center justify-center">
-            <h1 className="mb-8 text-center px-8 text-5xl font-bold tracking-tight font-lora">What do you want to know?</h1>
+          <div className="flex-1 md:flex-none flex flex-col h-[50vh] items-center justify-center">
+            <h1 className="mb-8 text-center px-8 text-5xl  font-bold tracking-tight font-lora">What do you want to know?</h1>
           </div>
         )}
         <Chat messages={messages} setMessages={setMessages} />
