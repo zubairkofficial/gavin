@@ -797,7 +797,7 @@ const Chat = ({
         className={cn(
           // Responsive chat input section
           "mx-auto w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-4xl bg-background px-2 sm:px-4 md:pl-8 flex-shrink-0 min-w-0",
-          messages.length > 0 ? "pb-3 fixed bottom-10 md:bottom-0" : "mt-auto"
+          messages.length > 0 ? "pb-3 fixed bottom-10 md:bottom-0" : "mt-auto absolute sm:bottom-0  md:bottom-40",
         )}
       >
 

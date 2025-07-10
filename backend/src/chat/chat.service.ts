@@ -447,7 +447,7 @@ export class ChatService {
         ${context}
         
         Previous Chat History:
-        ${chatHistoryContext}
+        
         
         Instructions:
         - *Context Understanding*: Check if this is a follow-up question by analyzing the chat history and current question context.
@@ -476,7 +476,7 @@ export class ChatService {
         - If the chat history include citation, please remove it and use chat history context to answer the question without citation.
         - If chat history context have any refernce than ignore it and use the chat hostory without any citation.
         Previous Chat History:
-        ${chatHistoryContext}
+      
              
         *Answer Priority Order*:
         2. *For New Questions*: Use Document Context first, then chat history for additional context
@@ -499,7 +499,7 @@ export class ChatService {
         ${documentContext}
         
         Previous Chat History:
-        ${chatHistoryContext}
+      
         
         Instructions:
         - *Context Understanding*: Check if this is a follow-up question by analyzing the chat history and current question context.
