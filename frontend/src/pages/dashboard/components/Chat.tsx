@@ -667,7 +667,7 @@ const Chat = ({
           )}
           {/* User message */}
           <div className="bg-gray-200 rounded-lg px-3 md:px-4 py-2 max-w-[80%] md:max-w-md">
-            <p className="text-gray-800 text-sm md:text-sm">{msg.content}</p>
+            <p className="text-gray-800 text-sm md:text-sm leading-5">{msg.content}</p>
           </div>
         </div>
       );
@@ -676,18 +676,19 @@ const Chat = ({
     return (
       <div key={msg.id} className="rounded-lg p-3  mb-4">
         <div className="space-y-3 ">
-          <p className="text-gray-800 text-sm md:text-sm">
+          <p className="text-gray-800  text-sm md:text-sm ">
             {/* <ReactMarkdown>
             {msg.content}
             </ReactMarkdown> */}
-            <ReactMarkdown
+            <ReactMarkdown 
               components={{
                 a: ({ href, children }) => (
                   <a
                     href={href}
                     target="_blank" // Open in new tab
                     rel="noopener noreferrer" // Security best practice
-                    style={{ textDecoration: 'underline' }} // Underline the link
+                    // backgroundColor : 'white', border : '1px solid #d1d5db' , borderRadius : '2px', margin : '5px' , padding: '5px' , color: 'black'
+                    style={{ textDecoration: 'underline' ,  }} // Underline the link
                   >
                     {children}
                   </a>
