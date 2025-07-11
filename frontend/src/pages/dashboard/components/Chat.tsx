@@ -1,25 +1,22 @@
 "use client"
-
 import type React from "react"
-
 import {
-  Book,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Copy,
   FileDown,
   FileText,
-  Paperclip,
   RotateCcw,
   ThumbsDown,
   ThumbsUp,
   X,
+  Plus,
+  Globe,
+  WrenchIcon,
+  Paperclip,
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
-import CitationTooltip from "./CitationTooltip";
-import type { DropdownMenuCheckboxItemProps } from "@radix-ui/react-dropdown-menu"
-
+import CitationTooltip from "./CitationTooltip"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -29,27 +26,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
 import { useEffect, useRef, useState } from "react"
 import { Mousewheel, Navigation, Scrollbar } from "swiper/modules"
 import { Swiper, SwiperSlide } from "swiper/react"
-
 // @ts-ignore
 import "swiper/css"
 // @ts-ignore
 import "swiper/css/navigation"
-
 import { useIsMobile } from "@/hooks/use-mobile"
 import API from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
-import { Link, useNavigate, useParams } from "react-router-dom"
-import { set } from "date-fns"
+import { useNavigate, useParams } from "react-router-dom"
 
 interface AttachedDocument {
   id: string
@@ -68,7 +58,6 @@ interface ChatMessage {
   isStreaming?: boolean
 }
 
-
 const Chat = ({
   messages,
   setMessages,
@@ -76,41 +65,40 @@ const Chat = ({
   messages: ChatMessage[]
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>
 }) => {
-  const [message, setMessage] = useState<string>("");
-  const [citation, setcitation] = useState<string>("");
-  const [selectedDocuments, setSelectedDocuments] = useState<AttachedDocument[]>([]);
-  const [tempSelectedDocs, setTempSelectedDocs] = useState<AttachedDocument[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [isSmallScreen, setIsSmallScreen] = useState(false);
-  const [conversationId, setConversationId] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isFetchingMessages, setIsFetchingMessages] = useState(false);
-  const [citationIndexes, setCitationIndexes] = useState<{ [msgId: string]: number }>({});
-  const [title, setTitle] = useState("");
-  const [isFirstMessage, setIsFirstMessage] = useState(false);
-  const [hasNavigatedToNewConversation, setHasNavigatedToNewConversation] = useState(false);
-  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
-  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const isMobile = useIsMobile();
-  const navigate = useNavigate();
-  const params = useParams();
-  const urlConversationId = params.conversationId;
-  const queryClient = useQueryClient();
+  const [message, setMessage] = useState<string>("")
+  const [citation, setcitation] = useState<string>("")
+  const [selectedDocuments, setSelectedDocuments] = useState<AttachedDocument[]>([])
+  const [tempSelectedDocs, setTempSelectedDocs] = useState<AttachedDocument[]>([])
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [isSmallScreen, setIsSmallScreen] = useState(false)
+  const [conversationId, setConversationId] = useState<string>("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [isFetchingMessages, setIsFetchingMessages] = useState(false)
+  const [citationIndexes, setCitationIndexes] = useState<{ [msgId: string]: number }>({})
+  const [title, setTitle] = useState("")
+  const [isFirstMessage, setIsFirstMessage] = useState(false)
+  const [hasNavigatedToNewConversation, setHasNavigatedToNewConversation] = useState(false)
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null)
+  const [searchWithWeb, setSearchWithWeb] = useState(false)
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const isMobile = useIsMobile()
+  const navigate = useNavigate()
+  const params = useParams()
+  const urlConversationId = params.conversationId
+  const queryClient = useQueryClient()
 
   // Ref for smooth scroll
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   // Ref to hold streaming content for assistant message
-  const streamingContentRef = useRef("");
+  const streamingContentRef = useRef("")
 
   // Cleanup copy timeout on unmount
   useEffect(() => {
     return () => {
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    };
-  }, []);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    }
+  }, [])
 
   // Fetch conversation messages when URL conversation ID changes
   const fetchConversationMessages = async () => {
@@ -130,6 +118,7 @@ const Chat = ({
     if (!isFirstMessage) {
       setIsFetchingMessages(true)
     }
+
     try {
       const response = await API.get(`/chat/conversation/${urlConversationId}`)
       if (response.status >= 200 && response.status < 300) {
@@ -138,45 +127,53 @@ const Chat = ({
         if (data.title) {
           setTitle(data.title)
         }
+
         // Update messages if available
         if (data.messages && Array.isArray(data.messages)) {
           const transformedMessages: ChatMessage[] = data.messages.flatMap((msg: any, index: number) => {
-            let transformedDocuments: AttachedDocument[] | undefined = undefined;
+            let transformedDocuments: AttachedDocument[] | undefined = undefined
+
             if (msg.documents && Array.isArray(msg.documents) && msg.documents.length > 0) {
               transformedDocuments = msg.documents.map((doc: any, docIndex: number) => ({
                 id: `${msg.id}-doc-${docIndex}`,
                 name: doc.fileName || doc.name || `Document ${docIndex + 1}`,
                 type: doc.fileType || doc.type || "Document",
                 size: doc.fileSize
-                  ? (typeof doc.fileSize === 'number' ? `${(doc.fileSize / 1024).toFixed(1)} KB` : doc.fileSize)
+                  ? typeof doc.fileSize === "number"
+                    ? `${(doc.fileSize / 1024).toFixed(1)} KB`
+                    : doc.fileSize
                   : doc.size || "Unknown size",
-              }));
+              }))
             } else if (msg.fileName && msg.fileType && msg.fileSize) {
               transformedDocuments = [
                 {
                   id: `${msg.id}-doc-0`,
                   name: msg.fileName,
-                  type: msg.fileType?.split('/')[1],
+                  type: msg.fileType?.split("/")[1],
                   size: `${(msg?.fileSize / 1024).toFixed(1)} KB`,
                 },
-              ];
+              ]
             }
+
             const userMsg: ChatMessage = {
               id: `${msg.id}-user`,
               role: "user",
               content: msg.userMessage || "",
               documents: transformedDocuments,
               isStreaming: false,
-            };
+            }
+
             const aiMsg: ChatMessage = {
               id: `${msg.id}-assistant`,
               role: "assistant",
               content: msg.aiResponse || "",
               documents: undefined,
               isStreaming: false,
-            };
-            return [userMsg, aiMsg];
-          });
+            }
+
+            return [userMsg, aiMsg]
+          })
+
           setMessages(transformedMessages)
         } else {
           setMessages([])
@@ -193,11 +190,6 @@ const Chat = ({
   }
 
   useEffect(() => {
-    const fetchsuggestions = async () => {
-      const response = await API.get(`/chat/get-suggestions`)
-      setSuggestions(response.data.suggestions.titles)
-    }
-    fetchsuggestions()
     // Only fetch messages if urlConversationId exists (not for new conversation)
     if (urlConversationId) {
       fetchConversationMessages()
@@ -207,25 +199,21 @@ const Chat = ({
       setConversationId("")
       setTitle("")
     }
-
-    queryClient.invalidateQueries({ queryKey: ['conversations'] });
-
-  }, [urlConversationId]);
+    queryClient.invalidateQueries({ queryKey: ["conversations"] })
+  }, [urlConversationId])
 
   // Smooth scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
     }
-  }, [messages]);
+  }, [messages])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)")
     const handleResize = () => setIsSmallScreen(mediaQuery.matches)
-
     handleResize()
     mediaQuery.addEventListener("change", handleResize)
-
     return () => mediaQuery.removeEventListener("change", handleResize)
   }, [])
 
@@ -242,7 +230,7 @@ const Chat = ({
           name: file.name,
           type: file.type.includes("pdf") ? "PDF" : "Document",
           size: `${(file.size / 1024).toFixed(1)} KB`,
-          file: file // Store the actual file object
+          file: file, // Store the actual file object
         }))
 
       setSelectedDocuments([...selectedDocuments, ...newDocs])
@@ -265,53 +253,54 @@ const Chat = ({
   }
 
   const handleSendMessage = async () => {
-    if (!message.trim() && selectedDocuments.length === 0) return;
+    if (!message.trim() && selectedDocuments.length === 0) return
 
-    setIsLoading(true);
+    setIsLoading(true)
 
     const newMessage: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
       content: message,
       documents: selectedDocuments.length > 0 ? [...selectedDocuments] : undefined,
-    };
+    }
 
     // Use functional updates to avoid race conditions and message loss
-    const assistantMessageId = (Date.now() + 1).toString();
-    setMessages(prev => [
+    const assistantMessageId = (Date.now() + 1).toString()
+    setMessages((prev) => [
       ...prev,
       newMessage,
       { id: assistantMessageId, role: "assistant", content: "", isStreaming: true },
-    ]);
+    ])
 
-    setMessage("");
-    setSelectedDocuments([]);
-    setTempSelectedDocs([]);
+    setMessage("")
+    setSelectedDocuments([])
+    setTempSelectedDocs([])
 
     try {
-      const currentConversationId = urlConversationId || conversationId;
-      const token = localStorage.getItem('authToken');
-      const baseURL = API.defaults?.baseURL || "";
+      const currentConversationId = urlConversationId || conversationId
+      const token = localStorage.getItem("authToken")
+      const baseURL = API.defaults?.baseURL || ""
 
       // Create FormData to handle file uploads
-      const formData = new FormData();
-      formData.append('message', newMessage.content);
-
+      const formData = new FormData()
+      formData.append("message", newMessage.content)
       if (currentConversationId) {
-        formData.append('conversationId', currentConversationId);
+        formData.append("conversationId", currentConversationId)
       }
-
       if (title) {
-        formData.append('title', title);
+        formData.append("title", title)
+      }
+      if (searchWithWeb) {
+        formData.append("searchWithWeb", "true")
       }
 
       // Add files to FormData
       if (newMessage.documents && newMessage.documents.length > 0) {
         newMessage.documents.forEach((doc, index) => {
           if (doc.file) {
-            formData.append(`files`, doc.file);
+            formData.append(`files`, doc.file)
           }
-        });
+        })
       }
 
       console.log(formData)
@@ -321,145 +310,135 @@ const Chat = ({
         headers: {
           // Don't set Content-Type header when sending FormData
           // The browser will set it automatically with the boundary
-          "Accept": "text/event-stream",
+          Accept: "text/event-stream",
           // "content-type": "multipart/form-data",
-          "Authorization": token ? `Bearer ${token}` : "",
+          Authorization: token ? `Bearer ${token}` : "",
         },
         body: formData, // Send FormData instead of JSON
-      });
+      })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const reader = response.body?.getReader();
+      const reader = response.body?.getReader()
       if (!reader) {
-        throw new Error("No stream reader available");
+        throw new Error("No stream reader available")
       }
 
-      let hasNavigated = false;
-      streamingContentRef.current = "";
-      let buffer = "";
+      let hasNavigated = false
+      streamingContentRef.current = ""
+      let buffer = ""
 
       try {
         while (true) {
-          const { value, done } = await reader.read();
-          console.log(`Received chunk:`, value, `Done:`, done);
+          const { value, done } = await reader.read()
+          console.log(`Received chunk:`, value, `Done:`, done)
+
           if (done) {
-            console.log("Stream completed");
-            break;
+            console.log("Stream completed")
+            break
           }
 
-          const chunk = new TextDecoder().decode(value, { stream: true });
-          buffer += chunk;
+          const chunk = new TextDecoder().decode(value, { stream: true })
+          buffer += chunk
 
           // Split by newlines to process complete lines
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || ""; // Keep the last incomplete line in buffer
+          const lines = buffer.split("\n")
+          buffer = lines.pop() || "" // Keep the last incomplete line in buffer
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               try {
-                const jsonStr = line.slice(6).trim();
-                if (jsonStr === "") continue;
+                const jsonStr = line.slice(6).trim()
+                if (jsonStr === "") continue
 
-                const data = JSON.parse(jsonStr);
-                console.log(`Received chunk data:`, data);
+                const data = JSON.parse(jsonStr)
+                console.log(`Received chunk data:`, data)
 
                 // Handle conversation metadata (first chunk)
                 if (data.conversationId && !hasNavigated) {
-                  setConversationId(data.conversationId);
+                  setConversationId(data.conversationId)
                   if (!urlConversationId || urlConversationId !== data.conversationId) {
-                    setIsFirstMessage(true);
-                    setHasNavigatedToNewConversation(true); // Set flag before navigation
-                    navigate(`/chat/${data.conversationId}`);
+                    setIsFirstMessage(true)
+                    setHasNavigatedToNewConversation(true) // Set flag before navigation
+                    navigate(`/chat/${data.conversationId}`)
                     // Add this line to force refetch after navigation
-                    setTimeout(() => queryClient.invalidateQueries({ queryKey: ['conversations'] }), 500);
-                    hasNavigated = true;
+                    setTimeout(() => queryClient.invalidateQueries({ queryKey: ["conversations"] }), 500)
+                    hasNavigated = true
                   }
                 }
 
                 // Handle title update
                 if (data.title) {
-                  setTitle(data.title);
+                  setTitle(data.title)
                 }
 
                 // Handle streaming tokens
                 if (data.token) {
-                  streamingContentRef.current += data.token;
-                  console.log("Current streaming content:", streamingContentRef.current);
-                  setMessages(prev => prev.map(msg =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: streamingContentRef.current, isStreaming: true }
-                      : msg
-                  ));
+                  streamingContentRef.current += data.token
+                  console.log("Current streaming content:", streamingContentRef.current)
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, content: streamingContentRef.current, isStreaming: true }
+                        : msg,
+                    ),
+                  )
                 }
 
                 // Handle completion
                 if (data.done) {
-                  setMessages(prev =>
-                    prev.map(msg =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, isStreaming: false }
-                        : msg
-                    )
-
-                  );
-
-                  setIsLoading(false);
+                  setMessages((prev) =>
+                    prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg)),
+                  )
+                  setIsLoading(false)
                   // Only update the sidebar (conversations list), not the chat messages
                   setTimeout(() => {
-                    queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                  }, 300);
-                  return;
+                    queryClient.invalidateQueries({ queryKey: ["conversations"] })
+                  }, 300)
+                  return
                 }
 
                 // Handle errors
                 if (data.error) {
-                  console.error("Server error:", data.error);
-                  setMessages(prev =>
-                    prev.map(msg =>
+                  console.error("Server error:", data.error)
+                  setMessages((prev) =>
+                    prev.map((msg) =>
                       msg.id === assistantMessageId
                         ? {
                           ...msg,
                           content: `Error: ${data.error}`,
                           isStreaming: false,
                         }
-                        : msg
-                    )
-                  );
-                  setIsLoading(false);
-                  return;
+                        : msg,
+                    ),
+                  )
+                  setIsLoading(false)
+                  return
                 }
-
               } catch (parseError) {
-                console.warn("Failed to parse JSON:", parseError, "Line:", line);
+                console.warn("Failed to parse JSON:", parseError, "Line:", line)
                 // Continue processing other lines
               }
             }
           }
         }
       } finally {
-        reader.releaseLock();
+        reader.releaseLock()
       }
 
       // Ensure streaming state is cleared even if done event wasn't received
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg
-        )
-      );
-      setIsLoading(false);
-
+      setMessages((prev) => prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg)))
+      setIsLoading(false)
     } catch (error: any) {
-      console.error("Streaming error:", error);
+      console.error("Streaming error:", error)
+      let errorMessage = "Sorry, I encountered an error while processing your request. Please try again."
 
-      let errorMessage = "Sorry, I encountered an error while processing your request. Please try again.";
-
-      if (error.message?.includes('Failed to fetch')) {
-        errorMessage = "Network error. Please check your connection and try again.";
-      } else if (error.message?.includes('HTTP error')) {
-        errorMessage = `Server error: ${error.message}`;
+      if (error.message?.includes("Failed to fetch")) {
+        errorMessage = "Network error. Please check your connection and try again."
+      } else if (error.message?.includes("HTTP error")) {
+        errorMessage = `Server error: ${error.message}`
       }
 
       setMessages((prev) =>
@@ -470,155 +449,161 @@ const Chat = ({
               content: errorMessage,
               isStreaming: false,
             }
-            : msg
-        )
-      );
-      setIsLoading(false);
+            : msg,
+        ),
+      )
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleSuggestionClick = (suggestion: string) => {
-    setMessage(suggestion); // Set selected suggestion to the message input
-  };
-
-
+    setMessage(suggestion) // Set selected suggestion to the message input
+  }
 
   const handleCopy = (msgId: string, content: string) => {
-    navigator.clipboard.writeText(content);
-    setCopiedMsgId(msgId);
-    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    copyTimeoutRef.current = setTimeout(() => setCopiedMsgId(null), 1500);
-  };
+    navigator.clipboard.writeText(content)
+    setCopiedMsgId(msgId)
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    copyTimeoutRef.current = setTimeout(() => setCopiedMsgId(null), 1500)
+  }
 
   // Regenerate functionality
   const handleRegenerate = async (assistantMsgId: string) => {
     // Find the assistant message index
-    const assistantIndex = messages.findIndex(msg => msg.id === assistantMsgId);
-    if (assistantIndex === -1 || assistantIndex === 0) return;
+    const assistantIndex = messages.findIndex((msg) => msg.id === assistantMsgId)
+    if (assistantIndex === -1 || assistantIndex === 0) return
 
     // The user message is usually just before the assistant message
-    const userMsg = messages[assistantIndex - 1];
-    if (!userMsg || userMsg.role !== "user") return;
+    const userMsg = messages[assistantIndex - 1]
+    if (!userMsg || userMsg.role !== "user") return
 
     // Remove the old assistant message and insert a new streaming one
-    const newAssistantId = `${Date.now()}-regen`;
-    setMessages(prev => {
-      const newMsgs = [...prev];
+    const newAssistantId = `${Date.now()}-regen`
+    setMessages((prev) => {
+      const newMsgs = [...prev]
       newMsgs.splice(assistantIndex, 1, {
         id: newAssistantId,
         role: "assistant",
         content: "",
         isStreaming: true,
-      });
-      return newMsgs;
-    });
+      })
+      return newMsgs
+    })
 
     // Send the user message again (reuse logic similar to handleSendMessage)
-    await sendMessageForRegenerate(userMsg, newAssistantId);
-  };
+    await sendMessageForRegenerate(userMsg, newAssistantId)
+  }
 
   // Helper for regeneration streaming
   const sendMessageForRegenerate = async (userMsg: ChatMessage, assistantMessageId: string) => {
-    setIsLoading(true);
-    const currentConversationId = urlConversationId || conversationId;
-    const token = localStorage.getItem('authToken');
-    const baseURL = API.defaults?.baseURL || "";
+    setIsLoading(true)
+
+    const currentConversationId = urlConversationId || conversationId
+    const token = localStorage.getItem("authToken")
+    const baseURL = API.defaults?.baseURL || ""
 
     // Create FormData to handle file uploads
-    const formData = new FormData();
-    formData.append('message', userMsg.content);
+    const formData = new FormData()
+    formData.append("message", userMsg.content)
     if (currentConversationId) {
-      formData.append('conversationId', currentConversationId);
+      formData.append("conversationId", currentConversationId)
     }
     if (title) {
-      formData.append('title', title);
+      formData.append("title", title)
     }
+
     // Add files to FormData
     if (userMsg.documents && userMsg.documents.length > 0) {
       userMsg.documents.forEach((doc) => {
         if (doc.file) {
-          formData.append('files', doc.file);
+          formData.append("files", doc.file)
         }
-      });
+      })
     }
 
     // Append regeneration parameters
-    formData.append('regenerate', 'true');
-    formData.append('assistantMsgId', assistantMessageId);
+    formData.append("regenerate", "true")
+    formData.append("assistantMsgId", assistantMessageId)
 
     // This is the id of the old assistant message being replaced
-    console.log('form data:', formData);
+    console.log("form data:", formData)
+
     try {
       const response = await fetch(`${baseURL}/chat/message`, {
         method: "POST",
         headers: {
-          "Accept": "text/event-stream",
-          "Authorization": token ? `Bearer ${token}` : "",
+          Accept: "text/event-stream",
+          Authorization: token ? `Bearer ${token}` : "",
         },
         body: formData,
-      });
+      })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const reader = response.body?.getReader();
+      const reader = response.body?.getReader()
       if (!reader) {
-        throw new Error("No stream reader available");
+        throw new Error("No stream reader available")
       }
 
-      let buffer = "";
-      streamingContentRef.current = "";
+      let buffer = ""
+      streamingContentRef.current = ""
 
       try {
         while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          const chunk = new TextDecoder().decode(value, { stream: true });
-          buffer += chunk;
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
+          const { value, done } = await reader.read()
+          if (done) break
+
+          const chunk = new TextDecoder().decode(value, { stream: true })
+          buffer += chunk
+
+          const lines = buffer.split("\n")
+          buffer = lines.pop() || ""
+
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               try {
-                const jsonStr = line.slice(6).trim();
-                if (jsonStr === "") continue;
-                const data = JSON.parse(jsonStr);
+                const jsonStr = line.slice(6).trim()
+                if (jsonStr === "") continue
+
+                const data = JSON.parse(jsonStr)
+
                 // Handle streaming tokens
                 if (data.token) {
-                  streamingContentRef.current += data.token;
-                  setMessages(prev => prev.map(msg =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: streamingContentRef.current, isStreaming: true }
-                      : msg
-                  ));
+                  streamingContentRef.current += data.token
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, content: streamingContentRef.current, isStreaming: true }
+                        : msg,
+                    ),
+                  )
                 }
+
                 // Handle completion
                 if (data.done) {
-                  setMessages(prev =>
-                    prev.map(msg =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, isStreaming: false }
-                        : msg
-                    )
-                  );
-                  setIsLoading(false);
+                  setMessages((prev) =>
+                    prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg)),
+                  )
+                  setIsLoading(false)
                   setTimeout(() => {
-                    queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                  }, 300);
-                  return;
+                    queryClient.invalidateQueries({ queryKey: ["conversations"] })
+                  }, 300)
+                  return
                 }
+
                 // Handle errors
                 if (data.error) {
-                  setMessages(prev =>
-                    prev.map(msg =>
+                  setMessages((prev) =>
+                    prev.map((msg) =>
                       msg.id === assistantMessageId
                         ? { ...msg, content: `Error: ${data.error}`, isStreaming: false }
-                        : msg
-                    )
-                  );
-                  setIsLoading(false);
-                  return;
+                        : msg,
+                    ),
+                  )
+                  setIsLoading(false)
+                  return
                 }
               } catch (parseError) {
                 // Ignore parse errors for incomplete lines
@@ -627,25 +612,20 @@ const Chat = ({
           }
         }
       } finally {
-        reader.releaseLock();
+        reader.releaseLock()
       }
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg
-        )
-      );
-      setIsLoading(false);
+
+      setMessages((prev) => prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg)))
+      setIsLoading(false)
     } catch (error) {
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === assistantMessageId
-            ? { ...msg, content: "Error regenerating response.", isStreaming: false }
-            : msg
-        )
-      );
-      setIsLoading(false);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId ? { ...msg, content: "Error regenerating response.", isStreaming: false } : msg,
+        ),
+      )
+      setIsLoading(false)
     }
-  };
+  }
 
   const renderMessage = (msg: ChatMessage) => {
     if (msg.role === "user") {
@@ -656,7 +636,9 @@ const Chat = ({
             <div className="mb-2 space-y-1 max-w-[80%] md:max-w-md">
               {msg.documents.map((doc) => (
                 <div key={doc.id} className="flex items-center gap-2 p-2 bg-gray-100 rounded text-xs border">
-                  <FileText className={`w-4 h-4 ${doc.type === "PDF" || doc.type?.toLowerCase().includes('pdf') ? "text-blue-500" : "text-red-500"}`} />
+                  <FileText
+                    className={`w-4 h-4 ${doc.type === "PDF" || doc.type?.toLowerCase().includes("pdf") ? "text-blue-500" : "text-red-500"}`}
+                  />
                   <div className="flex flex-col">
                     <span className="font-medium truncate">{doc.name}</span>
                     <span className="text-gray-500">
@@ -672,52 +654,46 @@ const Chat = ({
             <p className="text-gray-800 text-sm md:text-sm leading-5">{msg.content}</p>
           </div>
         </div>
-      );
+      )
     }
 
     return (
-      <div key={msg.id} className="rounded-lg p-3  mb-4  custom-inline" >
+      <div key={msg.id} className="rounded-lg mb-4  custom-inline !m-0">
         <div className="space-y-3 ">
           <p className="text-gray-800  text-[14px] leading-[22px] ">
-            <span style={{display: 'inline-block'}}>
-            {/* <ReactMarkdown>
+            <span style={{ display: "inline-block" }}>
+              {/* <ReactMarkdown>
             {msg.content}
             </ReactMarkdown> */}
-            <ReactMarkdown
-
-              components={{
-                 
-                a: ({ href, children }) => (
-                  <a
-                    href={href}
-                    target="_blank" // Open in new tab
-                    rel="noopener noreferrer" // Security best practice
-                    // backgroundColor : 'white', border : '1px solid #d1d5db' , borderRadius : '2px', margin : '5px' , padding: '5px' , color: 'black'
-                    style={{ textDecoration: 'underline', }} // Underline the link
-                  >
-                    {children}
-                  </a>
-
-                ),
-
-              }}
-            >
-              {msg.content.split('Citation00 :')[0]}
-            </ReactMarkdown>
-            {/* Citation Tooltip extracted as a component */}
+              <ReactMarkdown
+                components={{
+                  a: ({ href, children }) => (
+                    <a
+                      href={href}
+                      target="_blank" // Open in new tab
+                      rel="noopener noreferrer" // Security best practice
+                      // backgroundColor : 'white', border : '1px solid #d1d5db' , borderRadius : '2px', margin : '5px' , padding: '5px' , color: 'black'
+                      style={{ textDecoration: "underline" }} // Underline the link
+                    >
+                      {children}
+                    </a>
+                  ),
+                }}
+              >
+                {msg.content.split("Citation00 :")[0]}
+              </ReactMarkdown>
+              {/* Citation Tooltip extracted as a component */}
               <CitationTooltip
-              msgId={msg.id}
-              msgContent={msg.content}
-              citationIndexes={citationIndexes}
-              setCitationIndexes={setCitationIndexes}
-            />
-            
+                msgId={msg.id}
+                msgContent={msg.content}
+                citationIndexes={citationIndexes}
+                setCitationIndexes={setCitationIndexes}
+              />
 
-
-
-
-            {msg.isStreaming && !msg.content.trim() && <span className="inline-block w-4 h-4 bg-gray-400 ml-1 animate-pulse" />}
-            {/* {msg.isStreaming && !msg.content.trim() && (
+              {msg.isStreaming && !msg.content.trim() && (
+                <span className="inline-block w-[4px] rounded h-5 bg-gray-400 ml-1 animate-pulse" />
+              )}
+              {/* {msg.isStreaming && !msg.content.trim() && (
               <span className="inline-flex ml-2 align-middle">
                 <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5"></span>
                 <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5 [animation-delay:0.2s]"></span>
@@ -727,6 +703,7 @@ const Chat = ({
             </span>
           </p>
         </div>
+
         {/* Action buttons - only show when not streaming */}
         {!msg.isStreaming && (
           <div className="flex space-x-2 mt-3 md:mt-4">
@@ -769,8 +746,8 @@ const Chat = ({
           </div>
         )}
       </div>
-    );
-  };
+    )
+  }
 
   // Show loading state when fetching messages
   if (isFetchingMessages) {
@@ -789,9 +766,9 @@ const Chat = ({
         "w-full max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-4xl flex flex-col m-0 p-0 min-w-0 ",
         messages.length > 0 ? "h-[84vh] " : "",
         // Responsive padding and centering
-        "px-2 sm:px-4 md:px-6 lg:px-8 xl:px-0"
+        "px-2 sm:px-4 md:px-6 lg:px-8 xl:px-0",
       )}
-      style={{ boxSizing: 'border-box' }}
+      style={{ boxSizing: "border-box" }}
     >
       {/* Messages Section */}
       {messages.length > 0 && (
@@ -802,7 +779,7 @@ const Chat = ({
         //   WebkitMaskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
         // }}
         >
-          <div className="w-full max-w-5xl px-2 md:pl-8 flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px]">
+          <div className="w-full max-w-5xl px-5  flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px]">
             <div className="w-full space-y-4 pt-3 pb-[200px]">
               {messages.map(renderMessage)}
               <div ref={messagesEndRef} />
@@ -811,49 +788,26 @@ const Chat = ({
         </div>
       )}
 
-
-
-
       {/* Chat Input Section */}
       <div
         className={cn(
           // Responsive chat input section
-          "mx-auto w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-4xl bg-background px-2 sm:px-4 md:pl-8 flex-shrink-0 min-w-0",
-          messages.length > 0 ? "pb-3 fixed bottom-10 md:bottom-0" : "mt-auto absolute sm:bottom-0  md:bottom-40",
+          "mx-auto w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-4xl bg-background px-2 sm:px-4  flex-shrink-0 min-w-0",
+          messages.length > 0 ? "pb-6 fixed bottom-10 md:bottom-0" : "mt-auto absolute sm:bottom-0  md:bottom-40",
         )}
       >
         <div
           style={{
             position: "absolute",
-            top: -50,
+            top: -62,
             left: 0,
             right: 0,
             height: "62px",
             pointerEvents: "none",
-            zIndex: 99,
-            background: "linear-gradient(to top, rgba(250,251,253,1) 0%, rgba(250,251,253,0) 100%)"
+            zIndex: 50,
+            background: "linear-gradient(to top, rgba(250,251,253,1) 0%, rgba(250,251,253,0) 100%)",
           }}
         />
-
-        {/* Suggestions */}
-        <div
-          className={
-            cn(
-              "hidden md:flex   h-14 flex-row overflow-x-auto gap-4 sm:mt-3 z-10  transition-all duration-200 min-h-[3.5rem]"
-            )
-          }
-        >
-          {suggestions?.length > 0 && suggestions.map((suggestion, index) => (
-            <Button
-              key={index}
-              className="rounded-sm text-muted-foreground hover:text-white bg-muted px-4 py-2 text-sm"
-              onClick={() => handleSuggestionClick(suggestion)}
-            >
-              {suggestion}
-            </Button>
-          ))}
-        </div>
-
 
         {/* Message Input */}
         <div
@@ -861,7 +815,7 @@ const Chat = ({
             // Responsive message input area
             "bg-background mx-auto border rounded-md px-2 w-full  md:max-w-3xl lg:max-w-4xl xl:max-w-5xl overflow-y-auto relative flex flex-col min-w-0",
             selectedDocuments.length > 0 ? "h-[180px] md:h-[160px]" : "h-[120px] md:h-[100px]",
-            "transition-all duration-200"
+            "transition-all duration-200",
           )}
         >
           {/* Selected Documents Display */}
@@ -909,6 +863,7 @@ const Chat = ({
                 ))}
 
                 <div className="absolute top-0 right-0 mx-auto w-32 md:w-48 h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_38%,_rgba(250,251,253,1)_100%)] z-10"></div>
+
                 <div className="swiper-button-next absolute right-0 top-1/2 transform z-10 after:!content-none">
                   <Button
                     variant="ghost"
@@ -922,6 +877,8 @@ const Chat = ({
             </div>
           )}
 
+
+
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -932,73 +889,64 @@ const Chat = ({
               }
             }}
             disabled={isLoading}
-            className="rounded-sm  flex-1 text-start p-1  bg-transparent outline-none border-none focus-visible:ring-0 shadow-none font-inter placeholder:text-muted-foreground text-sm md:text-sm disabled:opacity-50 resize-none min-h-[30px] max-h-[40px] w-full"
+            className="rounded-sm  flex-1 text-start p-2 py-2  bg-transparent outline-none border-none focus-visible:ring-0 shadow-none font-inter placeholder:text-muted-foreground text-sm md:text-sm disabled:opacity-50 resize-none min-h-[30px] max-h-[40px] w-full"
             placeholder="Ask Gavin a question..."
             style={{ minWidth: 0 }}
           />
 
           <div className="flex w-full items-center justify-between absolute bottom-0 right-2 px-2 md:px-0">
-            <div className="md:hidden flex items-center gap-2 mr-auto">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="rounded-sm text-muted-foreground hover:text-foreground bg-transparent border px-2 pe-3 md:pe-4 py-2.5 md:py-3 h-[unset] text-xs md:text-sm"
-                  >
-                    <Book className="w-4 h-4 md:w-5 md:h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="top" className="w-64 md:w-72">
-                  <DropdownMenuCheckboxItem checked={false} onCheckedChange={() => { }}>
-                    Status Bar
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={false} onCheckedChange={() => { }}>
-                    Panel
-                  </DropdownMenuCheckboxItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
+            <div className="flex items-center gap-1 mr-auto">
+              {/* Attach Document Button */}
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="rounded-sm text-muted-foreground hover:text-foreground bg-transparent border px-2.5 md:px-3 py-2 md:py-[10px] text-xs md:text-sm"
-                  >
-                    <Paperclip className="w-4 h-4 md:w-5 md:h-5" />
+                  <Button variant="ghost" className="ml-4 h-8 hover:bg-gray-100">
+                    <Paperclip className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
               </Dialog>
+
+              {/* Search Options Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 hover:bg-gray-100">
+                    <span>Tools</span>
+                    <WrenchIcon className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" side="bottom">
+                  <DropdownMenuItem
+                    onClick={() => setSearchWithWeb(!searchWithWeb)}
+                    className="flex items-center gap-2"
+                  >
+                    <Globe className="h-4 w-4" />
+                    Search with web
+                    {searchWithWeb && <span className="ml-auto">✓</span>}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Search with Web Badge */}
+              {searchWithWeb && (
+                <div className="flex items-center gap-2 px-2 py-1">
+                  <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                    <Globe className="h-3 w-3" />
+                    Search
+                    <button onClick={() => setSearchWithWeb(false)} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </Badge>
+                </div>
+              )}
             </div>
 
             <Button
               onClick={handleSendMessage}
               disabled={isLoading || (!message.trim() && selectedDocuments.length === 0)}
-              className="rounded-sm ml-auto justify-self-end text-white hover:text-white bg-foreground hover:bg-gray-600 px-3 md:px-4 mb-1  text-xs md:text-sm disabled:opacity-50"
+              className="rounded-sm ml-auto justify-self-end text-white hover:text-white bg-foreground hover:bg-gray-600 px-3 md:px-4 mb-2  text-xs md:text-sm disabled:opacity-50"
             >
               {isLoading ? "Sending..." : "Ask Gavin"}
             </Button>
           </div>
-        </div>
-        {/* Document upload and knowledge source */}
-        <div className="hidden md:flex md:flex-row py-3 items-stretch sm:items-center justify-between gap-3 sm:gap-0">
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="rounded-sm text-foreground hover:bg-primary cursor-pointer hover:text-white bg-white border px-2 pe-3 md:pe-4 py-2.5 md:py-3 h-[unset] text-xs md:text-sm flex items-center gap-2"
-              >
-                <div className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-muted-foreground">
-                  <Paperclip className="w-4 h-4 md:w-5 md:h-5" />
-                </div>
-                <div className="flex flex-col items-start">
-                  <h3 className="font-medium text-xs md:text-sm">Attach doc or PDF</h3>
-                  <p className="text-xs text-muted-foreground hidden sm:block">Choose files from your computer</p>
-                </div>
-              </Button>
-            </DialogTrigger>
-          </Dialog>
-
-          <DropdownMenuCheckboxes />
         </div>
       </div>
 
@@ -1114,40 +1062,6 @@ const Chat = ({
         </DialogContent>
       </Dialog>
     </div>
-  )
-}
-
-type Checked = DropdownMenuCheckboxItemProps["checked"];
-
-export function DropdownMenuCheckboxes() {
-  const [showStatusBar, setShowStatusBar] = useState<Checked>(true)
-  const [showPanel, setShowPanel] = useState<Checked>(false)
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="rounded-sm text-foreground cursor-pointer bg-white border px-2 pe-3 md:pe-4 py-2.5 md:py-3 h-[unset] text-xs md:text-sm w-full sm:w-64 md:w-72 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-muted-foreground">
-            <Book className="w-4 h-4 md:w-5 md:h-5" />
-          </div>
-          <div className="flex flex-col items-start">
-            <h3 className="font-medium text-xs md:text-sm">Choose Knowledge Source</h3>
-            <p className="text-xs text-muted-foreground hidden sm:block">EDGAR, EUR-Lex and more</p>
-          </div>
-        </div>
-        <div>
-          <ChevronDown className="w-3 h-3 md:w-4 md:h-4" />
-        </div>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64 md:w-72">
-        <DropdownMenuCheckboxItem checked={showStatusBar} onCheckedChange={setShowStatusBar}>
-          Status Bar
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem checked={showPanel} onCheckedChange={setShowPanel}>
-          Panel
-        </DropdownMenuCheckboxItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   )
 }
 
