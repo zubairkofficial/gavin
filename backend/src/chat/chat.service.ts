@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatOpenAI } from '@langchain/openai';
-import { HumanMessage } from '@langchain/core/messages';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { DistanceStrategy, PGVectorStore } from '@langchain/community/vectorstores/pgvector';
@@ -48,7 +48,6 @@ export class ChatService {
     }
 
     this.model = new ChatOpenAI({
-      temperature: 0.7,
       openAIApiKey: openAiApiKey,
       modelName: 'gpt-4o-mini',
       streaming: true,
@@ -69,7 +68,35 @@ export class ChatService {
         user: duser,
         password: pass,
         database: data,
-        
+        ssl: {
+          rejectUnauthorized: false,
+          ca: `-----BEGIN CERTIFICATE-----
+MIIEUDCCArigAwIBAgIUFMY7g/gl96OaxPd/8S2wnI/bavYwDQYJKoZIhvcNAQEM
+BQAwQDE+MDwGA1UEAww1NzYyNzYwOWYtOGI5NC00YTNkLTg1OTItZTliZWZhYTJj
+ZmNlIEdFTiAxIFByb2plY3QgQ0EwHhcNMjUwNjE3MTIyMTQxWhcNMzUwNjE1MTIy
+MTQxWjBAMT4wPAYDVQQDDDU3NjI3NjA5Zi04Yjk0LTRhM2QtODU5Mi1lOWJlZmFh
+MmNmY2UgR0VOIDEgUHJvamVjdCBDQTCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCC
+AYoCggGBAN6G/DqFjk79qSzLlo3rAQHZMKWYTQYBUf3sGnZGkdtD/SaETn2QNHvR
+eEXUG7BKIqoz8ruczkij90YAiH/cSOdL0bS9rfZB2/lMy1oUMGjgrtdAS8X7nTPP
+7zthy6EOzMfmb+WXtXzfXXUUvhlVKRO1MNecYp6PWGZTKRwwQeGvWPMVBruyvkgs
+V/Se70WU6XZ3YJtj/+7f8548KliDnxPNBDo27A7AflXVpj4X7uTXV4fXu5WL1s5m
+eQOBoYRoY1kbcf/OQyoaZCe13HbulIkpqrzpQ4EKNG7zOf3TlDovlYlKpAHA9uvm
+y4vlYLjaTMH6B34WFdVBpRcJPahgyD3axvqHShdyXgQEKt1r70Sgvm0D1CV2nQqA
+W0YUajfr+QrK89eqXnXyU43XL1ulhrtNjl4bcSOAJDVR3CjwHVI95ZJcGL5+m/5K
+9AmNVIRfpO/p569fG46HwP2cy4xmBfcZOjw7XMbmdXtVnd2y9kjos7/yZkJ1lgTT
+UBuUxwxJPwIDAQABo0IwQDAdBgNVHQ4EFgQUKIGjJLXwW23PrJ2chOGPWRg+4z8w
+EgYDVR0TAQH/BAgwBgEB/wIBADALBgNVHQ8EBAMCAQYwDQYJKoZIhvcNAQEMBQAD
+ggGBABRAzDjsF2+hzYgUfZncheqBIlXuP3eOcPav838fsgCMUeQNq/2QovWHpIP5
+k8g2BwIXhdhZqOn4WIYWIQ8T1UwmE3gLic64rfUPkeOOJx10BHpkqCawW1AuFfQV
+9LQH/GCQd78xtbvvgoDX0DTGFBJ8j/UeWhuNZtC/Gaw0vMeJ7x2pljdfsCyby0Rp
+h4NqO2k6j8optr5WkH47UrP6fiB6mUbFBwm6OAvUhTRF61uPXUkUaYQch8oIQwW4
+0Ij4aU95p3WToSfBdOXiHQKgrqthQvKwJZKnWfnH1w3VQT39uzPADm7+jLw06rpX
+IeR/weWk5kPQas3jaN0hIEsV/TyjpOPqRlIpkvXCtJXuB1U3Ha0hh9FcF/Qccky5
+RLIg/EqouWzVfgqoHejsgLX/lfweRYOYjXcsG1/OSgLDkVIrimkLxRpLKjs+QHlK
+Bl8yI+HhlS1hA9AsVfY8DRpssIUszmmXpJBGYdcN5qDkZx6Rv811RcVUhaRHak3X
+OL/0OA==
+-----END CERTIFICATE-----
+`},
       },
       tableName: "document_embeddings",
       columns: {
@@ -452,6 +479,14 @@ relevantDocs = bestDoc;
 
       
 
+      const systemPrompt = `
+        🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
+        Instructions:
+          - *Context Understanding*: Check follow-up questions by analyzing the chat history and current question context.
+          - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
+          - If you do not find an answer in the Document Context, File Content, or chat history, respond with what you can based on the provided information.
+          - Provide the answer in a concise manner and include proper citations.
+      `;
       let prompt = `
         Use the following information to answer the question:
 
@@ -461,23 +496,10 @@ relevantDocs = bestDoc;
 
         if ${fileContent} just use the file content and chat history context to answer the question.
 
-        Instructions:
-        - *Context Understanding*: Check if this is a follow-up question by analyzing the chat history and current question context.
-        - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
-        - If you do not find an answer in the Document Context, File Content, or chat history, respond with: "I did not have knowledge about that."
-        - Provide the answer in a concise manner and include proper citations if available.
-        - *Reasoning Requirement*: Always inject reasoning into responses by explaining the logical process, why the information is relevant, and how conclusions were reached. Make the AI's decision-making process transparent and clear (e.g., why a certain statute applies, how legal principles connect, what factors influenced the analysis).
-
-        *Response Structure*:
-        When providing the answer, ensure that it is concise and well-structured:
-        1. **Answer**: For follow-up questions, reference the previous discussion ("As mentioned earlier..." or "Building on the previous answer...") and provide the requested additional details.
-        2. **Reasoning**: Inject reasoning into the response by explaining the logical process behind the answer. Detail why this information is relevant, how it connects to the previous conversation, and what makes this explanation comprehensive. Always explain the AI's logic and decision-making process clearly (e.g., why a certain statute applies, how legal principles connect, what factors led to this conclusion).
-
-        in the message response and answer please don't add the citation .
         Question:
         ${message}
         `;
-      const stream = await this.model.stream([new HumanMessage(prompt)]);
+      const stream = await this.model.stream([new SystemMessage(systemPrompt),new HumanMessage(prompt)]);
 
       const finalTitle = conTitle || title;
 
