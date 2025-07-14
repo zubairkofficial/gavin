@@ -29,6 +29,7 @@ import { fileURLToPath } from 'url';
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
   private model: ChatOpenAI;
+  private searchModel: ChatOpenAI;
   private vectorStore: PGVectorStore;
   @InjectRepository(Message)
   private messageRepository: Repository<Message>;
@@ -52,6 +53,11 @@ export class ChatService {
       modelName: 'gpt-4o-mini',
       streaming: true,
     });
+    this.searchModel = new ChatOpenAI({
+      openAIApiKey: openAiApiKey,
+      modelName: 'gpt-4o-mini-search-preview',
+      streaming: true,
+    });
 
     // Use environment variables for PG config
     const hotName = process.env.DB_HOST;
@@ -68,35 +74,7 @@ export class ChatService {
         user: duser,
         password: pass,
         database: data,
-        ssl: {
-          rejectUnauthorized: false,
-          ca: `-----BEGIN CERTIFICATE-----
-MIIEUDCCArigAwIBAgIUFMY7g/gl96OaxPd/8S2wnI/bavYwDQYJKoZIhvcNAQEM
-BQAwQDE+MDwGA1UEAww1NzYyNzYwOWYtOGI5NC00YTNkLTg1OTItZTliZWZhYTJj
-ZmNlIEdFTiAxIFByb2plY3QgQ0EwHhcNMjUwNjE3MTIyMTQxWhcNMzUwNjE1MTIy
-MTQxWjBAMT4wPAYDVQQDDDU3NjI3NjA5Zi04Yjk0LTRhM2QtODU5Mi1lOWJlZmFh
-MmNmY2UgR0VOIDEgUHJvamVjdCBDQTCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCC
-AYoCggGBAN6G/DqFjk79qSzLlo3rAQHZMKWYTQYBUf3sGnZGkdtD/SaETn2QNHvR
-eEXUG7BKIqoz8ruczkij90YAiH/cSOdL0bS9rfZB2/lMy1oUMGjgrtdAS8X7nTPP
-7zthy6EOzMfmb+WXtXzfXXUUvhlVKRO1MNecYp6PWGZTKRwwQeGvWPMVBruyvkgs
-V/Se70WU6XZ3YJtj/+7f8548KliDnxPNBDo27A7AflXVpj4X7uTXV4fXu5WL1s5m
-eQOBoYRoY1kbcf/OQyoaZCe13HbulIkpqrzpQ4EKNG7zOf3TlDovlYlKpAHA9uvm
-y4vlYLjaTMH6B34WFdVBpRcJPahgyD3axvqHShdyXgQEKt1r70Sgvm0D1CV2nQqA
-W0YUajfr+QrK89eqXnXyU43XL1ulhrtNjl4bcSOAJDVR3CjwHVI95ZJcGL5+m/5K
-9AmNVIRfpO/p569fG46HwP2cy4xmBfcZOjw7XMbmdXtVnd2y9kjos7/yZkJ1lgTT
-UBuUxwxJPwIDAQABo0IwQDAdBgNVHQ4EFgQUKIGjJLXwW23PrJ2chOGPWRg+4z8w
-EgYDVR0TAQH/BAgwBgEB/wIBADALBgNVHQ8EBAMCAQYwDQYJKoZIhvcNAQEMBQAD
-ggGBABRAzDjsF2+hzYgUfZncheqBIlXuP3eOcPav838fsgCMUeQNq/2QovWHpIP5
-k8g2BwIXhdhZqOn4WIYWIQ8T1UwmE3gLic64rfUPkeOOJx10BHpkqCawW1AuFfQV
-9LQH/GCQd78xtbvvgoDX0DTGFBJ8j/UeWhuNZtC/Gaw0vMeJ7x2pljdfsCyby0Rp
-h4NqO2k6j8optr5WkH47UrP6fiB6mUbFBwm6OAvUhTRF61uPXUkUaYQch8oIQwW4
-0Ij4aU95p3WToSfBdOXiHQKgrqthQvKwJZKnWfnH1w3VQT39uzPADm7+jLw06rpX
-IeR/weWk5kPQas3jaN0hIEsV/TyjpOPqRlIpkvXCtJXuB1U3Ha0hh9FcF/Qccky5
-RLIg/EqouWzVfgqoHejsgLX/lfweRYOYjXcsG1/OSgLDkVIrimkLxRpLKjs+QHlK
-Bl8yI+HhlS1hA9AsVfY8DRpssIUszmmXpJBGYdcN5qDkZx6Rv811RcVUhaRHak3X
-OL/0OA==
------END CERTIFICATE-----
-`},
+        
       },
       tableName: "document_embeddings",
       columns: {
@@ -115,7 +93,7 @@ OL/0OA==
   }
 
   async sendMessage(createMessageDto: CreateMessageDto, req: any, files: multer.File[]): Promise<{
-    prompt: any,
+
     stream: any,
     conversationId: string,
     userId?: string,
@@ -126,7 +104,7 @@ OL/0OA==
     size: string,
     type: string,
   }> {
-    const { message, conversationId, title } = createMessageDto;
+    const { message, conversationId, title , websearch } = createMessageDto;
     if (!message) throw new BadRequestException('Message cannot be empty');
 
     // console.log(files, 'files in chat service')
@@ -182,10 +160,55 @@ OL/0OA==
         inputKey: 'input',
         outputKey: 'output',
       });
+      let documentContext: Array<{ title: string; reference: string; jurisdiction?: string; citation?: string; subject_area?: string; code?: string; decision_date?: string; name?: string; case_type?: string; }> = [];
+      let str  
+      let ftitle 
 
-      // console.log('User ID:', userId);
 
-      // Use the vector store as retriever
+      // condionally handle web search or document context
+      
+      if(websearch == 'true'){
+        console.log('Web search enabled for this message');
+        let context = '';
+      // Only include citations if relevantDocs found and not just file upload
+      context += fileContent ? `File Content:\n${fileContent}\n` : '';
+
+
+
+      const systemPrompt = `
+        🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
+        Instructions:
+          - *Context Understanding*: Check follow-up questions by analyzing the chat history and current question context.
+          - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
+          - If you do not find an answer in the Document Context, File Content, or chat history, respond with what you can based on the provided information.
+          - Provide the answer in a concise manner and include proper citations.
+      `;
+      let prompt = `
+        Use the following information to answer the question:
+        ${fileContent ? `File Content:\n${fileContent}\n` : ''}
+        ${context ? `Context:\n${context}\n` : ''}
+
+        if ${fileContent} just use the file content and chat history context to answer the question.
+
+        Question:
+        ${message}
+        `;
+
+        const  stream = await this.searchModel.stream([new SystemMessage(systemPrompt),new HumanMessage(prompt)]);
+       
+
+      
+       str = stream
+      const finalTitle = conTitle || title;
+      ftitle = finalTitle 
+      if (fileContent) {
+        documentContext = []
+      }
+
+
+
+        // You can implement web search logic here if needed
+      }else if (websearch == 'false') {
       let relevantDocs: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
       let enabledDocs: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
       // let filteredDoc: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
@@ -250,7 +273,6 @@ relevantDocs = bestDoc;
 
       // Build prompt with context from relevant docs and buffer memory
       let context = '';
-      let documentContext: Array<{ title: string; reference: string; jurisdiction?: string; citation?: string; subject_area?: string; code?: string; decision_date?: string; name?: string; case_type?: string; }> = [];
       // Only include citations if relevantDocs found and not just file upload
       context += fileContent ? `File Content:\n${fileContent}\n` : '';
       if (relevantDocs.length > 0) {
@@ -499,25 +521,33 @@ relevantDocs = bestDoc;
         Question:
         ${message}
         `;
-      const stream = await this.model.stream([new SystemMessage(systemPrompt),new HumanMessage(prompt)]);
 
+
+      const  stream = await this.model.stream([new SystemMessage(systemPrompt),new HumanMessage(prompt)]);
+
+       str = stream
       const finalTitle = conTitle || title;
-
+      ftitle = finalTitle 
       if (fileContent) {
         documentContext = []
       }
+      }
+      
+      // console.log('User ID:', userId);
+
+      // Use the vector store as retriever
+      
 
       // Optionally, you can reconstruct the stream if needed, or just return the chunks as response
       // If you need to return the original stream, you may need to handle this logic differently
 
       return {
-        stream: stream, // or stream, if you want to keep streaming
-        prompt,
+        stream: str, // or stream, if you want to keep streaming
         documentContext,
         conversationId: convId,
         userId,
         fileContent,
-        title: finalTitle,
+        title: ftitle,
         filename: fileName,
         size: fileSize,
         type: fileType,

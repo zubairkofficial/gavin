@@ -108,9 +108,10 @@ export class ChatController {
       // --- Regenerate logic: delete most recent assistant message if needed ---
       if (createMessageDto.regenerate && createMessageDto.conversationId) {
         try {
+          // TODO: Fixme
           // Find the most recent assistant message in this conversation
           const lastAssistantMsg = await this.messageRepository.findOne({
-            where: { conversationId: createMessageDto.conversationId, },
+            where: { conversationId: createMessageDto.conversationId, id: createMessageDto.assistantMsgId },
             order: { createdAt: 'DESC' },
           });
           if (lastAssistantMsg) {

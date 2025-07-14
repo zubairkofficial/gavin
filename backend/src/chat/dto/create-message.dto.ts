@@ -1,5 +1,6 @@
-import { IsString, IsNotEmpty, IsOptional, isNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, isNotEmpty, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 export class CreateMessageDto {
   @ApiProperty({
@@ -14,7 +15,6 @@ export class CreateMessageDto {
     description: 'Optional user ID to track conversations',
     example: 'user123',
   })
-
   @IsOptional()
   @IsString()
   userId?: string;
@@ -22,6 +22,15 @@ export class CreateMessageDto {
   @IsOptional()
   @IsString()
   title?: string;
+
+  @ApiPropertyOptional({
+    description: 'Enable web search for this message',
+    type: Boolean,
+    default: false
+  })
+  @IsOptional()
+  @IsString()
+  websearch?: string;
 
   @IsOptional()
   @IsString()

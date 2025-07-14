@@ -40,6 +40,7 @@ import API from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate, useParams } from "react-router-dom"
+import { boolean } from "zod"
 
 interface AttachedDocument {
   id: string
@@ -290,9 +291,10 @@ const Chat = ({
       if (title) {
         formData.append("title", title)
       }
-      if (searchWithWeb) {
-        formData.append("searchWithWeb", "true")
-      }
+     
+        formData.append("websearch", searchWithWeb ? "true" : "false")
+        console.log('web search:', searchWithWeb)
+      
 
       // Add files to FormData
       if (newMessage.documents && newMessage.documents.length > 0) {
@@ -303,7 +305,13 @@ const Chat = ({
         })
       }
 
-      console.log(formData)
+      // Log FormData entries
+      console.log("FormData contents:")
+      for (const pair of formData.entries()) {
+        console.log(pair[0], pair[1])
+      }
+
+      // console.log(searchWithWeb, 'data of web serach')
 
       const response = await fetch(`${baseURL}/chat/message`, {
         method: "POST",
@@ -333,10 +341,10 @@ const Chat = ({
       try {
         while (true) {
           const { value, done } = await reader.read()
-          console.log(`Received chunk:`, value, `Done:`, done)
+          // console.log(`Received chunk:`, value, `Done:`, done)
 
           if (done) {
-            console.log("Stream completed")
+            // console.log("Stream completed")
             break
           }
 
@@ -354,7 +362,7 @@ const Chat = ({
                 if (jsonStr === "") continue
 
                 const data = JSON.parse(jsonStr)
-                console.log(`Received chunk data:`, data)
+                // console.log(`Received chunk data:`, data)
 
                 // Handle conversation metadata (first chunk)
                 if (data.conversationId && !hasNavigated) {
@@ -377,7 +385,7 @@ const Chat = ({
                 // Handle streaming tokens
                 if (data.token) {
                   streamingContentRef.current += data.token
-                  console.log("Current streaming content:", streamingContentRef.current)
+                  // console.log("Current streaming content:", streamingContentRef.current)
                   setMessages((prev) =>
                     prev.map((msg) =>
                       msg.id === assistantMessageId
