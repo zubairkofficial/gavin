@@ -129,102 +129,141 @@ export class ChatController {
       streamData = result;
       // const stream = await result.model.stream([new HumanMessage(result.prompt)]);
 
-      for await (const chunk of result.stream) {
+      if (createMessageDto.websearch == 'false') {
+        for await (const chunk of result.stream) {
+          if (clientDisconnected || res.destroyed) {
+            console.log('Response destroyed or client disconnected, stopping stream');
+            break;
+          }
+
+          let token = '';
+          // if(typeof chunk.content === 'string' &&  chunk.content.includes('I did not have knowledge about that.')) {
+          //   result.documentContext = ''
+          //   console.log('No relevant documents found, skipping document context');
+          // }
+          if (typeof chunk.content === 'string') {
+            token = chunk.content;
+
+            // console.log('anotation:' , chunk)
+          } else if (Array.isArray(chunk.content)) {
+            token = chunk.content
+              .map((part: any) => typeof part.text === 'string' ? part.text : '')
+              .join('');
+          }
+          // const event = { token };
+          // res.write(`data: ${JSON.stringify(event)}\n\n`);
+          // console.log('documentContext:', result.documentContext);
+          if (!sentMetadata) {
+            const event = {
+              conversationId: result.conversationId,
+              userId: result.userId,
+              title: result.title,
+              token,
+              filesProcessed: files?.files?.length || 0
+            };
+            res.write(`data: ${JSON.stringify(event)}\n\n`);
+            sentMetadata = true;
+
+          } else {
+            const event = { token };
+            res.write(`data: ${JSON.stringify(event)}\n\n`);
+          }
+
+          // Flush the response to send data immediately
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
+
+          fullAiResponse += token;
+        }
+        if (fullAiResponse.includes('I did not have knowledge about that.')) {
+          result.documentContext = [];
+          // console.log('removing the document context beacause no response was found');
+        }
+
+        if (!clientDisconnected && !res.destroyed && result.documentContext) {
+          // 1. Send the citation label as a chunk
+          const citationLabel = "";
+          res.write(`data: ${JSON.stringify({ token: citationLabel })}\n\n`);
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
+          fullAiResponse += citationLabel;
+          // console.log(`\n\n Citation00 : --${JSON.stringify(result.documentContext)}`)
+          // console.log(`\n\n Citation00 : --${(result.documentContext)}`)
+
+          // 2. Wrap document context in <citation> and send as JSON
+          const citationJson = `\n\n Citation00 : --${JSON.stringify(result.documentContext)}`;
+          res.write(`data: ${JSON.stringify({ token: citationJson })}\n\n`);
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
+          fullAiResponse += citationJson;
+        }
+
+
+        // Send final "done" event if no client disconnection
+        if (!clientDisconnected && !res.destroyed) {
+          res.write(`data: ${JSON.stringify({ done: true, documentContext: result.documentContext })}\n\n`);
+          console.log(`data: ${JSON.stringify({ done: true, documentContext: result.documentContext })}\n\n`);
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
+        }
+      } else {
         if (clientDisconnected || res.destroyed) {
-          console.log('Response destroyed or client disconnected, stopping stream');
-          break;
+          console.log('Response destroyed or client disconnected');
+          return;
         }
 
-        let token = '';
-        // if(typeof chunk.content === 'string' &&  chunk.content.includes('I did not have knowledge about that.')) {
-        //   result.documentContext = ''
-        //   console.log('No relevant documents found, skipping document context');
+        // console.log(result.stream.content)
+
+        // Send initial metadata with the content
+        const initialEvent = {
+          conversationId: result.conversationId,
+          userId: result.userId,
+          title: result.title,
+          token: Array.isArray(result.stream.content)
+            ? result.stream.content.map(item => item.text).join('')
+            : (result.stream.content?.text?.toString() || ''),
+
+          filesProcessed: files?.files?.length || 0
+        };
+        // console.log('initialEvent', initialEvent),
+          res.write(`data: ${JSON.stringify(initialEvent)}\n\n`);
+
+        // Add the content to full response
+        fullAiResponse = Array.isArray(result.stream.content)
+          ? result.stream.content.map(item => item.text).join('')
+          : (typeof result.stream.content === 'string'
+            ? result.stream.content
+            : result.stream.content?.toString() || '');        // console.log)
+
+        // Handle annotations if they exist
+        // if (result.documentContext && result.documentContext.length > 0) {
+        //   const citationJson = `\n\n Citation00 : --${JSON.stringify(result.annotations)}`;
+        //   res.write(`data: ${JSON.stringify({ token: citationJson })}\n\n`);
+        //   fullAiResponse += citationJson;
         // }
-        if (typeof chunk.content === 'string') {
-          token = chunk.content;
-        } else if (Array.isArray(chunk.content)) {
-          token = chunk.content
-            .map((part: any) => typeof part.text === 'string' ? part.text : '')
-            .join('');
-        }
-        // const event = { token };
-        // res.write(`data: ${JSON.stringify(event)}\n\n`);
-
-        if (!sentMetadata) {
-          const event = {
-            conversationId: result.conversationId,
-            userId: result.userId,
-            title: result.title,
-            token,
-            filesProcessed: files?.files?.length || 0
-          };
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
-          sentMetadata = true;
-
-        } else {
-          const event = { token };
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
+        if (result.annotations && result.annotations.length > 0) {
+          const citationJson = `\n\n annotations : --${JSON.stringify(result.annotations)}`;
+          res.write(`data: ${JSON.stringify({ token: citationJson })}\n\n`);
+          fullAiResponse += citationJson;
         }
 
-        // Flush the response to send data immediately
-        if (typeof (res as any).flush === 'function') {
-          (res as any).flush();
-        }
-
-        fullAiResponse += token;
-      }
-      if (fullAiResponse.includes('I did not have knowledge about that.')) {
-        result.documentContext = [];
-        console.log('removing the document context beacause no response was found');
-      }
-
-      if (!clientDisconnected && !res.destroyed && result.documentContext) {
-        // 1. Send the citation label as a chunk
-        const citationLabel = "";
-        res.write(`data: ${JSON.stringify({ token: citationLabel })}\n\n`);
-        if (typeof (res as any).flush === 'function') {
-          (res as any).flush();
-        }
-        fullAiResponse += citationLabel;
-        console.log(`\n\n Citation00 : --${JSON.stringify(result.documentContext)}`)
-        console.log(`\n\n Citation00 : --${(result.documentContext)}`)
-
-        // 2. Wrap document context in <citation> and send as JSON
-        const citationJson = `\n\n Citation00 : --${JSON.stringify(result.documentContext)}`;
-        res.write(`data: ${JSON.stringify({ token: citationJson })}\n\n`);
-        if (typeof (res as any).flush === 'function') {
-          (res as any).flush();
-        }
-        fullAiResponse += citationJson;
-      }
-      //  if (!clientDisconnected && !res.destroyed && result.documentContext) {
-      //   const citationTokens = [
-      //     "\n\n **Citation** : ",
-      //     result.documentContext
-      //   ];
-
-      //   for (const citationToken of citationTokens) {
-      //     if (clientDisconnected || res.destroyed) break;
-
-      //     const event = { token: citationToken };
-      //     res.write(`data: ${JSON.stringify(event)}\n\n`);
-
-      //     if (typeof (res as any).flush === 'function') {
-      //       (res as any).flush();
-      //     }
-
-      //     fullAiResponse += citationToken;
-      //   }
-      // }
-
-
-      // Send final "done" event if no client disconnection
-      if (!clientDisconnected && !res.destroyed) {
-        res.write(`data: ${JSON.stringify({ done: true, documentContext: result.documentContext })}\n\n`);
-        if (typeof (res as any).flush === 'function') {
-          (res as any).flush();
+        // Send final done event
+        if (!clientDisconnected && !res.destroyed) {
+          res.write(`data: ${JSON.stringify({
+            done: true,
+            documentContext: result.documentContext,
+            finalContent: fullAiResponse
+          })}\n\n`);
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
         }
       }
+
 
       // Save message to database after streaming is complete
       try {
@@ -295,6 +334,27 @@ export class ChatController {
     res.json({ success: true, conversations });
   }
 
+  @Get('trash')
+  async getTrashConversations(
+    @Request() req: any,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(400).json({ success: false, message: 'User ID is required' });
+      return;
+    }
+
+    try {
+      const trashedConversations = await this.chatService.getDeletedConversationsByUser(userId);
+      res.json({ success: true, conversations: trashedConversations });
+      console.log('Fetched deleted conversations:', trashedConversations);
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to fetch deleted conversations' });
+    }
+  }
+
   @Get('get-suggestions')
   async getSugggestions(
     @Request() req: any,
@@ -312,6 +372,47 @@ export class ChatController {
     res.json({ success: true, suggestions });
   }
 
+  @Post('restore/:conversationId')
+  async restoreConversation(
+    @Param('conversationId') conversationId: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id;
+
+    if (!conversationId) {
+      res.status(400).json({ success: false, message: 'Conversation ID is required' });
+      return;
+    }
+
+    try {
+      await this.chatService.restoreConversation(conversationId, userId);
+      res.json({ success: true, message: 'Conversation restored successfully' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to restore conversation' });
+    }
+  }
+
+  @Post('permanent-delete/:conversationId')
+  async permanatDelConversation(
+    @Param('conversationId') conversationId: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id;
+
+    if (!conversationId) {
+      res.status(400).json({ success: false, message: 'Conversation ID is required' });
+      return;
+    }
+
+    try {
+      await this.chatService.permnatDelConversation(conversationId, userId);
+      res.json({ success: true, message: 'Conversation deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to delete conversation' });
+    }
+  }
 
   @Post('create-conversation')
   async createConversation(
@@ -356,5 +457,47 @@ export class ChatController {
     res.json({ success: true, messages });
   }
 
+  @Post('update-title/:conversationId')
+  async updateConversationTitle(
+    @Param('conversationId') conversationId: string,
+    @Body() body: { title: string },
+    @Request() req: any,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id;
+
+    if (!conversationId || !body.title) {
+      res.status(400).json({ success: false, message: 'Conversation ID and title are required' });
+      return;
+    }
+
+    try {
+      await this.chatService.updateConversationTitle(conversationId, body.title, userId);
+      res.json({ success: true, message: 'Title updated successfully' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to update conversation title' });
+    }
+  }
+
+  @Post('delete/:conversationId')
+  async deleteConversation(
+    @Param('conversationId') conversationId: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id;
+
+    if (!conversationId) {
+      res.status(400).json({ success: false, message: 'Conversation ID is required' });
+      return;
+    }
+
+    try {
+      await this.chatService.deleteConversation(conversationId, userId);
+      res.json({ success: true, message: 'Conversation deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to delete conversation' });
+    }
+  }
 
 }

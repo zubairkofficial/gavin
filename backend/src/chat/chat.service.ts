@@ -1,13 +1,13 @@
 import { Injectable, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatOpenAI } from '@langchain/openai';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { AIMessageChunk, HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { DistanceStrategy, PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Message } from './entities/message.entity';
-import { getRepository, Repository } from 'typeorm';
+import { getRepository, Repository, IsNull, Not } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BufferMemory } from 'langchain/memory';
 import { filter } from 'compression';
@@ -24,6 +24,9 @@ import * as pdfParse from 'pdf-parse';
 import * as mammoth from 'mammoth';
 import { fi } from 'zod/dist/types/v4/locales';
 import { fileURLToPath } from 'url';
+import OpenAI from "openai";
+import { end } from 'cheerio/dist/commonjs/api/traversing';
+
 
 @Injectable()
 export class ChatService {
@@ -97,6 +100,7 @@ export class ChatService {
     stream: any,
     conversationId: string,
     userId?: string,
+    annotations?: any[],
     fileContent?: string,
     documentContext?: any[],
     title?: string
@@ -104,7 +108,7 @@ export class ChatService {
     size: string,
     type: string,
   }> {
-    const { message, conversationId, title , websearch } = createMessageDto;
+    const { message, conversationId, title, websearch } = createMessageDto;
     if (!message) throw new BadRequestException('Message cannot be empty');
 
     // console.log(files, 'files in chat service')
@@ -161,13 +165,14 @@ export class ChatService {
         outputKey: 'output',
       });
       let documentContext: Array<{ title: string; reference: string; jurisdiction?: string; citation?: string; subject_area?: string; code?: string; decision_date?: string; name?: string; case_type?: string; }> = [];
+      let annotations: Array<{ title: string; reference: string , type : string , start_index : string , end_index: string ,   }> = [];
       let str  
       let ftitle 
 
 
       // condionally handle web search or document context
       
-      if(websearch == 'true'){
+      if (websearch == 'true') {
         console.log('Web search enabled for this message');
         let context = '';
       // Only include citations if relevantDocs found and not just file upload
@@ -180,8 +185,9 @@ export class ChatService {
         Instructions:
           - *Context Understanding*: Check follow-up questions by analyzing the chat history and current question context.
           - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
-          - If you do not find an answer in the Document Context, File Content, or chat history, respond with what you can based on the provided information.
+          - If you do not find an answer in the Document Context, File Content, or chat history, respond with what you can based on the provided information also web search as well.
           - Provide the answer in a concise manner and include proper citations.
+          - 
       `;
       let prompt = `
         Use the following information to answer the question:
@@ -194,8 +200,47 @@ export class ChatService {
         ${message}
         `;
 
-        const  stream = await this.searchModel.stream([new SystemMessage(systemPrompt),new HumanMessage(prompt)]);
+        // // const stream = await this.searchModel.stream([new SystemMessage(systemPrompt), new HumanMessage(prompt)]);
+        // const stream = await this.searchModel.stream([
+        //   new SystemMessage(systemPrompt),
+        //   new HumanMessage(prompt)
+        // ]);
        
+        const llm = new ChatOpenAI({ model: "gpt-4o-mini" , streaming : true }).bindTools([
+          { type: "web_search_preview" },
+        ]);
+
+       const stream = await llm.invoke([
+          new SystemMessage(systemPrompt),
+          new HumanMessage(prompt)
+        ]);
+        console.log('stream:', stream, 'stream type:', typeof stream);
+        // console.log('stream:', stream);
+
+        // Safely check and process output array with nested content and annotations
+        if (stream?.response_metadata?.output) {
+          stream.response_metadata.output.forEach((output: any, index: number) => {
+            console.log(`Processing Output[${index}]`);
+            if (output?.content && Array.isArray(output.content)) {
+              output.content.forEach((content: any, contentIndex: number) => {
+                console.log(`Processing Content[${contentIndex}]`);
+                if (content?.annotations && Array.isArray(content.annotations)) {
+                  content.annotations.forEach((annotation: any, annotationIndex: number) => {
+                    console.log(`Annotation----------------[${annotationIndex}]:`, annotation);
+                    annotations.push({
+                      title: annotation.title || '',
+                      reference: annotation.url || '',
+                      type : annotation.type || '',
+                      start_index: annotation.startIndex || 0,
+                      end_index: annotation.endIndex || 0,
+                    })
+                    
+                  });
+                }
+              });
+            }
+          });
+        }
 
       
        str = stream
@@ -205,10 +250,11 @@ export class ChatService {
         documentContext = []
       }
 
+        console.log('Document context:', documentContext);
 
 
         // You can implement web search logic here if needed
-      }else if (websearch == 'false') {
+      } else if (websearch == 'false') {
       let relevantDocs: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
       let enabledDocs: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
       // let filteredDoc: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
@@ -320,7 +366,7 @@ relevantDocs = bestDoc;
                   filePath = `${process.env.BASE_URL}/static/files/${filePath}`;
                   finalPath = filePath;
                 } else {
-                  finalPath =` <${filePath || '#'} >`;
+                      finalPath = ` <${filePath || '#'} >`;
                 }
                 // documentContext += [
                 //   document.title ? ` \n\n [*Reference:* ${document.title}](${finalPath})` : `\n\n **Reference:** [${document.fileName}](${filePath})`,
@@ -353,7 +399,7 @@ relevantDocs = bestDoc;
                 let filePath = document.filePath || '';
                 let finalPath = '';
                 if (!filePath.startsWith('http://') && !filePath.startsWith('https://')) {
-                  filePath =` ${process.env.BASE_URL}/static/files/${filePath}`;
+                      filePath = ` ${process.env.BASE_URL}/static/files/${filePath}`;
                   finalPath = filePath;
                 } else {
                   finalPath = filePath;
@@ -523,7 +569,7 @@ relevantDocs = bestDoc;
         `;
 
 
-      const  stream = await this.model.stream([new SystemMessage(systemPrompt),new HumanMessage(prompt)]);
+        const stream = await this.model.stream([new SystemMessage(systemPrompt), new HumanMessage(prompt)]);
 
        str = stream
       const finalTitle = conTitle || title;
@@ -546,6 +592,7 @@ relevantDocs = bestDoc;
         documentContext,
         conversationId: convId,
         userId,
+        annotations,
         fileContent,
         title: ftitle,
         filename: fileName,

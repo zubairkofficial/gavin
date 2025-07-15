@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import API from "@/lib/api"
+import { useNavigate } from "react-router-dom"
 
 // Types for the conversation data
 export interface Conversation {
@@ -23,10 +24,8 @@ export function useConversationsQuery() {
     queryKey: ["conversations"],
     queryFn: async (): Promise<ConversationsResponse> => {
       const response = await API.get('/chat/user-conversations')
-      console.log(response)
       return response.data
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
 
@@ -50,20 +49,43 @@ export function useCreateConversationMutation() {
   })
 }
 
-export function useDeleteConversationMutation() {
+export function useUpdateConversationTitleMutation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ conversationId }: { conversationId: string }) => {
-      const response = await API.delete(`/chat/conversations/${conversationId}`)
-      if (response.status !== 200) {
-        throw new Error("Failed to delete conversation")
+    mutationFn: async ({ conversationId, title }: { conversationId: string; title: string }) => {
+      const response = await API.post(`/chat/update-title/${conversationId}`, { title })
+      if (response.status >= 300) {
+        throw new Error("Failed to update conversation title")
       }
       return response.data
     },
     onSuccess: () => {
-      // Invalidate and refetch conversations data
       queryClient.invalidateQueries({ queryKey: ["conversations"] })
+    },
+  })
+}
+
+export function useDeleteConversationMutation() {
+  const queryClient = useQueryClient()
+
+  const navigate = useNavigate()
+  return useMutation({
+    mutationFn: async (conversationId: string) => {
+      const response = await API.post(`/chat/delete/${conversationId}`)
+      if (response.status >= 300) {
+        throw new Error("Failed to delete conversation")
+      }
+      return response.data
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["conversations"] })
+      navigate("/", {
+        replace: true, // Replace the current entry in the history stack  
+      })
+    },
+    onError: (error: any) => {
+      console.error("Error deleting conversation:", error)
     },
   })
 }

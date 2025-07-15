@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import CitationTooltip from "./CitationTooltip"
+import AnnotationTooltip from "./AnnotationTooltip"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -291,10 +292,10 @@ const Chat = ({
       if (title) {
         formData.append("title", title)
       }
-     
-        formData.append("websearch", searchWithWeb ? "true" : "false")
-        console.log('web search:', searchWithWeb)
-      
+
+      formData.append("websearch", searchWithWeb ? "true" : "false")
+      console.log('web search:', searchWithWeb)
+
 
       // Add files to FormData
       if (newMessage.documents && newMessage.documents.length > 0) {
@@ -668,28 +669,116 @@ const Chat = ({
     return (
       <div key={msg.id} className="rounded-lg mb-4  custom-inline !m-0">
         <div className="space-y-3 ">
-          <p className="text-gray-800  text-[14px] leading-[22px] ">
+          <p className="text-gray-800  text-[14px] leading-[26px] ">
             <span style={{ display: "inline-block" }}>
               {/* <ReactMarkdown>
             {msg.content}
             </ReactMarkdown> */}
-              <ReactMarkdown
-                components={{
-                  a: ({ href, children }) => (
-                    <a
-                      href={href}
-                      target="_blank" // Open in new tab
-                      rel="noopener noreferrer" // Security best practice
-                      // backgroundColor : 'white', border : '1px solid #d1d5db' , borderRadius : '2px', margin : '5px' , padding: '5px' , color: 'black'
-                      style={{ textDecoration: "underline" }} // Underline the link
-                    >
-                      {children}
-                    </a>
-                  ),
-                }}
-              >
-                {msg.content.split("Citation00 :")[0]}
-              </ReactMarkdown>
+              <AnnotationTooltip msgId={msg.id} msgContent={msg.content}>
+                {({ handleLinkInteraction, clickedLink, annotations, currentIndex, tooltipRef, setCurrentIndex }) => (
+                  <ReactMarkdown
+                    components={{
+                      a: ({ href, children }) => {
+                        const annotation = annotations.find((a: any) => a.reference === href);
+                        const isActive = clickedLink === href;
+                        console.log('Checking annotation for href:', href, 'Found:', annotation, 'Active:', isActive);
+
+                        return (
+                          <>
+                          <div className="relative inline-block">
+                            <a
+                              href={href}
+className="cursor-pointer bg-white border-2 border-gray-200 hover:bg-black py-1 px-2 mt-1 rounded-sm text-black hover:text-white transition-all duration-200 ease-in-out"                              style={{ textDecoration: " " }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (e.ctrlKey || e.metaKey) {
+                                  window.open(href, '_blank', 'noopener,noreferrer');
+                                } else {
+                                  handleLinkInteraction(href || null, false);
+                                }
+                              }}
+                            >
+                          
+                              {children}
+                            </a>
+
+                            {isActive && annotations[currentIndex] && (
+                              <div ref={tooltipRef} className="absolute z-100 rounded-md -translate-x-1/2 bottom-full left-full ml-15 md:ml-40 mb-2 flex flex-col text-left justify-start min-w-[250px] md:min-w-[350px] max-w-xs bg-white text-gray-900 border border-gray-300 shadow-lg text-xs">
+                                <div className="flex items-center rounded-t-md justify-between w-full bg-gray-100 p-2">
+                                  <div>
+                                    <button
+                                      className="p-1 disabled:opacity-30"
+                                      disabled={currentIndex === 0}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const newIndex = Math.max(0, currentIndex - 1);
+                                        setCurrentIndex(newIndex);
+                                      }}
+                                    >
+                                      <ChevronLeft className="cursor-pointer" />
+                                    </button>
+                                    <button
+                                      className="p-1 disabled:opacity-30"
+                                      disabled={currentIndex === annotations.length - 1}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const newIndex = Math.min(annotations.length - 1, currentIndex + 1);
+                                        setCurrentIndex(newIndex);
+                                      }}
+                                    >
+                                      <ChevronRight className="cursor-pointer" />
+                                    </button>
+                                  </div>
+                                  <span className="font-semibold text-xs">
+                                    {currentIndex + 1} / {annotations.length}
+                                  </span>
+                                </div>
+                                <div className="px-3 my-5">
+                                  <div className="flex items-center mb-2 gap-2">
+                                    {annotation.reference && (
+                                      <img
+                                        src={`${new URL(annotation.reference).protocol}//${new URL(annotation.reference).hostname}/favicon.ico`}
+                                        alt="icon"
+                                        className="h-[22px] w-[22px] rounded-lg border-amber-200"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none'
+                                        }}
+                                      />
+                                    )}
+                                    <div className="font-semibold">
+                                      {annotation.reference ? new URL(annotation.reference).hostname : 'Reference'}
+                                    </div>
+                                  </div>
+                                  <h4 className="font-semibold mb-2 text-sm">{annotation.title}</h4>
+                                  <div className="break-all text-gray-700">
+                                    <a
+                                      href={annotation.reference}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block break-all whitespace-normal"
+                                    >
+                                      {annotation.reference}
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+
+
+                          </div>
+                          <br/>
+                          </>
+                        
+                        );
+                        
+                      },
+                    }}
+                  >
+                    {msg.content.split(/Citation00 :|annotations :/)[0].replace(/\(([^)]*)\)/g, '$1')}
+                  </ReactMarkdown>
+                )}
+              </AnnotationTooltip>
               {/* Citation Tooltip extracted as a component */}
               <CitationTooltip
                 msgId={msg.id}
