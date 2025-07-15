@@ -745,7 +745,163 @@ relevantDocs = bestDoc;
   }
 
 
+  async restoreConversation(conversationId: string, userId: string): Promise<void> {
+    try {
+      // Set deletedAt to null to restore the conversation
+      await this.messageRepository.update(
+        { conversationId, userId },
+        { deletedAt: () => 'NULL' }
+      );
+    } catch (error) {
+      console.error('Error restoring conversation:', error);
+      throw new Error('Failed to restore conversation');
+    }
+  }
 
+  async permnatDelConversation(conversationId: string, userId: string): Promise<void> {
+    try {
+      // Set deletedAt to null to restore the conversation
+      await this.messageRepository.delete({
+        conversationId,
+        userId
+      });
+    } catch (error) {
+      console.error('Error restoring conversation:', error);
+      throw new Error('Failed to restore conversation');
+    }
+  }
+
+
+  async getDeletedConversationsByUser(
+    userId: string
+  ): Promise<{ conversationId: string; title: string; createdAt: Date; deletedAt: Date }[]> {
+    console.log('Fetching deleted conversations for user:', userId);
+
+    try {
+      // Approach 1: Using subquery to get the first message per conversation
+      const deletedConversations = await this.messageRepository
+        .createQueryBuilder('m')
+        .select([
+          'm.conversationId',
+          'm.title',
+          'm.createdAt',
+          'm.deletedAt'
+        ])
+        .where('m.userId = :userId', { userId })
+        .andWhere('m.deletedAt IS NOT NULL')
+        .andWhere((qb) => {
+          const subQuery = qb
+            .subQuery()
+            .select('MIN(m2.createdAt)')
+            .from('message', 'm2') // Replace 'message' with your actual table name
+            .where('m2.conversationId = m.conversationId')
+            .andWhere('m2.userId = :userId')
+            .getQuery();
+          return `m.createdAt = (${subQuery})`;
+        })
+        .withDeleted() // Important for soft deletes
+        .orderBy('m.deletedAt', 'DESC')
+        .getMany();
+
+      console.log('Found deleted conversations (first messages):', deletedConversations);
+
+      return deletedConversations.map(msg => ({
+        conversationId: msg.conversationId ?? '',
+        title: msg.title ?? '',
+        createdAt: msg.createdAt,
+        deletedAt: msg.deletedAt
+      }));
+
+    } catch (error) {
+      console.error('Error fetching deleted conversations:', error);
+
+      // Fallback approach: Get all deleted messages and filter in JavaScript
+      try {
+        console.log('Trying fallback approach...');
+
+        const allDeletedMessages = await this.messageRepository.find({
+          select: ['conversationId', 'title', 'createdAt', 'deletedAt'],
+          where: {
+            userId,
+            deletedAt: Not(IsNull())
+          },
+          withDeleted: true,
+          order: {
+            createdAt: 'ASC' // Order by creation time to get first messages
+          }
+        });
+
+        // Group by conversationId and take the first message from each group
+        const conversationMap = new Map<string, any>();
+
+        for (const message of allDeletedMessages) {
+          const convId = message.conversationId ?? '';
+          if (!conversationMap.has(convId)) {
+            conversationMap.set(convId, message);
+          }
+        }
+
+        const uniqueConversations = Array.from(conversationMap.values())
+          .sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
+
+        console.log('Fallback result:', uniqueConversations);
+
+        return uniqueConversations.map(msg => ({
+          conversationId: msg.conversationId ?? '',
+          title: msg.title ?? '',
+          createdAt: msg.createdAt,
+          deletedAt: msg.deletedAt
+        }));
+
+      } catch (fallbackError) {
+        console.error('Fallback approach also failed:', fallbackError);
+        throw new Error('Failed to fetch deleted conversations');
+      }
+    }
+  }
+
+  async updateConversationTitle(conversationId: string, title: string, userId: string): Promise<void> {
+    try {
+      // Update all messages in the conversation with the new title
+      await this.messageRepository.update(
+        { conversationId, userId },
+        { title }
+      );
+    } catch (error) {
+      console.error('Error updating conversation title:', error);
+      throw new Error('Failed to update conversation title');
+    }
+  }
+
+  async deleteConversation(conversationId: string, userId: string): Promise<void> {
+    try {
+      // Soft delete all messages in the conversation
+      const result = await this.messageRepository.update(
+        { conversationId, userId },
+        { deletedAt: new Date() }
+      );
+
+      console.log('Delete operation result:', {
+        conversationId,
+        userId,
+        affected: result.affected
+      });
+
+      // Verify the deletion worked
+      const deletedMessages = await this.messageRepository.find({
+        where: {
+          conversationId,
+          userId,
+          deletedAt: Not(IsNull())
+        }
+      });
+      console.log('Deleted messages count:', deletedMessages.length);
+
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      throw new Error('Failed to delete conversation');
+    }
+  }
 }
 
 function cleanResponseText(input: any): string {
