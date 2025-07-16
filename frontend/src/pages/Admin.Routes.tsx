@@ -8,6 +8,7 @@ import DocTable from "./admin/dashboard/displayDoc/index";
 import JurisdictionsPage from "./admin/dashboard/jurisdictions";
 import ScrapeUrlPage from "./admin/dashboard/ScrapeUrl/Home";
 import SetTimePage from "./admin/dashboard/setTimeCron/Home";
+import SystemPrompt from "./admin/systemprompt/Home";
 export default function AuthenticateRoutes() {
   return createRoutesFromElements(
     <>
@@ -43,6 +44,9 @@ export default function AuthenticateRoutes() {
         <Route
           path="/set-time"
           element={<SetTimePage />} />
+        <Route
+          path="/set-system-prompt"
+          element={<SystemPrompt />} />
         </Route>
       <Route
         path="/onboarding"

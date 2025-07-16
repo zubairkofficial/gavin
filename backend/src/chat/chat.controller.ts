@@ -104,6 +104,7 @@ export class ChatController {
 
 
     try {
+      let upadtedMessageId
       // console.log('Received regenerate request for message', createMessageDto.assistantMsgId);
       // console.log('Received regenerate request for conversation', createMessageDto.conversationId);
       // --- Regenerate logic: delete most recent assistant message if needed ---
@@ -117,7 +118,9 @@ export class ChatController {
           if (lastAssistantMsg) {
             // console.log('Regenerating message, deleting most recent assistant message with ID:', lastAssistantMsg.id);
             // console.log('Using websearch value:', createMessageDto.websearch);
-            await this.messageRepository.delete({ id: lastAssistantMsg.id });
+            // await this.messageRepository.delete({ id: lastAssistantMsg.id });
+            upadtedMessageId = lastAssistantMsg.id
+            console.log('Deleting most recent assistant message:', lastAssistantMsg.id, 'the whole data ', lastAssistantMsg);
           } else {
             console.log('No assistant message found to delete for conversation:', createMessageDto.conversationId);
           }
@@ -203,33 +206,62 @@ export class ChatController {
           }
           fullAiResponse += citationJson;
         }
-         let msgcontent 
-        try {
-       const msg = await this.chatService.saveMessage(
-          createMessageDto.message,
-          fullAiResponse,
-          streamData.title,
-          streamData.userId,
-          streamData.conversationId,
-          result.filename || '',
-          result.size || '',
-          result.type || '',
-          result.fileContent || ''
-        );
-        console.log('Message saved successfull ' , msg)
-        msgcontent = msg
-        } catch (saveError) {
-        console.error('Error saving message:', saveError);
-        if (!clientDisconnected && !res.destroyed) {
-          res.write(`data: ${JSON.stringify({ error: 'Failed to save message' })}\n\n`);
+        let messageId
+        if (createMessageDto.regenerate && upadtedMessageId) {
+          let msgcontent
+          try {
+            const msg = await this.chatService.updateMessage(
+              upadtedMessageId, // Use the existing message ID for update
+              {
+                humanMessage: createMessageDto.message,
+                aiMessage: fullAiResponse,
+                title: streamData.title,
+                userId: streamData.userId,
+                conversationId: streamData.conversationId,
+                filename: result.filename || '',
+                size: result.size || '',
+                type: result.type || '',
+                fileContent: result.fileContent || ''
+              }
+            );
+            console.log('Message updated successfully', msg);
+            msgcontent = msg;
+          } catch (updateError) {
+            console.error('Error updating message:', updateError);
+            if (!clientDisconnected && !res.destroyed) {
+              res.write(`data: ${JSON.stringify({ error: 'Failed to update message' })}\n\n`);
+            }
+          }
+        } else {
+          let msgcontent
+          try {
+            const msg = await this.chatService.saveMessage(
+              createMessageDto.message,
+              fullAiResponse,
+              streamData.title,
+              streamData.userId,
+              streamData.conversationId,
+              result.filename || '',
+              result.size || '',
+              result.type || '',
+              result.fileContent || ''
+            );
+            console.log('Message saved successfull ', msg)
+            msgcontent = msg
+          } catch (saveError) {
+            console.error('Error saving message:', saveError);
+            if (!clientDisconnected && !res.destroyed) {
+              res.write(`data: ${JSON.stringify({ error: 'Failed to save message' })}\n\n`);
+            }
+          }
+          messageId = msgcontent.id
+          console.log('Message saved successfully:', msgcontent);
         }
-      }
-      console.log('Message saved successfully:', msgcontent);
 
 
         // Send final "done" event if no client disconnection
         if (!clientDisconnected && !res.destroyed) {
-          res.write(`data: ${JSON.stringify({ done: true, documentContext: result.documentContext , messageid : msgcontent.id })}\n\n`);
+          res.write(`data: ${JSON.stringify({ done: true, documentContext: result.documentContext, messageid: messageId })}\n\n`);
           console.log(`data: ${JSON.stringify({ done: true, documentContext: result.documentContext })}\n\n`);
           if (typeof (res as any).flush === 'function') {
             (res as any).flush();
@@ -255,7 +287,7 @@ export class ChatController {
           filesProcessed: files?.files?.length || 0
         };
         // console.log('initialEvent', initialEvent),
-          res.write(`data: ${JSON.stringify(initialEvent)}\n\n`);
+        res.write(`data: ${JSON.stringify(initialEvent)}\n\n`);
 
         // Add the content to full response
         fullAiResponse = Array.isArray(result.stream.content)
@@ -276,36 +308,64 @@ export class ChatController {
           fullAiResponse += citationJson;
         }
 
-        let msgcontent
-        try {
-       const msg = await this.chatService.saveMessage(
-          createMessageDto.message,
-          fullAiResponse,
-          streamData.title,
-          streamData.userId,
-          streamData.conversationId,
-          result.filename || '',
-          result.size || '',
-          result.type || '',
-          result.fileContent || ''
-        );
-
-        msgcontent = msg
-        } catch (saveError) {
-        console.error('Error saving message:', saveError);
-        if (!clientDisconnected && !res.destroyed) {
-          res.write(`data: ${JSON.stringify({ error: 'Failed to save message' })}\n\n`);
+         let messageId
+        if (createMessageDto.regenerate && upadtedMessageId) {
+          let msgcontent
+          try {
+            const msg = await this.chatService.updateMessage(
+              upadtedMessageId, // Use the existing message ID for update
+              {
+                humanMessage: createMessageDto.message,
+                aiMessage: fullAiResponse,
+                title: streamData.title,
+                userId: streamData.userId,
+                conversationId: streamData.conversationId,
+                filename: result.filename || '',
+                size: result.size || '',
+                type: result.type || '',
+                fileContent: result.fileContent || ''
+              }
+            );
+            console.log('Message updated successfully', msg);
+            msgcontent = msg;
+          } catch (updateError) {
+            console.error('Error updating message:', updateError);
+            if (!clientDisconnected && !res.destroyed) {
+              res.write(`data: ${JSON.stringify({ error: 'Failed to update message' })}\n\n`);
+            }
+          }
+        } else {
+          let msgcontent
+          try {
+            const msg = await this.chatService.saveMessage(
+              createMessageDto.message,
+              fullAiResponse,
+              streamData.title,
+              streamData.userId,
+              streamData.conversationId,
+              result.filename || '',
+              result.size || '',
+              result.type || '',
+              result.fileContent || ''
+            );
+            console.log('Message saved successfull ', msg)
+            msgcontent = msg
+          } catch (saveError) {
+            console.error('Error saving message:', saveError);
+            if (!clientDisconnected && !res.destroyed) {
+              res.write(`data: ${JSON.stringify({ error: 'Failed to save message' })}\n\n`);
+            }
+          }
+          messageId = msgcontent.id
+          console.log('Message saved successfully:', msgcontent);
         }
-      }
-      console.log('Message saved successfully:', msgcontent);
-
         // Send final done event
         if (!clientDisconnected && !res.destroyed) {
           res.write(`data: ${JSON.stringify({
             done: true,
             documentContext: result.documentContext,
             finalContent: fullAiResponse,
-            messageId : msgcontent.id,
+            messageId: messageId,
           })}\n\n`);
           if (typeof (res as any).flush === 'function') {
             (res as any).flush();

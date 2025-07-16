@@ -27,6 +27,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "../../../components/ui/hover-card";
+
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { useEffect, useRef, useState } from "react"
@@ -566,7 +572,7 @@ const Chat = ({
       const response = await fetch(`${baseURL}/chat/message`, {
         method: "POST",
         headers: {
-          Accept: "text/event-stream",
+          Accept: "text/event-stream", 
           Authorization: token ? `Bearer ${token}` : "",
         },
         body: formData,
@@ -702,108 +708,105 @@ const Chat = ({
       <div key={msg.id} className="rounded-lg mb-4  custom-inline !m-0">
         <div className="space-y-3 ">
           <p className="text-gray-800  text-[14px] leading-[26px] ">
-            <span style={{ display: "inline-block" }}>
+            <span  style={{ display: "inline-block" }}>
               {/* <ReactMarkdown>
             {msg.content}
             </ReactMarkdown> */}
-              <AnnotationTooltip msgId={msg.id} msgContent={msg.content}>
+              <AnnotationTooltip msgId={msg.id} msgContent={msg.content} containerRef={messagesEndRef}>
                 {({ handleLinkInteraction, clickedLink, annotations, currentIndex, tooltipRef, setCurrentIndex }) => (
                   <ReactMarkdown
                     components={{
                       a: ({ href, children }) => {
-                        const annotation = annotations.find((a: any) => a.reference === href);
+                        if (!href) return children;
+                        
+                        const annotation = annotations?.find((a: any) => a?.reference === href);
                         const isActive = clickedLink === href;
-                        console.log('Checking annotation for href:', href, 'Found:', annotation, 'Active:', isActive);
-
+                        
                         return (
                           <>
-                          <div className="relative inline-block">
-                            <a
-                              href={href}
-className="cursor-pointer bg-white border-2 border-gray-200 hover:bg-black py-1 px-2 mt-1 rounded-sm text-black hover:text-white transition-all duration-200 ease-in-out"                              style={{ textDecoration: " " }}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                if (e.ctrlKey || e.metaKey) {
-                                  window.open(href, '_blank', 'noopener,noreferrer');
-                                } else {
-                                  handleLinkInteraction(href || null, false);
-                                }
-                              }}
-                            >
-                          
-                              {children}
-                            </a>
-
-                            {isActive && annotations[currentIndex] && (
-                              <div ref={tooltipRef} className="absolute z-100 rounded-md left-full  md:left-0 right-1/2  -translate-x-1/2 bottom-full  ml-15 md:ml-40 mb-2 flex flex-col text-left justify-start min-w-[300px] md:min-w-[350px] max-w-xs bg-white text-gray-900 border border-gray-300 shadow-lg text-xs">
-                                <div className="flex items-center rounded-t-md justify-between w-full bg-gray-100 p-2">
-                                  <div>
-                                    <button
-                                      className="p-1 disabled:opacity-30"
-                                      disabled={currentIndex === 0}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const newIndex = Math.max(0, currentIndex - 1);
-                                        setCurrentIndex(newIndex);
-                                      }}
-                                    >
-                                      <ChevronLeft className="cursor-pointer" />
-                                    </button>
-                                    <button
-                                      className="p-1 disabled:opacity-30"
-                                      disabled={currentIndex === annotations.length - 1}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const newIndex = Math.min(annotations.length - 1, currentIndex + 1);
-                                        setCurrentIndex(newIndex);
-                                      }}
-                                    >
-                                      <ChevronRight className="cursor-pointer" />
-                                    </button>
-                                  </div>
-                                  <span className="font-semibold text-xs">
-                                    {currentIndex + 1} / {annotations.length}
-                                  </span>
-                                </div>
-                                <div className="px-3 my-5">
-                                  <div className="flex items-center mb-2 gap-2">
-                                    {annotation.reference && (
-                                      <img
-                                        src={`${new URL(annotation.reference).protocol}//${new URL(annotation.reference).hostname}/favicon.ico`}
-                                        alt="icon"
-                                        className="h-[22px] w-[22px] rounded-lg border-amber-200"
-                                        onError={(e) => {
-                                          e.currentTarget.style.display = 'none'
-                                        }}
-                                      />
-                                    )}
-                                    <div className="font-semibold">
-                                      {annotation.reference ? new URL(annotation.reference).hostname : 'Reference'}
+                            <div className="relative inline-block">
+                              <HoverCard>
+                                <HoverCardTrigger asChild>
+                                  <a
+                                    href={href}
+                                    className="cursor-pointer bg-white border-2 border-gray-200 hover:bg-black py-1 px-2 mt-1 rounded-sm text-black hover:text-white transition-all duration-200 ease-in-out"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      if (e.ctrlKey || e.metaKey) {
+                                        window.open(href, '_blank', 'noopener,noreferrer');
+                                      } else {
+                                        handleLinkInteraction(href || null, false);
+                                      }
+                                    }}
+                                  >
+                                    {children}
+                                  </a>
+                                </HoverCardTrigger>
+                                {annotation && (
+                                  <HoverCardContent 
+                                    className="min-w-[300px] md:min-w-[350px] max-w-xs p-0"
+                                    side="top"
+                                  >
+                                    <div className="flex items-center rounded-t-md justify-between w-full bg-gray-100 p-2">
+                                      <div>
+                                        <span className="font-semibold text-xs">
+                                          {currentIndex + 1} / {annotations.length}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <button
+                                          onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+                                          disabled={currentIndex === 0}
+                                          className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          <ChevronLeft className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => setCurrentIndex(Math.min(annotations.length - 1, currentIndex + 1))}
+                                          disabled={currentIndex === annotations.length - 1}
+                                          className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          <ChevronRight className="h-4 w-4" />
+                                        </button>
+                                      </div>
                                     </div>
-                                  </div>
-                                  <h4 className="font-semibold mb-2 text-sm">{annotation.title}</h4>
-                                  <div className="break-all text-gray-700">
-                                    <a
-                                      href={annotation.reference}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="block break-all whitespace-normal"
-                                    >
-                                      {annotation.reference}
-                                    </a>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                            
-
-
-                          </div>
-                          <br/>
+                                    <div className="px-3 my-5">
+                                      <div className="flex items-center mb-2 gap-2">
+                                        {annotation.reference && (
+                                          <img
+                                            src={`${new URL(annotation.reference).protocol}//${new URL(annotation.reference).hostname}/favicon.ico`}
+                                            alt="icon"
+                                            className="h-[22px] w-[22px] rounded-lg border-amber-200"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display = 'none'
+                                            }}
+                                          />
+                                        )}
+                                        <div className="font-semibold">
+                                          {annotation.reference ? new URL(annotation.reference).hostname : 'Reference'}
+                                        </div>
+                                      </div>
+                                      {annotation.title && (
+                                        <h4 className="font-semibold mb-2 text-sm">{annotation.title}</h4>
+                                      )}
+                                      <div className="break-all text-gray-700">
+                                        <a
+                                          href={annotation.reference}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="block break-all whitespace-normal"
+                                        >
+                                          {annotation.reference}
+                                        </a>
+                                      </div>
+                                    </div>
+                                  </HoverCardContent>
+                                )}
+                              </HoverCard>
+                            </div>
+                            <br/>
                           </>
-                        
                         );
-                        
                       },
                     }}
                   >
@@ -817,6 +820,7 @@ className="cursor-pointer bg-white border-2 border-gray-200 hover:bg-black py-1 
                 msgContent={msg.content}
                 citationIndexes={citationIndexes}
                 setCitationIndexes={setCitationIndexes}
+               
               />
 
               {msg.isStreaming && !msg.content.trim() && (
@@ -1023,55 +1027,46 @@ className="cursor-pointer bg-white border-2 border-gray-200 hover:bg-black py-1 
             style={{ minWidth: 0 }}
           />
 
-          <div className="flex w-full items-center justify-between absolute bottom-0 right-2 px-2 md:px-0">
-            <div className="flex items-center gap-1 mr-auto">
-              {/* Attach Document Button */}
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" className="ml-4 h-8 hover:bg-gray-100">
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
-
-              {/* Search Options Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 hover:bg-gray-100">
+          <div className="flex items-center gap-2 px-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-sm">
+                  <span className="sr-only">Open tools menu</span>
+                  <div className="flex items-center gap-2">
                     <span>Tools</span>
                     <WrenchIcon className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="bottom">
-                  <DropdownMenuItem
-                    onClick={() => setSearchWithWeb(!searchWithWeb)}
-                    className="flex items-center gap-2"
-                  >
-                    <Globe className="h-4 w-4" />
-                    Search with web
-                    {searchWithWeb && <span className="ml-auto">✓</span>}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="bottom">
+                <DropdownMenuItem
+                  onClick={() => setSearchWithWeb(!searchWithWeb)}
+                  className="flex items-center gap-2"
+                >
+                  <Globe className="h-4 w-4" />
+                  Search with web
+                  {searchWithWeb && <span className="ml-auto">✓</span>}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-              {/* Search with Web Badge */}
-              {searchWithWeb && (
-                <div className="flex items-center gap-2 px-2 py-1">
-                  <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                    <Globe className="h-3 w-3" />
-                    Search
-                    <button onClick={() => setSearchWithWeb(false)} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
-                      <X className="h-2.5 w-2.5" />
-                    </button>
-                  </Badge>
-                </div>
-              )}
-            </div>
+            {/* Search with Web Badge */}
+            {searchWithWeb && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                  <Globe className="h-3 w-3" />
+                  Search
+                  <button onClick={() => setSearchWithWeb(false)} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </Badge>
+              </div>
+            )}
 
             <Button
               onClick={handleSendMessage}
               disabled={isLoading || (!message.trim() && selectedDocuments.length === 0)}
-              className="rounded-sm ml-auto justify-self-end text-white hover:text-white bg-foreground hover:bg-gray-600 px-3 md:px-4 mb-2  text-xs md:text-sm disabled:opacity-50"
+              className="rounded-sm ml-auto justify-self-end text-white hover:text-white bg-foreground hover:bg-gray-600 px-3 md:px-4 mb-2 text-xs md:text-sm disabled:opacity-50"
             >
               {isLoading ? "Sending..." : "Ask Gavin"}
             </Button>

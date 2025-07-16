@@ -642,6 +642,53 @@ relevantDocs = bestDoc;
       throw saveError;
     }
   }
+
+  async updateMessage(
+    messageId: string,
+    updateData: {
+      humanMessage: string,
+      aiMessage: string, 
+      title: string,
+      userId: string | undefined,
+      conversationId: string,
+      filename: string,
+      size: string,
+      type: string,
+      fileContent?: string
+    }
+): Promise<Message> {
+    try {
+      // Find existing message
+      const existingMessage = await this.messageRepository.findOne({ 
+        where: { id: messageId }
+      });
+
+      if (!existingMessage) {
+        throw new Error(`Message with ID ${messageId} not found`);
+      }
+
+      // Update message fields
+      existingMessage.userMessage = updateData.humanMessage;
+      existingMessage.aiResponse = updateData.aiMessage;
+      existingMessage.title = updateData.title;
+      existingMessage.userId = updateData.userId ? String(updateData.userId) : undefined;
+      existingMessage.conversationId = updateData.conversationId;
+      existingMessage.fileName = updateData.filename;
+      existingMessage.fileSize = updateData.size;
+      existingMessage.fileType = updateData.type;
+      existingMessage.fileContent = updateData.fileContent || '';
+
+      // Save updated message
+      const updatedMessage = await this.messageRepository.save(existingMessage);
+      console.log('Message updated successfully');
+
+      return updatedMessage;
+      
+    } catch (updateError) {
+      console.error('Error updating message:', updateError);
+      throw updateError;
+    }
+  }
   async getMessagesByConversation(conversationId: string, userId: string): Promise<Message[]> {
     return this.messageRepository.find({
       where: { conversationId, userId },

@@ -1,5 +1,10 @@
-import {  ChevronLeft, ChevronRight } from "lucide-react";
-import React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useEffect } from "react";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 interface CitationTooltipProps {
     msgId: string;
@@ -8,7 +13,15 @@ interface CitationTooltipProps {
     setCitationIndexes: React.Dispatch<React.SetStateAction<{ [msgId: string]: number }>>;
 }
 
-const CitationTooltip: React.FC<CitationTooltipProps> = ({ msgId, msgContent, citationIndexes, setCitationIndexes }) => {
+const CitationTooltip: React.FC<CitationTooltipProps> = ({ 
+    msgId, 
+    msgContent, 
+    citationIndexes, 
+    setCitationIndexes
+}) => {
+    // Track open state for each card
+    const [openCards, setOpenCards] = React.useState<{ [key: string]: boolean }>({});
+
     // Safely extract citation part
     let citationPart = "";
     const splitContent = msgContent.split('Citation00 :');
@@ -29,6 +42,18 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({ msgId, msgContent, ci
         const setCurrentCitationIndex = (idx: number) => {
             setCitationIndexes(prev => ({ ...prev, [msgId]: idx }));
         };
+
+        // Close handler for clicking outside
+        useEffect(() => {
+            const handleClickOutside = (e: MouseEvent) => {
+                const target = e.target as HTMLElement;
+                if (!target.closest('.citation-card')) {
+                    setOpenCards({});
+                }
+            };
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }, []);
 
         // Group citations by hostname
         const groupedCitations: { [hostname: string]: { c: any; hostname: string; fullPath: string; imgPath: string }[] } = {};
@@ -65,29 +90,10 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({ msgId, msgContent, ci
             runningIndex += group.length;
         }
 
-        // Add at the top of the component
-        const [openGroup, setOpenGroup] = React.useState<string | null>(null);
-        const [locked, setLocked] = React.useState(false);
-        const tooltipRef = React.useRef<HTMLDivElement>(null);
-
-        // Close on outside click
-        React.useEffect(() => {
-            if (!locked) return;
-            const handleClick = (e: MouseEvent) => {
-                if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
-                    setOpenGroup(null);
-                    setLocked(false);
-                }
-            };
-            document.addEventListener("mousedown", handleClick);
-            return () => document.removeEventListener("mousedown", handleClick);
-        }, [locked]);
-
         return (
-            <div className="mt-2 mr-60 flex flex-row gap-2" ref={tooltipRef}>
+            <div className="mt-2   flex flex-row gap-2">
                 {Object.entries(groupedCitations).map(([hostname, group]) => {
                     const { c } = group[0];
-                    const isTooltipOpen = openGroup === hostname;
                     const groupStartIndex = citations.findIndex((cit: any) => {
                         let h = '';
                         try {
@@ -102,75 +108,81 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({ msgId, msgContent, ci
                         return h === hostname;
                     });
                     const groupCitations = group;
-                    const groupCitationIndex = isTooltipOpen && currentGroup && currentGroup[0].hostname === hostname ? currentGroupIndex : 0;
+                    const groupCitationIndex = currentGroup && currentGroup[0].hostname === hostname ? currentGroupIndex : 0;
                     const { fullPath, imgPath } = group[groupCitationIndex] || group[0];
+
                     return (
-                        <div
+                        <HoverCard 
                             key={hostname}
-                            className="relative group border border-gray-400 rounded bg-black p-3 text-sm md:text-base w-fit h-7 flex justify-center items-center text-white px-3 py-2 mb-2 cursor-pointer transition-shadow hover:shadow-lg whitespace-nowrap"
-                            onClick={e => {
-                                e.stopPropagation();
-                                if (openGroup === hostname && locked) {
-                                    setOpenGroup(null);
-                                    setLocked(false);
-                                } else {
-                                    setOpenGroup(hostname);
-                                    setLocked(true);
-                                }
+                            open={openCards[hostname]}
+                            onOpenChange={(open) => {
+                                setOpenCards(prev => ({ ...prev, [hostname]: open }));
                             }}
                         >
-
-
-                            {c.code || c.title || c.citation || c.subject_area || c.fileName || "Reference"}
-                            {isTooltipOpen && c.reference && (
-                                <div className="absolute z-50 rounded-md -translate-x-1/2 bottom-full left-1/2 ml-15 md:ml-40  mb-2 flex flex-col text-left justify-start min-w-[250px] md:min-w-[350px] max-w-xs bg-white text-gray-900 border border-gray-300 shadow-lg text-xs">
-                                    {/* Arrow and navigation for only this group */}
-                                    <div className="flex items-center rounded-t-md justify-between w-full bg-gray-100 p-2">
-                                        <div>
-                                            <button
-                                                className="p-1 disabled:opacity-30"
-                                                disabled={groupCitationIndex === 0}
-                                                onClick={e => {
-                                                    e.stopPropagation();
-                                                    setCurrentCitationIndex(groupStartIndex + Math.max(0, groupCitationIndex - 1));
-                                                }}
-                                            >
-                                                <ChevronLeft className="cursor-pointer"/>
-                                            </button>
-                                            <button
-                                                className="p-1 disabled:opacity-30"
-                                                disabled={groupCitationIndex === groupCitations.length - 1}
-                                                onClick={e => {
-                                                    e.stopPropagation();
-                                                    setCurrentCitationIndex(groupStartIndex + Math.min(groupCitations.length - 1, groupCitationIndex + 1));
-                                                }}
-                                            >
-                                                <ChevronRight className="cursor-pointer"/>
-                                            </button>
-                                        </div>
-                                        <span className="font-semibold text-xs">
-                                            {groupCitationIndex + 1} / {groupCitations.length}
-                                        </span>
+                            <HoverCardTrigger asChild>
+                                <div 
+                                    className="citation-card relative group border border-gray-400 rounded bg-black p-3 text-sm md:text-base w-fit h-7 flex justify-center items-center text-white px-3 py-2 mb-2 cursor-pointer transition-shadow hover:shadow-lg whitespace-nowrap"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenCards(prev => ({
+                                            ...prev,
+                                            [hostname]: !prev[hostname]
+                                        }));
+                                    }}
+                                >
+                                    {c.code || c.title || c.citation || c.subject_area || c.fileName || "Reference"}
+                                </div>
+                            </HoverCardTrigger>
+                            <HoverCardContent 
+                                className="citation-card min-w-[250px] md:min-w-[350px] max-w-xs p-0 w-full ml-5 "
+                                side="top"
+                                align="center"
+                            >
+                                <div className="flex items-center rounded-t-md justify-between w-full bg-gray-100 p-2">
+                                    <div>
+                                        <button
+                                            className="p-1 disabled:opacity-30"
+                                            disabled={groupCitationIndex === 0}
+                                            onClick={e => {
+                                                e.stopPropagation();
+                                                setCurrentCitationIndex(groupStartIndex + Math.max(0, groupCitationIndex - 1));
+                                            }}
+                                        >
+                                            <ChevronLeft className="cursor-pointer"/>
+                                        </button>
+                                        <button
+                                            className="p-1 disabled:opacity-30"
+                                            disabled={groupCitationIndex === groupCitations.length - 1}
+                                            onClick={e => {
+                                                e.stopPropagation();
+                                                setCurrentCitationIndex(groupStartIndex + Math.min(groupCitations.length - 1, groupCitationIndex + 1));
+                                            }}
+                                        >
+                                            <ChevronRight className="cursor-pointer"/>
+                                        </button>
                                     </div>
-                                    <div className="px-3 my-5">
-                                        <div className="flex items-center mb-2 gap-2">
-                                            <img src={imgPath} alt="icon" className="h-[22px] w-[22px] rounded-lg border-amber-200" />
-                                            <div className="font-semibold">{hostname}</div>
-                                        </div>
-                                        <div className="break-all text-gray-700">
-                                            <a
-                                                href={fullPath}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="block break-all whitespace-normal"
-                                            >
-                                                {fullPath}
-                                            </a>
-                                        </div>
+                                    <span className="font-semibold text-xs">
+                                        {groupCitationIndex + 1} / {groupCitations.length}
+                                    </span>
+                                </div>
+                                <div className="px-3 my-5">
+                                    <div className="flex items-center mb-2 gap-2">
+                                        <img src={imgPath} alt="icon" className="h-[22px] w-[22px] rounded-lg border-amber-200" />
+                                        <div className="font-semibold">{hostname}</div>
+                                    </div>
+                                    <div className="break-all text-gray-700">
+                                        <a
+                                            href={fullPath}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block break-all whitespace-normal"
+                                        >
+                                            {fullPath}
+                                        </a>
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                            </HoverCardContent>
+                        </HoverCard>
                     );
                 })}
             </div>
