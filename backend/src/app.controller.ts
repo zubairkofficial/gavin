@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { JWTUser } from './auth/decorators/jwtUser.decorator';
@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Status } from './documents/entities/status.entity';
 import { Repository } from 'typeorm';
 import { Cron } from './cron.entity';
+import { SystemPrompt } from './documents/entities/system-prompt.entity';
 
 let isProcessing = false;
 
@@ -22,6 +23,8 @@ export class AppController {
          private StatusRepository: Repository<Status>,
      @InjectRepository(Cron)
          private cronRepository: Repository<Cron>,
+     @InjectRepository(SystemPrompt)
+         private systemPromptRepository: Repository<SystemPrompt>,
   ) {
 
   }
@@ -124,4 +127,70 @@ export class AppController {
       return this.tasksService.deleteCronJob(name);
     }
 
+  @Post('set-systemprompt')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Set or update system prompt for a user' })
+  @ApiResponse({
+    status: 200,
+    description: 'System prompt set successfully',
+  })
+  async setSystemPrompt(
+    @Req() req: any,
+    @Body() body: { prompt: string }
+  ) {
+    let systemPrompt = await this.systemPromptRepository.find({
+    });
+    // console.log('System prompt:', systemPrompt);
+    // if(systemPrompt) {
+    //   console.log('System prompt already exists for user:', req.user.id);
+    // }else{
+    //   console.log('Creating new system prompt for user:', req.user.id);
+    // }
+
+    if (systemPrompt.length > 0) {
+      // console.log('we are in if');
+     const existingPrompt = systemPrompt[0]; // Get the first prompt since we only need one
+        existingPrompt.prompt = body.prompt;
+        await this.systemPromptRepository.save(existingPrompt);
+        return {
+            message: 'System prompt updated successfully',
+            systemPrompt: existingPrompt
+        };
+    } else {
+      // console.log('we are in else');
+      const newPrompt = this.systemPromptRepository.create({
+            prompt: body.prompt
+        });
+        const savedPrompt = await this.systemPromptRepository.save(newPrompt);
+        return {
+            message: 'System prompt created successfully',
+            systemPrompt: savedPrompt
+        };
+    }
+  }
+
+  @Get('get-prompt')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get system prompt for the authenticated user' })
+  @ApiResponse({
+    status: 200,
+    description: 'System prompt retrieved successfully',
+  })
+  async getSystemPrompt(@Req() req: any) {
+    // console.log('Fetching system prompt for user:', req.user.id);
+    const systemPrompt = await this.systemPromptRepository.find({
+    });
+
+    if (!systemPrompt) {
+      return {
+        message: 'No system prompt found for this user',
+        systemPrompt: null
+      };
+    }
+
+    return {
+      message: 'System prompt retrieved successfully',
+      systemPrompt
+    };
+  }
 }

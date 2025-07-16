@@ -20,7 +20,6 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({
     setCitationIndexes
 }) => {
     // Track open state for each card
-    const [openCards, setOpenCards] = React.useState<{ [key: string]: boolean }>({});
 
     // Safely extract citation part
     let citationPart = "";
@@ -48,7 +47,7 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({
             const handleClickOutside = (e: MouseEvent) => {
                 const target = e.target as HTMLElement;
                 if (!target.closest('.citation-card')) {
-                    setOpenCards({});
+                    setCurrentCitationIndex(0); // Reset to first citation on outside click
                 }
             };
             document.addEventListener('mousedown', handleClickOutside);
@@ -91,7 +90,7 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({
         }
 
         return (
-            <div className="mt-2   flex flex-row gap-2">
+            <div className="mt-2   flex flex-row gap-2 cursor-pointer">
                 {Object.entries(groupedCitations).map(([hostname, group]) => {
                     const { c } = group[0];
                     const groupStartIndex = citations.findIndex((cit: any) => {
@@ -114,21 +113,12 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({
                     return (
                         <HoverCard 
                             key={hostname}
-                            open={openCards[hostname]}
-                            onOpenChange={(open) => {
-                                setOpenCards(prev => ({ ...prev, [hostname]: open }));
-                            }}
+                          
+                            
                         >
                             <HoverCardTrigger asChild>
                                 <div 
-                                    className="citation-card relative group border border-gray-400 rounded bg-black p-3 text-sm md:text-base w-fit h-7 flex justify-center items-center text-white px-3 py-2 mb-2 cursor-pointer transition-shadow hover:shadow-lg whitespace-nowrap"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenCards(prev => ({
-                                            ...prev,
-                                            [hostname]: !prev[hostname]
-                                        }));
-                                    }}
+                                    className="citation-card relative group border border-gray-400 rounded bg-black p-3 text-sm md:text-base w-fit h-7 flex justify-center items-center text-white px-3 py-2 mb-2 transition-shadow hover:shadow-lg whitespace-nowrap"
                                 >
                                     {c.code || c.title || c.citation || c.subject_area || c.fileName || "Reference"}
                                 </div>

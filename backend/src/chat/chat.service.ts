@@ -26,6 +26,7 @@ import { fi } from 'zod/dist/types/v4/locales';
 import { fileURLToPath } from 'url';
 import OpenAI from "openai";
 import { end } from 'cheerio/dist/commonjs/api/traversing';
+import { SystemPrompt } from '@/documents/entities/system-prompt.entity';
 
 
 @Injectable()
@@ -44,6 +45,9 @@ export class ChatService {
   private caseRepository: Repository<Case>;
   @InjectRepository(Statute)
   private statuteRepository: Repository<Statute>;
+
+  @InjectRepository(SystemPrompt)
+  private systemPromptRepository: Repository<SystemPrompt>;
 
   constructor(private configService: ConfigService) {
     const openAiApiKey = this.configService.get<string>('OPENAI_API_KEY');
@@ -175,20 +179,29 @@ export class ChatService {
       if (websearch == 'true') {
         // console.log('Web search enabled for this message');
         let context = '';
+        let promptfromDB = '';
       // Only include citations if relevantDocs found and not just file upload
       context += fileContent ? `File Content:\n${fileContent}\n` : '';
-
-
-
-      const systemPrompt = `
-        🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
+        // console.log('userId to fetch system prompt:', userId);
+        const data = await this.systemPromptRepository.find({})
+        // console.log('the data that we got from system repo is',data[0]?.prompt)
+        promptfromDB = data[0]?.prompt 
+        if(data.length == 0){
+          const data = await this.systemPromptRepository.create({
+            prompt:`🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
         Instructions:
           - *Context Understanding*: Check follow-up questions by analyzing the chat history and current question context.
           - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
           - If you do not find an answer in the Document Context, File Content, or chat history, respond with what you can based on the provided information also web search as well.
           - Provide the answer in a concise manner and include proper citations.
-          - 
-      `;
+          - `
+          })
+        const dat =  await this.systemPromptRepository.save(data)
+          // console.log('System prompt created after save:', dat.prompt);
+          promptfromDB = dat.prompt
+        }
+
+        const systemPrompt =`${promptfromDB}` 
       let prompt = `
         Use the following information to answer the question:
         ${fileContent ? `File Content:\n${fileContent}\n` : ''}
@@ -542,20 +555,31 @@ relevantDocs = bestDoc;
         // 'can you answer my question', 'can you provide information', 'can you give me advice', 'can you explain something', 'can you clarify something',
         // 'hy'
       ];
+        let promptfromDB = '';
 
       const lowerMsg = message.toLowerCase();
       const isGreeting = greetings.some(greet => lowerMsg.includes(greet));
-
-      
-
-      const systemPrompt = `
-        🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
+        // console.log('user id to fetch the system prompt:', userId);
+        const data = await this.systemPromptRepository.find({
+        })
+        // console.log('data that we got for the system prompt',data[0]?.prompt )
+        promptfromDB = data[0]?.prompt 
+        if(data.length == 0){
+          const data = await this.systemPromptRepository.create({
+            prompt:`🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
         Instructions:
           - *Context Understanding*: Check follow-up questions by analyzing the chat history and current question context.
           - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
-          - If you do not find an answer in the Document Context, File Content, or chat history, respond with what you can based on the provided information.
+          - If you do not find an answer in the Document Context, File Content, or chat history, respond with what you can based on the provided information also web search as well.
           - Provide the answer in a concise manner and include proper citations.
-      `;
+          - `
+          })
+        const dat =   await this.systemPromptRepository.save(data)
+        // console.log('System prompt created after save:', dat.prompt);
+          promptfromDB = dat.prompt
+        }
+
+        const systemPrompt = `${promptfromDB}`
       let prompt = `
         Use the following information to answer the question:
 

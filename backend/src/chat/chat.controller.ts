@@ -120,7 +120,7 @@ export class ChatController {
             // console.log('Using websearch value:', createMessageDto.websearch);
             // await this.messageRepository.delete({ id: lastAssistantMsg.id });
             upadtedMessageId = lastAssistantMsg.id
-            console.log('Deleting most recent assistant message:', lastAssistantMsg.id, 'the whole data ', lastAssistantMsg);
+            // console.log('Deleting most recent assistant message:', lastAssistantMsg.id, 'the whole data ', lastAssistantMsg);
           } else {
             console.log('No assistant message found to delete for conversation:', createMessageDto.conversationId);
           }

@@ -20,6 +20,9 @@ import { Status } from './documents/entities/status.entity';
 import { Cron } from './cron.entity';
 import { Case } from './documents/entities/case.entity';
 import { ChatModule } from './chat/chat.module';
+import { DeleteService } from './delete.service';
+import { Message } from './chat/entities/message.entity';
+import { SystemPrompt } from './documents/entities/system-prompt.entity';
 
 
 @Module({
@@ -57,11 +60,12 @@ import { ChatModule } from './chat/chat.module';
     SharedModule,
     DocumentsModule,
     JurisdictionsModule,
-    TypeOrmModule.forFeature([Statute , Regulation , Status , Cron , Case]),
+    TypeOrmModule.forFeature([Statute , Regulation , Status , Cron , Case , Message, SystemPrompt]),
   ],
   controllers: [AppController],
   providers: [
     TasksService,
+    DeleteService,
     AppService,
     EmbeddingService,
     {

@@ -9,11 +9,13 @@ import { Contract } from '@/documents/entities/contract.entity';
 import { Regulation } from '@/documents/entities/regulation.entity';
 import { Case } from '@/documents/entities/case.entity';
 import { Statute } from '@/documents/entities/statute.entity';
+import { SystemPrompt } from '@/documents/entities/system-prompt.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Message , Contract , Regulation , Case , Statute]),
+    TypeOrmModule.forFeature([Message , Contract , Regulation , Case , Statute , SystemPrompt]),
     ConfigModule.forFeature(openaiConfig),
+    
   ],
   controllers: [ChatController],
   providers: [ChatService],

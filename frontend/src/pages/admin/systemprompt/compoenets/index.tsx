@@ -27,10 +27,11 @@ export default function SystemPromptManager({ className }: SystemPromptManagerPr
       try {
         setIsFetching(true)
         setError(null)
-        const response = await API.get("/chat/get-prompt")
+        const response = await API.get("get-prompt")
 
-        if (response.data?.prompt) {
-          setPrompt(response.data.prompt)
+        if (response.data) {
+          setPrompt(response.data.systemPrompt[0]?.prompt )
+          // console.log("Fetched system prompt:", response.data.systemPrompt)
         }
       } catch (err) {
         console.error("Failed to fetch prompt:", err)
@@ -45,7 +46,7 @@ export default function SystemPromptManager({ className }: SystemPromptManagerPr
 
   // Handle update button click
   const handleUpdate = async () => {
-    if (!prompt.trim()) {
+    if (!prompt) {
       setError("Please enter a system prompt")
       return
     }
@@ -55,8 +56,8 @@ export default function SystemPromptManager({ className }: SystemPromptManagerPr
       setError(null)
       setSuccess(false)
 
-      const response = await API.post("/chat/save-prompt", {
-        prompt: prompt.trim(),
+      const response = await API.post("/set-systemprompt", {
+        prompt: prompt,
       })
 
       if (response.status === 200 || response.status === 201) {
@@ -127,7 +128,7 @@ export default function SystemPromptManager({ className }: SystemPromptManagerPr
 
               {/* Update Button */}
               <div className="flex justify-end">
-                <Button onClick={handleUpdate} disabled={isLoading || !prompt.trim()} className="min-w-[120px]">
+                <Button onClick={handleUpdate} disabled={isLoading || !prompt} className="min-w-[120px]">
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
