@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate, useParams } from "react-router-dom"
 import { boolean } from "zod"
+import { ms } from "date-fns/locale"
 
 interface AttachedDocument {
   id: string
@@ -53,6 +54,7 @@ interface AttachedDocument {
 
 interface ChatMessage {
   id: string
+  originalId?: string // Used to track original message ID for streaming updates
   role: "user" | "assistant"
   content: string
   currentMessages?: any
@@ -126,6 +128,7 @@ const Chat = ({
       if (response.status >= 200 && response.status < 300) {
         const data = response.data
         setConversationId(urlConversationId)
+        console.log("Fetched conversation data:", data)
         if (data.title) {
           setTitle(data.title)
         }
@@ -136,7 +139,9 @@ const Chat = ({
             let transformedDocuments: AttachedDocument[] | undefined = undefined
 
             if (msg.documents && Array.isArray(msg.documents) && msg.documents.length > 0) {
+              
               transformedDocuments = msg.documents.map((doc: any, docIndex: number) => ({
+              
                 id: `${msg.id}-doc-${docIndex}`,
                 name: doc.fileName || doc.name || `Document ${docIndex + 1}`,
                 type: doc.fileType || doc.type || "Document",
@@ -156,18 +161,20 @@ const Chat = ({
                 },
               ]
             }
-
+            console.log("Transformed documents for message:", msg.id,)
             const userMsg: ChatMessage = {
               id: `${msg.id}-user`,
               role: "user",
+              originalId: msg.id, // Store original ID for streaming updates
               content: msg.userMessage || "",
               documents: transformedDocuments,
               isStreaming: false,
             }
-
+            console.log("Transformed user message:", msg.id)
             const aiMsg: ChatMessage = {
-              id: `${msg.id}-assistant`,
+              id: msg.id, // Use the original message ID directly
               role: "assistant",
+              originalId: msg.id,
               content: msg.aiResponse || "",
               documents: undefined,
               isStreaming: false,
@@ -316,7 +323,8 @@ const Chat = ({
 
       const response = await fetch(`${baseURL}/chat/message`, {
         method: "POST",
-        headers: {
+        headers:
+         {
           // Don't set Content-Type header when sending FormData
           // The browser will set it automatically with the boundary
           Accept: "text/event-stream",
@@ -399,7 +407,14 @@ const Chat = ({
                 // Handle completion
                 if (data.done) {
                   setMessages((prev) =>
-                    prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg)),
+                    prev.map((msg) => 
+                      msg.id === assistantMessageId ? {
+                        ...msg,
+                        id: data.messageid || msg.id, // Use the backend messageid if available
+                        originalId: data.messageid || msg.id, // Store it as originalId too
+                        isStreaming: false
+                      } : msg
+                    ),
                   )
                   setIsLoading(false)
                   // Only update the sidebar (conversations list), not the chat messages
@@ -480,18 +495,23 @@ const Chat = ({
   const handleRegenerate = async (assistantMsgId: string) => {
     // Find the assistant message index
     const assistantIndex = messages.findIndex((msg) => msg.id === assistantMsgId)
+    console.log("Regenerating message for assistant ID:", assistantMsgId)
     if (assistantIndex === -1 || assistantIndex === 0) return
 
     // The user message is usually just before the assistant message
+    const assistantMsg = messages[assistantIndex]
     const userMsg = messages[assistantIndex - 1]
     if (!userMsg || userMsg.role !== "user") return
 
+    // Use the assistant message ID directly since it's the original backend ID
+    console.log("Using message ID for regeneration:", assistantMsgId)
+    
     // Remove the old assistant message and insert a new streaming one
-    const newAssistantId = `${Date.now()}-regen`
+    const tempId = `${Date.now()}-regen`
     setMessages((prev) => {
       const newMsgs = [...prev]
       newMsgs.splice(assistantIndex, 1, {
-        id: newAssistantId,
+        id: tempId,
         role: "assistant",
         content: "",
         isStreaming: true,
@@ -499,15 +519,15 @@ const Chat = ({
       return newMsgs
     })
 
-    // Send the user message again (reuse logic similar to handleSendMessage)
-    await sendMessageForRegenerate(userMsg, newAssistantId)
+    // Send the user message again with both IDs for regeneration
+    await sendMessageForRegenerate(userMsg, assistantMsgId, tempId)
   }
 
   // Helper for regeneration streaming
-  const sendMessageForRegenerate = async (userMsg: ChatMessage, assistantMessageId: string) => {
+  const sendMessageForRegenerate = async (userMsg: ChatMessage, assistantMessageId: string, tempId: string) => {
     setIsLoading(true)
 
-    const currentConversationId = urlConversationId || conversationId
+    const currentConversationId = urlConversationId 
     const token = localStorage.getItem("authToken")
     const baseURL = API.defaults?.baseURL || ""
 
@@ -521,6 +541,10 @@ const Chat = ({
       formData.append("title", title)
     }
 
+    // Add websearch value to FormData
+    formData.append("websearch", searchWithWeb ? "true" : "false")
+    console.log('Using websearch value for regeneration:', searchWithWeb)
+
     // Add files to FormData
     if (userMsg.documents && userMsg.documents.length > 0) {
       userMsg.documents.forEach((doc) => {
@@ -533,6 +557,7 @@ const Chat = ({
     // Append regeneration parameters
     formData.append("regenerate", "true")
     formData.append("assistantMsgId", assistantMessageId)
+    console.log("Regeneration form asssistnat message:", assistantMessageId)
 
     // This is the id of the old assistant message being replaced
     console.log("form data:", formData)
@@ -583,7 +608,7 @@ const Chat = ({
                   streamingContentRef.current += data.token
                   setMessages((prev) =>
                     prev.map((msg) =>
-                      msg.id === assistantMessageId
+                      msg.id === tempId
                         ? { ...msg, content: streamingContentRef.current, isStreaming: true }
                         : msg,
                     ),
@@ -593,7 +618,14 @@ const Chat = ({
                 // Handle completion
                 if (data.done) {
                   setMessages((prev) =>
-                    prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg)),
+                    prev.map((msg) => 
+                      msg.id === tempId ? {
+                        ...msg,
+                        id: data.messageid || assistantMessageId,
+                        originalId: data.messageid || assistantMessageId,
+                        isStreaming: false
+                      } : msg
+                    ),
                   )
                   setIsLoading(false)
                   setTimeout(() => {
@@ -624,12 +656,12 @@ const Chat = ({
         reader.releaseLock()
       }
 
-      setMessages((prev) => prev.map((msg) => (msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg)))
+      setMessages((prev) => prev.map((msg) => (msg.id === tempId ? { ...msg, isStreaming: false } : msg)))
       setIsLoading(false)
     } catch (error) {
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === assistantMessageId ? { ...msg, content: "Error regenerating response.", isStreaming: false } : msg,
+          msg.id === tempId ? { ...msg, content: "Error regenerating response.", isStreaming: false } : msg,
         ),
       )
       setIsLoading(false)

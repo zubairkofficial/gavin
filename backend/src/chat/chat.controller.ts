@@ -24,7 +24,7 @@ import * as fs from 'fs';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Message } from './entities/message.entity';
-import { Repository } from 'typeorm';
+import { MssqlParameter, Repository } from 'typeorm';
 import { Public } from '@/auth/decorators/public.decorator';
 import { ChatOpenAI } from '@langchain/openai';
 import { ConfigService } from '@nestjs/config';
@@ -104,18 +104,19 @@ export class ChatController {
 
 
     try {
-
+      // console.log('Received regenerate request for message', createMessageDto.assistantMsgId);
+      // console.log('Received regenerate request for conversation', createMessageDto.conversationId);
       // --- Regenerate logic: delete most recent assistant message if needed ---
       if (createMessageDto.regenerate && createMessageDto.conversationId) {
         try {
-          // TODO: Fixme
           // Find the most recent assistant message in this conversation
           const lastAssistantMsg = await this.messageRepository.findOne({
             where: { conversationId: createMessageDto.conversationId, id: createMessageDto.assistantMsgId },
             order: { createdAt: 'DESC' },
           });
           if (lastAssistantMsg) {
-            console.log('Regenerating message, deleting most recent assistant message with ID:', lastAssistantMsg.id);
+            // console.log('Regenerating message, deleting most recent assistant message with ID:', lastAssistantMsg.id);
+            // console.log('Using websearch value:', createMessageDto.websearch);
             await this.messageRepository.delete({ id: lastAssistantMsg.id });
           } else {
             console.log('No assistant message found to delete for conversation:', createMessageDto.conversationId);
@@ -124,6 +125,8 @@ export class ChatController {
           console.error('Error deleting most recent assistant message:', deleteError);
         }
       }
+
+      // console.log('web search that is using in the controller',createMessageDto.websearch)
 
       const result = await this.chatService.sendMessage(createMessageDto, req, files?.files || []);
       streamData = result;
@@ -200,11 +203,33 @@ export class ChatController {
           }
           fullAiResponse += citationJson;
         }
+         let msgcontent 
+        try {
+       const msg = await this.chatService.saveMessage(
+          createMessageDto.message,
+          fullAiResponse,
+          streamData.title,
+          streamData.userId,
+          streamData.conversationId,
+          result.filename || '',
+          result.size || '',
+          result.type || '',
+          result.fileContent || ''
+        );
+        console.log('Message saved successfull ' , msg)
+        msgcontent = msg
+        } catch (saveError) {
+        console.error('Error saving message:', saveError);
+        if (!clientDisconnected && !res.destroyed) {
+          res.write(`data: ${JSON.stringify({ error: 'Failed to save message' })}\n\n`);
+        }
+      }
+      console.log('Message saved successfully:', msgcontent);
 
 
         // Send final "done" event if no client disconnection
         if (!clientDisconnected && !res.destroyed) {
-          res.write(`data: ${JSON.stringify({ done: true, documentContext: result.documentContext })}\n\n`);
+          res.write(`data: ${JSON.stringify({ done: true, documentContext: result.documentContext , messageid : msgcontent.id })}\n\n`);
           console.log(`data: ${JSON.stringify({ done: true, documentContext: result.documentContext })}\n\n`);
           if (typeof (res as any).flush === 'function') {
             (res as any).flush();
@@ -251,23 +276,9 @@ export class ChatController {
           fullAiResponse += citationJson;
         }
 
-        // Send final done event
-        if (!clientDisconnected && !res.destroyed) {
-          res.write(`data: ${JSON.stringify({
-            done: true,
-            documentContext: result.documentContext,
-            finalContent: fullAiResponse
-          })}\n\n`);
-          if (typeof (res as any).flush === 'function') {
-            (res as any).flush();
-          }
-        }
-      }
-
-
-      // Save message to database after streaming is complete
-      try {
-        await this.chatService.saveMessage(
+        let msgcontent
+        try {
+       const msg = await this.chatService.saveMessage(
           createMessageDto.message,
           fullAiResponse,
           streamData.title,
@@ -278,12 +289,50 @@ export class ChatController {
           result.type || '',
           result.fileContent || ''
         );
-      } catch (saveError) {
+
+        msgcontent = msg
+        } catch (saveError) {
         console.error('Error saving message:', saveError);
         if (!clientDisconnected && !res.destroyed) {
           res.write(`data: ${JSON.stringify({ error: 'Failed to save message' })}\n\n`);
         }
       }
+      console.log('Message saved successfully:', msgcontent);
+
+        // Send final done event
+        if (!clientDisconnected && !res.destroyed) {
+          res.write(`data: ${JSON.stringify({
+            done: true,
+            documentContext: result.documentContext,
+            finalContent: fullAiResponse,
+            messageId : msgcontent.id,
+          })}\n\n`);
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
+        }
+      }
+
+
+      // Save message to database after streaming is complete
+      // try {
+      //   await this.chatService.saveMessage(
+      //     createMessageDto.message,
+      //     fullAiResponse,
+      //     streamData.title,
+      //     streamData.userId,
+      //     streamData.conversationId,
+      //     result.filename || '',
+      //     result.size || '',
+      //     result.type || '',
+      //     result.fileContent || ''
+      //   );
+      // } catch (saveError) {
+      //   console.error('Error saving message:', saveError);
+      //   if (!clientDisconnected && !res.destroyed) {
+      //     res.write(`data: ${JSON.stringify({ error: 'Failed to save message' })}\n\n`);
+      //   }
+      // }
 
     } catch (error) {
       console.error('Streaming error:', error);

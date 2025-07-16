@@ -173,7 +173,7 @@ export class ChatService {
       // condionally handle web search or document context
       
       if (websearch == 'true') {
-        console.log('Web search enabled for this message');
+        // console.log('Web search enabled for this message');
         let context = '';
       // Only include citations if relevantDocs found and not just file upload
       context += fileContent ? `File Content:\n${fileContent}\n` : '';
@@ -193,6 +193,7 @@ export class ChatService {
         Use the following information to answer the question:
         ${fileContent ? `File Content:\n${fileContent}\n` : ''}
         ${context ? `Context:\n${context}\n` : ''}
+        ${chatHistoryContext ? `Chat History:\n${chatHistoryContext}\n` : ''}
 
         if ${fileContent} just use the file content and chat history context to answer the question.
 
@@ -214,19 +215,19 @@ export class ChatService {
           new SystemMessage(systemPrompt),
           new HumanMessage(prompt)
         ]);
-        console.log('stream:', stream, 'stream type:', typeof stream);
+        // console.log('stream:', stream, 'stream type:', typeof stream);
         // console.log('stream:', stream);
 
         // Safely check and process output array with nested content and annotations
         if (stream?.response_metadata?.output) {
           stream.response_metadata.output.forEach((output: any, index: number) => {
-            console.log(`Processing Output[${index}]`);
+            // console.log(`Processing Output[${index}]`);
             if (output?.content && Array.isArray(output.content)) {
               output.content.forEach((content: any, contentIndex: number) => {
-                console.log(`Processing Content[${contentIndex}]`);
+                // console.log(`Processing Content[${contentIndex}]`);
                 if (content?.annotations && Array.isArray(content.annotations)) {
                   content.annotations.forEach((annotation: any, annotationIndex: number) => {
-                    console.log(`Annotation----------------[${annotationIndex}]:`, annotation);
+                    // console.log(`Annotation----------------[${annotationIndex}]:`, annotation);
                     annotations.push({
                       title: annotation.title || '',
                       reference: annotation.url || '',
@@ -250,7 +251,7 @@ export class ChatService {
         documentContext = []
       }
 
-        console.log('Document context:', documentContext);
+        // console.log('Document context:', documentContext);
 
 
         // You can implement web search logic here if needed
@@ -619,7 +620,7 @@ relevantDocs = bestDoc;
     type: string,
     fileContent?: string
 
-  ): Promise<void> {
+  ): Promise<Message> {
     try {
       const messageEntity = new Message();
       messageEntity.userMessage = message;
@@ -632,8 +633,10 @@ relevantDocs = bestDoc;
       messageEntity.fileType = type;
       messageEntity.fileContent = fileContent || '';
 
-      await this.messageRepository.save(messageEntity);
+    const msg =  await this.messageRepository.save(messageEntity);
       // console.log('Message saved successfully');
+
+      return msg;
     } catch (saveError) {
       console.error('Error saving message:', saveError);
       throw saveError;
