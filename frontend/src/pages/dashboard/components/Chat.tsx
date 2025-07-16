@@ -703,7 +703,7 @@ className="cursor-pointer bg-white border-2 border-gray-200 hover:bg-black py-1 
                             </a>
 
                             {isActive && annotations[currentIndex] && (
-                              <div ref={tooltipRef} className="absolute z-100 rounded-md -translate-x-1/2 bottom-full left-full ml-15 md:ml-40 mb-2 flex flex-col text-left justify-start min-w-[250px] md:min-w-[350px] max-w-xs bg-white text-gray-900 border border-gray-300 shadow-lg text-xs">
+                              <div ref={tooltipRef} className="absolute z-100 rounded-md left-full  md:left-0 right-1/2  -translate-x-1/2 bottom-full  ml-15 md:ml-40 mb-2 flex flex-col text-left justify-start min-w-[300px] md:min-w-[350px] max-w-xs bg-white text-gray-900 border border-gray-300 shadow-lg text-xs">
                                 <div className="flex items-center rounded-t-md justify-between w-full bg-gray-100 p-2">
                                   <div>
                                     <button

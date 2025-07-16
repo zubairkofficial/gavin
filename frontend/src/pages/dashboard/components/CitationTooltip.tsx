@@ -123,7 +123,7 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({ msgId, msgContent, ci
 
                             {c.code || c.title || c.citation || c.subject_area || c.fileName || "Reference"}
                             {isTooltipOpen && c.reference && (
-                                <div className="absolute z-50 rounded-md -translate-x-1/2 bottom-full left-full ml-15 md:ml-40  mb-2 flex flex-col text-left justify-start min-w-[250px] md:min-w-[350px] max-w-xs bg-white text-gray-900 border border-gray-300 shadow-lg text-xs">
+                                <div className="absolute z-50 rounded-md -translate-x-1/2 bottom-full left-1/2 ml-15 md:ml-40  mb-2 flex flex-col text-left justify-start min-w-[250px] md:min-w-[350px] max-w-xs bg-white text-gray-900 border border-gray-300 shadow-lg text-xs">
                                     {/* Arrow and navigation for only this group */}
                                     <div className="flex items-center rounded-t-md justify-between w-full bg-gray-100 p-2">
                                         <div>
