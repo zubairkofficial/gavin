@@ -572,7 +572,7 @@ const Chat = ({
       const response = await fetch(`${baseURL}/chat/message`, {
         method: "POST",
         headers: {
-          Accept: "text/event-stream", 
+          Accept: "text/event-stream",
           Authorization: token ? `Bearer ${token}` : "",
         },
         body: formData,
@@ -708,7 +708,7 @@ const Chat = ({
       <div key={msg.id} className="rounded-lg mb-4  custom-inline !m-0">
         <div className="space-y-3 ">
           <p className="text-gray-800  text-[14px] leading-[26px] ">
-            <span  style={{ display: "inline-block" }}>
+            <span style={{ display: "inline-block" }}>
               {/* <ReactMarkdown>
             {msg.content}
             </ReactMarkdown> */}
@@ -752,22 +752,6 @@ const Chat = ({
                                         <span className="font-semibold text-xs">
                                           {currentIndex + 1} / {annotations.length}
                                         </span>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <button
-                                          onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-                                          disabled={currentIndex === 0}
-                                          className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                          <ChevronLeft className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                          onClick={() => setCurrentIndex(Math.min(annotations.length - 1, currentIndex + 1))}
-                                          disabled={currentIndex === annotations.length - 1}
-                                          className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                          <ChevronRight className="h-4 w-4" />
-                                        </button>
                                       </div>
                                     </div>
                                     <div className="px-3 my-5">
@@ -1027,46 +1011,55 @@ const Chat = ({
             style={{ minWidth: 0 }}
           />
 
-          <div className="flex items-center gap-2 px-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-sm">
-                  <span className="sr-only">Open tools menu</span>
-                  <div className="flex items-center gap-2">
+          <div className="flex w-full items-center justify-between absolute bottom-0 right-2 px-2 md:px-0">
+            <div className="flex items-center gap-1 mr-auto">
+              {/* Attach Document Button */}
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" className="ml-4 h-8 hover:bg-gray-100">
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
+
+              {/* Search Options Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 hover:bg-gray-100">
                     <span>Tools</span>
                     <WrenchIcon className="h-4 w-4" />
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" side="bottom">
-                <DropdownMenuItem
-                  onClick={() => setSearchWithWeb(!searchWithWeb)}
-                  className="flex items-center gap-2"
-                >
-                  <Globe className="h-4 w-4" />
-                  Search with web
-                  {searchWithWeb && <span className="ml-auto">✓</span>}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" side="bottom">
+                  <DropdownMenuItem
+                    onClick={() => setSearchWithWeb(!searchWithWeb)}
+                    className="flex items-center gap-2"
+                  >
+                    <Globe className="h-4 w-4" />
+                    Search with web
+                    {searchWithWeb && <span className="ml-auto">✓</span>}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            {/* Search with Web Badge */}
-            {searchWithWeb && (
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                  <Globe className="h-3 w-3" />
-                  Search
-                  <button onClick={() => setSearchWithWeb(false)} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </Badge>
-              </div>
-            )}
+              {/* Search with Web Badge */}
+              {searchWithWeb && (
+                <div className="flex items-center gap-2 px-2 py-1">
+                  <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                    <Globe className="h-3 w-3" />
+                    Search
+                    <button onClick={() => setSearchWithWeb(false)} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </Badge>
+                </div>
+              )}
+            </div>
 
             <Button
               onClick={handleSendMessage}
               disabled={isLoading || (!message.trim() && selectedDocuments.length === 0)}
-              className="rounded-sm ml-auto justify-self-end text-white hover:text-white bg-foreground hover:bg-gray-600 px-3 md:px-4 mb-2 text-xs md:text-sm disabled:opacity-50"
+              className="rounded-sm ml-auto justify-self-end text-white hover:text-white bg-foreground hover:bg-gray-600 px-3 md:px-4 mb-2  text-xs md:text-sm disabled:opacity-50"
             >
               {isLoading ? "Sending..." : "Ask Gavin"}
             </Button>

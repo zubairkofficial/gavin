@@ -1,22 +1,14 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { ReactNode, RefObject } from 'react';
-
-interface Annotation {
-    reference: string;
-    title: string;
-    type?: string;
-    start_index?: string;
-    end_index?: string;
-}
 
 interface AnnotationTooltipProps {
     msgContent: string;
     msgId: string;
     containerRef: RefObject<HTMLDivElement | null>;
     children: (props: {
-        handleLinkInteraction: (link: string | null, isHover: boolean, event?: React.MouseEvent) => void;
+        handleLinkInteraction: (link: string | null, isHover: boolean) => void;
         clickedLink: string | null;
-        annotations: Annotation[];
+        annotations: any[];
         currentIndex: number;
         tooltipRef: RefObject<HTMLDivElement | null>;
         setCurrentIndex: (index: number) => void;
@@ -24,11 +16,9 @@ interface AnnotationTooltipProps {
     }) => ReactNode;
 }
 
-const AnnotationTooltip: React.FC<AnnotationTooltipProps> = ({ msgContent, containerRef, children }) => {
+const AnnotationTooltip: React.FC<AnnotationTooltipProps> = ({ msgContent, children }) => {
     const [clickedLink, setClickedLink] = useState<string | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [tooltipPosition, setTooltipPosition] = useState({ left: 0, transform: 'none' });
-    const tooltipRef = React.useRef<HTMLDivElement>(null);
 
     // Parse annotations from message content
     const annotations = useMemo(() => {
@@ -49,40 +39,15 @@ const AnnotationTooltip: React.FC<AnnotationTooltipProps> = ({ msgContent, conta
         }
     }, [msgContent]);
 
-    // Update tooltip position when link is clicked
-    const updateTooltipPosition = (event: React.MouseEvent) => {
-        if (!containerRef.current || !tooltipRef.current) return;
-
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const clickX = event.clientX - containerRect.left;
-        const tooltipWidth = tooltipRef.current.offsetWidth;
-        const containerWidth = containerRect.width;
-
-        let left = clickX;
-        let transform = 'translateX(-50%)';
-
-        // Adjust position if tooltip would overflow container
-        if (clickX - tooltipWidth / 2 < 0) {
-            left = tooltipWidth / 2;
-            transform = 'translateX(-50%)';
-        } else if (clickX + tooltipWidth / 2 > containerWidth) {
-            left = containerWidth - tooltipWidth / 2;
-            transform = 'translateX(-50%)';
-        }
-
-        setTooltipPosition({ left, transform });
-    };
-
     // Function to handle link interaction
-    const handleLinkInteraction = (link: string | null, isHover: boolean, event?: React.MouseEvent) => {
-        if (!isHover && event) {
+    const handleLinkInteraction = (link: string | null, isHover: boolean) => {
+        if (!isHover) {
             if (link === null) {
                 setClickedLink(null);
             } else {
-                const annotationIndex = annotations.findIndex(a => a?.reference === link);
+                const annotationIndex = annotations.findIndex(a => a.reference === link);
                 if (annotationIndex !== -1) {
                     setCurrentIndex(annotationIndex);
-                    updateTooltipPosition(event);
                 }
                 setClickedLink(link === clickedLink ? null : link);
             }
@@ -93,31 +58,54 @@ const AnnotationTooltip: React.FC<AnnotationTooltipProps> = ({ msgContent, conta
     const handleIndexChange = (newIndex: number) => {
         setCurrentIndex(newIndex);
         const annotation = annotations[newIndex];
-        if (annotation?.reference) {
+        if (annotation) {
             setClickedLink(annotation.reference);
         }
     };
 
-    // Close tooltip when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
-                setClickedLink(null);
-            }
-        };
+    const renderAnnotationContent = (annotation: any) => {
+        if (!annotation) return null;
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        return (
+            <div className="px-3 my-5">
+                <div className="flex items-center mb-2 gap-2">
+                    {annotation.reference && (
+                        <img
+                            src={`${new URL(annotation.reference).protocol}//${new URL(annotation.reference).hostname}/favicon.ico`}
+                            alt="icon"
+                            className="h-[22px] w-[22px] rounded-lg border-amber-200"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                            }}
+                        />
+                    )}
+                    <div className="font-semibold">
+                        {annotation.reference ? new URL(annotation.reference).hostname : 'Reference'}
+                    </div>
+                </div>
+                <h4 className="font-semibold mb-2 text-sm">{annotation.title}</h4>
+                <div className="break-all text-gray-700">
+                    <a
+                        href={annotation.reference}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block break-all whitespace-normal"
+                    >
+                        {annotation.reference}
+                    </a>
+                </div>
+            </div>
+        );
+    };
 
     return children({
         handleLinkInteraction,
         annotations,
         clickedLink,
         currentIndex,
-        tooltipRef,
+        tooltipRef: { current: null },
         setCurrentIndex: handleIndexChange,
-        tooltipPosition
+        tooltipPosition: { left: 0, transform: 'none' }
     });
 };
 
