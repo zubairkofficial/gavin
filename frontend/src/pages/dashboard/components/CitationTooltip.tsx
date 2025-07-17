@@ -5,6 +5,11 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 interface CitationTooltipProps {
     msgId: string;
@@ -111,27 +116,27 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({
                     const { fullPath, imgPath } = group[groupCitationIndex] || group[0];
 
                     return (
-                        <HoverCard 
+                        <Popover 
                             key={hostname}
                           
                             
                         >
-                            <HoverCardTrigger asChild>
+                            <PopoverTrigger asChild>
                                 <div 
-                                    className="citation-card relative group border border-gray-400 rounded bg-black p-3 text-sm md:text-base w-fit h-7 flex justify-center items-center text-white px-3 py-2 mb-2 transition-shadow hover:shadow-lg whitespace-nowrap"
+                                    className="citation-card cursor-pointer bg-white border-2 border-gray-200 hover:bg-black  px-2 mt-1 rounded-sm text-black hover:text-white transition-all duration-200 ease-in-out"
                                 >
                                     {c.code || c.title || c.citation || c.subject_area || c.fileName || "Reference"}
                                 </div>
-                            </HoverCardTrigger>
-                            <HoverCardContent 
-                                className="citation-card min-w-[250px] md:min-w-[350px] max-w-xs p-0 w-full ml-5 "
+                            </PopoverTrigger>
+                            <PopoverContent 
+                                className="citation-card  min-w-[250px] md:min-w-[350px] max-w-xs p-0 w-full ml-5 "
                                 side="top"
                                 align="center"
                             >
-                                <div className="flex items-center rounded-t-md justify-between w-full bg-gray-100 p-2">
+                                <div className="flex items-center rounded-t-md justify-between w-full bg-[#F9F9F9] p-2">
                                     <div>
                                         <button
-                                            className="p-1 disabled:opacity-30"
+                                            className="p-1 disabled:opacity-30 text-[#a7a4a4]"
                                             disabled={groupCitationIndex === 0}
                                             onClick={e => {
                                                 e.stopPropagation();
@@ -141,7 +146,7 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({
                                             <ChevronLeft className="cursor-pointer"/>
                                         </button>
                                         <button
-                                            className="p-1 disabled:opacity-30"
+                                            className="p-1 disabled:opacity-30 text-[#a7a4a4]"
                                             disabled={groupCitationIndex === groupCitations.length - 1}
                                             onClick={e => {
                                                 e.stopPropagation();
@@ -151,16 +156,16 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({
                                             <ChevronRight className="cursor-pointer"/>
                                         </button>
                                     </div>
-                                    <span className="font-semibold text-xs">
+                                    <span className="font-semibold text-xs text-[#a7a4a4]">
                                         {groupCitationIndex + 1} / {groupCitations.length}
                                     </span>
                                 </div>
                                 <div className="px-3 my-5">
                                     <div className="flex items-center mb-2 gap-2">
-                                        <img src={imgPath} alt="icon" className="h-[22px] w-[22px] rounded-lg border-amber-200" />
-                                        <div className="font-semibold">{hostname}</div>
+                                        <img src={imgPath} alt="icon" className="h-[18px] w-[18px] rounded-lg border-amber-200 " />
+                                        <div className="text-[#343434]  font-medium text-[12px]">{hostname}</div>
                                     </div>
-                                    <div className="break-all text-gray-700">
+                                    <div className="text-[#343434]  font-normal text-[12px] break-all">
                                         <a
                                             href={fullPath}
                                             target="_blank"
@@ -171,8 +176,8 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({
                                         </a>
                                     </div>
                                 </div>
-                            </HoverCardContent>
-                        </HoverCard>
+                            </PopoverContent>
+                        </Popover>
                     );
                 })}
             </div>

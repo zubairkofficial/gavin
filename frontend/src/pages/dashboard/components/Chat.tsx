@@ -32,6 +32,11 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "../../../components/ui/hover-card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
@@ -145,9 +150,9 @@ const Chat = ({
             let transformedDocuments: AttachedDocument[] | undefined = undefined
 
             if (msg.documents && Array.isArray(msg.documents) && msg.documents.length > 0) {
-              
+
               transformedDocuments = msg.documents.map((doc: any, docIndex: number) => ({
-              
+
                 id: `${msg.id}-doc-${docIndex}`,
                 name: doc.fileName || doc.name || `Document ${docIndex + 1}`,
                 type: doc.fileType || doc.type || "Document",
@@ -330,7 +335,7 @@ const Chat = ({
       const response = await fetch(`${baseURL}/chat/message`, {
         method: "POST",
         headers:
-         {
+        {
           // Don't set Content-Type header when sending FormData
           // The browser will set it automatically with the boundary
           Accept: "text/event-stream",
@@ -413,7 +418,7 @@ const Chat = ({
                 // Handle completion
                 if (data.done) {
                   setMessages((prev) =>
-                    prev.map((msg) => 
+                    prev.map((msg) =>
                       msg.id === assistantMessageId ? {
                         ...msg,
                         id: data.messageid || msg.id, // Use the backend messageid if available
@@ -511,7 +516,7 @@ const Chat = ({
 
     // Use the assistant message ID directly since it's the original backend ID
     console.log("Using message ID for regeneration:", assistantMsgId)
-    
+
     // Remove the old assistant message and insert a new streaming one
     const tempId = `${Date.now()}-regen`
     setMessages((prev) => {
@@ -533,7 +538,7 @@ const Chat = ({
   const sendMessageForRegenerate = async (userMsg: ChatMessage, assistantMessageId: string, tempId: string) => {
     setIsLoading(true)
 
-    const currentConversationId = urlConversationId 
+    const currentConversationId = urlConversationId
     const token = localStorage.getItem("authToken")
     const baseURL = API.defaults?.baseURL || ""
 
@@ -624,7 +629,7 @@ const Chat = ({
                 // Handle completion
                 if (data.done) {
                   setMessages((prev) =>
-                    prev.map((msg) => 
+                    prev.map((msg) =>
                       msg.id === tempId ? {
                         ...msg,
                         id: data.messageid || assistantMessageId,
@@ -718,38 +723,53 @@ const Chat = ({
                     components={{
                       a: ({ href, children }) => {
                         if (!href) return children;
-                        
+
                         const annotation = annotations?.find((a: any) => a?.reference === href);
                         const isActive = clickedLink === href;
-                        
+
                         return (
                           <>
                             <div className="relative inline-block">
-                              <HoverCard>
-                                <HoverCardTrigger asChild>
-                                  <a
-                                    href={href}
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <p
+                                    // href={href}
                                     className="cursor-pointer bg-white border-2 border-gray-200 hover:bg-black py-1 px-2 mt-1 rounded-sm text-black hover:text-white transition-all duration-200 ease-in-out"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      if (e.ctrlKey || e.metaKey) {
-                                        window.open(href, '_blank', 'noopener,noreferrer');
-                                      } else {
-                                        handleLinkInteraction(href || null, false);
-                                      }
-                                    }}
+                                    // target="_blank"
                                   >
                                     {children}
-                                  </a>
-                                </HoverCardTrigger>
+                                  </p>
+                                </PopoverTrigger>
                                 {annotation && (
-                                  <HoverCardContent 
+                                  <PopoverContent
                                     className="min-w-[300px] md:min-w-[350px] max-w-xs p-0"
                                     side="top"
                                   >
-                                    <div className="flex items-center rounded-t-md justify-between w-full bg-gray-100 p-2">
+                                    <div className="flex items-center rounded-t-md justify-between w-full bg-[#F9F9F9] p-2">
+                                      <div className="flex items-center space-x-1">
+                                        <button
+                                          className="p-1 disabled:opacity-30 hover:bg-gray-200 text-[#a7a4a4] rounded"
+                                          disabled={currentIndex === 0}
+                                          onClick={(e: React.MouseEvent) => {
+                                            e.stopPropagation();
+                                            setCurrentIndex(Math.max(0, currentIndex - 1));
+                                          }}
+                                        >
+                                          <ChevronLeft className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          className="p-1 disabled:opacity-30 hover:bg-gray-200 text-[#a7a4a4] rounded"
+                                          disabled={currentIndex === annotations.length - 1}
+                                          onClick={(e: React.MouseEvent) => {
+                                            e.stopPropagation();
+                                            setCurrentIndex(Math.min(annotations.length - 1, currentIndex + 1));
+                                          }}
+                                        >
+                                          <ChevronRight className="h-4 w-4" />
+                                        </button>
+                                      </div>
                                       <div>
-                                        <span className="font-semibold text-xs">
+                                        <span className="font-semibold text-xs text-[#a7a4a4]">
                                           {currentIndex + 1} / {annotations.length}
                                         </span>
                                       </div>
@@ -760,20 +780,20 @@ const Chat = ({
                                           <img
                                             src={`${new URL(annotation.reference).protocol}//${new URL(annotation.reference).hostname}/favicon.ico`}
                                             alt="icon"
-                                            className="h-[22px] w-[22px] rounded-lg border-amber-200"
+                                            className="h-[18px] w-[18px] rounded-lg border-amber-200"
                                             onError={(e) => {
                                               e.currentTarget.style.display = 'none'
                                             }}
                                           />
                                         )}
-                                        <div className="font-semibold">
+                                        <div className=" text-[#343434]  font-medium text-[12px]">
                                           {annotation.reference ? new URL(annotation.reference).hostname : 'Reference'}
                                         </div>
                                       </div>
                                       {annotation.title && (
-                                        <h4 className="font-semibold mb-2 text-sm">{annotation.title}</h4>
+                                        <h4 className="text-[#343434]  font-medium text-[14px] mb-2">{annotation.title}</h4>
                                       )}
-                                      <div className="break-all text-gray-700">
+                                      <div className="text-[#343434]  font-normal text-[12px] break-all">
                                         <a
                                           href={annotation.reference}
                                           target="_blank"
@@ -784,11 +804,11 @@ const Chat = ({
                                         </a>
                                       </div>
                                     </div>
-                                  </HoverCardContent>
+                                  </PopoverContent>
                                 )}
-                              </HoverCard>
+                              </Popover>
                             </div>
-                            <br/>
+                            <br />
                           </>
                         );
                       },
@@ -804,7 +824,7 @@ const Chat = ({
                 msgContent={msg.content}
                 citationIndexes={citationIndexes}
                 setCitationIndexes={setCitationIndexes}
-               
+
               />
 
               {msg.isStreaming && !msg.content.trim() && (

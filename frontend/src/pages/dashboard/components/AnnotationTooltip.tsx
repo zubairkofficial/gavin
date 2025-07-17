@@ -6,7 +6,7 @@ interface AnnotationTooltipProps {
     msgId: string;
     containerRef: RefObject<HTMLDivElement | null>;
     children: (props: {
-        handleLinkInteraction: (link: string | null, isHover: boolean) => void;
+        handleLinkInteraction: (link: string | null) => void;
         clickedLink: string | null;
         annotations: any[];
         currentIndex: number;
@@ -19,6 +19,8 @@ interface AnnotationTooltipProps {
 const AnnotationTooltip: React.FC<AnnotationTooltipProps> = ({ msgContent, children }) => {
     const [clickedLink, setClickedLink] = useState<string | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+
 
     // Parse annotations from message content
     const annotations = useMemo(() => {
@@ -40,18 +42,14 @@ const AnnotationTooltip: React.FC<AnnotationTooltipProps> = ({ msgContent, child
     }, [msgContent]);
 
     // Function to handle link interaction
-    const handleLinkInteraction = (link: string | null, isHover: boolean) => {
-        if (!isHover) {
-            if (link === null) {
-                setClickedLink(null);
-            } else {
+    const handleLinkInteraction = (link: string | null, ) => {
+        
                 const annotationIndex = annotations.findIndex(a => a.reference === link);
                 if (annotationIndex !== -1) {
                     setCurrentIndex(annotationIndex);
                 }
                 setClickedLink(link === clickedLink ? null : link);
-            }
-        }
+        
     };
 
     // Custom setCurrentIndex that also updates the clicked link
@@ -79,12 +77,12 @@ const AnnotationTooltip: React.FC<AnnotationTooltipProps> = ({ msgContent, child
                             }}
                         />
                     )}
-                    <div className="font-semibold">
+                    <div className="font-semibold text-gray-600">
                         {annotation.reference ? new URL(annotation.reference).hostname : 'Reference'}
                     </div>
                 </div>
-                <h4 className="font-semibold mb-2 text-sm">{annotation.title}</h4>
-                <div className="break-all text-gray-700">
+                <h4 className="font-semibold mb-2 text-sm text-gray-700">{annotation.title}</h4>
+                <div className="break-all text-gray-600">
                     <a
                         href={annotation.reference}
                         target="_blank"
