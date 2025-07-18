@@ -157,6 +157,41 @@ export class TasksService implements OnModuleInit {
     await this.embeddingService.deleteDocumentEmbadings('Scraper');
 
 
+
+
+    for await (const { url, content, code, section, Title, subject_area } of scrapeCaliforniaCodes()) {
+
+
+      const statute = new Statute();
+      statute.content_html = content;
+      statute.source_url = 'scaper';
+      statute.fileName = url.split('/').pop() || '';
+      statute.title = Title;
+      statute.section = section;
+      statute.code = code;
+      statute.jurisdiction = 'California';
+      statute.type = 'statute';
+      statute.holding_summary = subject_area;
+      statute.filePath = url;
+
+
+
+      const document = await this.statuteRepository.save(statute);
+
+      await this.embeddingService.processDocument({
+        documentId: document.id,
+        content: document.content_html || '',
+        additionalMetadata: {
+          document_id: document.id,
+          document_type: document.type,
+          processed_at: new Date().toISOString(),
+          enabled: true,
+          source: 'Scraper',
+          jurisdiction : 'California'
+        }
+      });
+    }
+
      for await (const data of scrapeCourtListener()) {
       //   console.log(data); // Each plain_text as soon as it's available
         // console.log('='.repeat(60))
@@ -192,43 +227,14 @@ export class TasksService implements OnModuleInit {
           processed_at: new Date().toISOString(),
           enabled: true,
           source: 'Api',
+          jurisdiction : '',
         }
       });
 }
     
 
 
-    for await (const { url, content, code, section, Title, subject_area } of scrapeCaliforniaCodes()) {
-
-
-      const statute = new Statute();
-      statute.content_html = content;
-      statute.source_url = 'scaper';
-      statute.fileName = url.split('/').pop() || '';
-      statute.title = Title;
-      statute.section = section;
-      statute.code = code;
-      statute.jurisdiction = 'California';
-      statute.type = 'statute';
-      statute.holding_summary = subject_area;
-      statute.filePath = url;
-
-
-
-      const document = await this.statuteRepository.save(statute);
-
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          document_type: document.type,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-        }
-      });
-    }
+    
 
 
     for await (const { title, content, url } of processAllFloridaStatutes()) {
@@ -259,6 +265,7 @@ export class TasksService implements OnModuleInit {
           processed_at: new Date().toISOString(),
           enabled: true,
           source: 'Scraper',
+          jurisdiction : 'Florida'
         }
       });
     }
@@ -288,6 +295,7 @@ export class TasksService implements OnModuleInit {
           processed_at: new Date().toISOString(),
           enabled: true,
           source: 'Scraper',
+          jurisdiction : 'Texas'
         }
       });
 
@@ -319,6 +327,7 @@ export class TasksService implements OnModuleInit {
           processed_at: new Date().toISOString(),
           enabled: true,
           source: 'Scraper',
+          jurisdiction : 'delaware'
         }
       });
     }
@@ -350,6 +359,7 @@ export class TasksService implements OnModuleInit {
           processed_at: new Date().toISOString(),
           enabled: true,
           source: 'Scraper',
+          jurisdiction : 'NewYork'
         }
       });
     }
@@ -378,6 +388,7 @@ export class TasksService implements OnModuleInit {
           processed_at: new Date().toISOString(),
           enabled: true,
           source: 'Scraper',
+          jurisdiction : 'federal',
         }
       });
     }
@@ -410,6 +421,7 @@ export class TasksService implements OnModuleInit {
           processed_at: new Date().toISOString(),
           enabled: true,
           source: 'Scraper',
+          jurisdiction : 'federal'
         }
       });
     }
