@@ -29,6 +29,7 @@
     "@google/generative-ai": "^0.24.1",
     "@langchain/community": "^0.3.46",
     "@langchain/core": "^0.3.58",
+    "@langchain/langgraph": "^0.3.10",
     "@langchain/openai": "^0.5.13",
     "@lillallol/outline-pdf": "^4.0.0",
     "@nestjs/axios": "^4.0.0",

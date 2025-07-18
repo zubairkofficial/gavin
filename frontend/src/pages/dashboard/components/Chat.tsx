@@ -14,6 +14,12 @@ import {
   Globe,
   WrenchIcon,
   Paperclip,
+  Scale, // Florida
+  Building2, // New York
+  Trees, 
+  Beef,
+  Landmark, 
+  TreePalm, 
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import CitationTooltip from "./CitationTooltip"
@@ -62,6 +68,13 @@ interface AttachedDocument {
   size: string
   file?: File // Add the actual file object
 }
+const stateIcons = {
+  'Florida': TreePalm ,
+  'NewYork': Building2,
+  'California': Trees,
+  'Texas': Beef,
+  'delaware': Landmark,
+};
 
 interface ChatMessage {
   id: string
@@ -95,6 +108,10 @@ const Chat = ({
   const [hasNavigatedToNewConversation, setHasNavigatedToNewConversation] = useState(false)
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null)
   const [searchWithWeb, setSearchWithWeb] = useState(false)
+  const [jurisdiction, setJurisdiction] = useState('')
+  const [jurisdictions, setJurisdictions] = useState<string[]>([])
+  const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>('')
+  const [jurisdictionSearch, setJurisdictionSearch] = useState('')
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
@@ -102,6 +119,22 @@ const Chat = ({
   const params = useParams()
   const urlConversationId = params.conversationId
   const queryClient = useQueryClient()
+
+  // Fetch jurisdictions from API
+  useEffect(() => {
+    const fetchJurisdictions = async () => {
+      try {
+        const response = await API.get("/jurisdictions/forall")
+        if (response.data) {
+          setJurisdictions(response.data?.map((jurisdiction: any) => jurisdiction.jurisdiction))
+          console.log(response.data, 'jurisdictions fetched')
+        }
+      } catch (error) {
+        console.error("Error fetching jurisdictions:", error)
+      }
+    }
+    fetchJurisdictions()
+  }, [])
 
   // Ref for smooth scroll
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -210,11 +243,9 @@ const Chat = ({
   }
 
   useEffect(() => {
-    // Only fetch messages if urlConversationId exists (not for new conversation)
     if (urlConversationId) {
       fetchConversationMessages()
     } else {
-      // If it's a new conversation, clear messages
       setMessages([])
       setConversationId("")
       setTitle("")
@@ -222,7 +253,6 @@ const Chat = ({
     queryClient.invalidateQueries({ queryKey: ["conversations"] })
   }, [urlConversationId])
 
-  // Smooth scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
@@ -310,9 +340,14 @@ const Chat = ({
       if (title) {
         formData.append("title", title)
       }
+      if( selectedJurisdiction) {
+        formData.append("jurisdiction", selectedJurisdiction)
+        console.log('Selected jurisdiction:', selectedJurisdiction)
+      }
 
       formData.append("websearch", searchWithWeb ? "true" : "false")
       console.log('web search:', searchWithWeb)
+
 
 
       // Add files to FormData
@@ -323,6 +358,7 @@ const Chat = ({
           }
         })
       }
+
 
       // Log FormData entries
       console.log("FormData contents:")
@@ -735,7 +771,7 @@ const Chat = ({
                                   <p
                                     // href={href}
                                     className="cursor-pointer bg-white border-2 border-gray-200 hover:bg-black py-1 px-2 mt-1 rounded-sm text-black hover:text-white transition-all duration-200 ease-in-out"
-                                    // target="_blank"
+                                  // target="_blank"
                                   >
                                     {children}
                                   </p>
@@ -1062,6 +1098,7 @@ const Chat = ({
                 </DropdownMenuContent>
               </DropdownMenu>
 
+
               {/* Search with Web Badge */}
               {searchWithWeb && (
                 <div className="flex items-center gap-2 px-2 py-1">
@@ -1069,6 +1106,72 @@ const Chat = ({
                     <Globe className="h-3 w-3" />
                     Search
                     <button onClick={() => setSearchWithWeb(false)} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </Badge>
+                </div>
+              )}
+              
+
+            
+              {!selectedJurisdiction ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 hover:bg-gray-100">
+                      <span>Jurisdiction</span>
+                      <WrenchIcon className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" side="bottom" className="w-[200px]">
+                    <div className="p-2">
+                      <input
+                        type="text"
+                        placeholder="Search jurisdictions..."
+                        value={jurisdictionSearch}
+                        onChange={(e) => setJurisdictionSearch(e.target.value)}
+                        className="w-full px-2 py-1 text-sm border rounded-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
+                      />
+                    </div>
+                    <div className="max-h-[120px] overflow-y-auto">
+                    {jurisdictions
+                      ?.filter(state => 
+                        state.toLowerCase().includes(jurisdictionSearch.toLowerCase())
+                      )
+                      .map((state) => {
+                        const StateIcon = stateIcons[state as keyof typeof stateIcons];
+                        return (
+                          <DropdownMenuItem
+                            key={state}
+                            onClick={() => {
+                              setSelectedJurisdiction(state);
+                              setJurisdiction(state);
+                              setJurisdictionSearch(''); // Reset search after selection
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            {state}
+                            {selectedJurisdiction === state && <span className="ml-auto">✓</span>}
+                          </DropdownMenuItem>
+                      );
+                    })}
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center gap-2 px-2 py-1 border rounded-md bg-gray-100">
+                  <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                    {(() => {
+                      const StateIcon = stateIcons[selectedJurisdiction as keyof typeof stateIcons];
+                      return StateIcon && <StateIcon className="h-3 w-3" />;
+                    })()}
+                    {selectedJurisdiction}
+                    <button
+                      onClick={() => {
+                        setSelectedJurisdiction('');
+                        setJurisdiction('');
+                      }}
+                      className="ml-1 hover:bg-gray-300 rounded-full p-0.5 "
+                    >
                       <X className="h-2.5 w-2.5" />
                     </button>
                   </Badge>

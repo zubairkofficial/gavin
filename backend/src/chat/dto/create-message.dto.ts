@@ -46,4 +46,8 @@ export class CreateMessageDto {
   @IsOptional()
   @IsString()
   assistantMsgId?: string;
+
+  @IsOptional()
+  @IsString()
+  jurisdiction?: string;
 }

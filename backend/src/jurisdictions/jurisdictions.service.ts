@@ -27,6 +27,12 @@ export class JurisdictionsService {
     return data
   }
 
+  async find(): Promise<Jurisdiction[]> {
+    const data = await this.jurisdictionRepository.find();
+    return data
+  }
+
+
   async findOne(id: string): Promise<Jurisdiction> {
     const jurisdiction = await this.jurisdictionRepository.findOne({
       where: { id }

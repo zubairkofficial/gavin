@@ -118,7 +118,7 @@ export class ChatService {
     const { message, conversationId, title, websearch } = createMessageDto;
     if (!message) throw new BadRequestException('Message cannot be empty');
 
-
+    console.log('websearch:', websearch);
 
     // console.log(files, 'files in chat service')
     const file = files[0];
@@ -160,8 +160,8 @@ export class ChatService {
 
 
 
-    console.log('data that we got for credits is ---------------------------------------------', data)
-    console.log('credits that we got for user is', data?.credits)
+    // console.log('data that we got for credits is ---------------------------------------------', data)
+    // console.log('credits that we got for user is', data?.credits)
     if ((data?.credits ?? 0) < minTokens) {
       throw new BadRequestException('You have low credits, please Add credits');
     }
@@ -204,7 +204,7 @@ export class ChatService {
       // condionally handle web search or document context
       
       if (websearch == 'true') {
-        // console.log('Web search enabled for this message');
+        console.log('Web search enabled for this message');
         let context = '';
         let promptfromDB = '';
       // Only include citations if relevantDocs found and not just file upload
@@ -240,12 +240,6 @@ export class ChatService {
         Question:
         ${message}
         `;
-
-        // // const stream = await this.searchModel.stream([new SystemMessage(systemPrompt), new HumanMessage(prompt)]);
-        // const stream = await this.searchModel.stream([
-        //   new SystemMessage(systemPrompt),
-        //   new HumanMessage(prompt)
-        // ]);
        
         const llm = new ChatOpenAI({ model: "gpt-4o-mini", streaming: true }).bindTools([
           { type: "web_search_preview" },
@@ -291,18 +285,27 @@ export class ChatService {
         documentContext = []
       }
 
-        // console.log('Document context:', documentContext);
+        console.log('Document context:', websearch);
 
 
         // You can implement web search logic here if needed
       } else if (websearch == 'false') {
+        console.log('Web search disabled for this message, using document context and file content');
       let relevantDocs: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
       let enabledDocs: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
       // let filteredDoc: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
       try {
+
+          console.log('jurisdiction in createMessageDto', createMessageDto.jurisdiction)
+          const filter = createMessageDto.jurisdiction 
+            ? { enabled: true , jurisdiction: createMessageDto.jurisdiction }
+            : { enabled: true };
+          console.log('filter that we are using for similarity search', filter)
+
         const enabledDocsWithScores = await this.vectorStore.similaritySearchWithScore(message, 7, {
-          filter: { enabled: true }
+            filter: {   enabled: true , jurisdiction: createMessageDto.jurisdiction}, 
         });
+          console.log('enabledDocsWithScores:', enabledDocsWithScores.length, 'documents found');
         enabledDocs = enabledDocsWithScores.map(([doc, _score]) => doc);
         // console.log('documnet that we got from similarity',enabledDocsWithScores)
 
@@ -315,75 +318,34 @@ const bestDoc = top3DocsWithScores.map(([doc]) => doc);
 
 // console.log(relevantDocs, 'relevantDocs')
 relevantDocs = bestDoc;
-//  console.log('Top scoring document(s):', relevantDocs);
-
-
-        // console.log('enabledDocs:', enabledDocs.length, 'relevantDocs:', relevantDocs.length);
-        // Simple keyword-based filter (can be improved)
-        // console.log('Relevant docs found:', enabledDocs.length);
-        // console.log(message)
-
-
-        // const messageKeywords = message.toLowerCase().split(/\s+/).filter(w => w.length > 4);
-        // const filteredDocs = enabledDocs.filter(doc =>
-        //   messageKeywords.some(keyword => doc.pageContent.toLowerCase().includes(keyword))
-        // );
-        // const topDoc = filteredDocs[0] ? [filteredDocs[0]] : [];
-
-        // console.log(topDoc, 'topDoc')
-        // console.log('Relevant docs before filtering:', filteredDocs.length);
-        // console.log('Message keywords:', filteredDocs);
-
-        // relevantDocs = filteredDocs;
-        // filteredDoc = filteredDocs
-        // const strictlyRelevantDocs = relevantDocs.filter(doc =>
-        //   messageKeywords.some(keyword =>
-        //     doc.pageContent.toLowerCase().includes(keyword)
-        //   )
-        // );
-        // console.log('Strictly relevant docs:', strictlyRelevantDocs.length);
-
-        // console.log('Filtered docs based on message keywords:', filteredDocs.length);
+          
         if (relevantDocs.length > 0) {
           // console.log('Relevant docs found:', relevantDocs.length);
         } else {
           // console.log('No relevant docs found');
         }
       } catch (err) {
-        // console.log('Error retrieving relevant docs:', err);
+          console.log('Error retrieving relevant docs:', err);
       }
 
-      // If there are no enabled docs after filtering, do not answer (unless fileContent is present)
-      // if ((!enabledDocs || enabledDocs.length === 0) && !fileContent) {
-      //   throw new BadRequestException('No enabled documents found for this query.');
-      // }
-
-      // Build prompt with context from relevant docs and buffer memory
       let context = '';
-      // Only include citations if relevantDocs found and not just file upload
       context += fileContent ? `File Content:\n${fileContent}\n` : '';
       if (relevantDocs.length > 0) {
-        // console.log(relevantDocs.length , 'relevantDocs.length chcekin on line 242')
 
-        const disableDocs = enabledDocs.filter(doc => doc.metadata && doc.metadata.enabled === false);
-        const enable = enabledDocs.filter(doc => doc.metadata && doc.metadata.enabled === true);
-        // console.log('Enabled docs:', enable.length, 'Disabled docs:', disableDocs.length);
+          const disableDocs = relevantDocs.filter(doc => doc.metadata && doc.metadata.jurisdiction == createMessageDto.jurisdiction );
+          const enable = relevantDocs.filter(doc => doc.metadata && doc.metadata.enabled === true && doc.metadata.jurisdiction == createMessageDto.jurisdiction);
+          console.log( 'Disabled docs:', disableDocs.length);
+          console.log('Enabled docs:', enable.length, 'Relevant docs:', relevantDocs.length);
 
         if (enable.length === 0) {
-          // No enabled docs, skip processing
-          // console.log('No enabled documents found, skipping context/documentContext processing.');
-          // Optionally, you can return early or handle fileContent/chatHistoryContext here
-          // <-- Add this if you want to skip further processing
+
         } else {
           if (chatHistoryContext) {
           context += chatHistoryContext + '\n';
         }
-
-        const enabledDocs = relevantDocs;
-        let metaid: string | null = null;
         const seenIds = new Set<string>();
           // Only process enabled docs
-          for (const doc of relevantDocs) {
+            for (const doc of enable) {
           if (seenIds.has(doc.metadata.document_id)) continue;
           seenIds.add(doc.metadata.document_id);
           try {
@@ -605,7 +567,7 @@ relevantDocs = bestDoc;
         // console.log('System prompt created after save:', dat.prompt);
           promptfromDB = dat.prompt
         }
-
+          console.log(context , 'context that we are using in the prompt')
         const systemPrompt = `${promptfromDB}`
       let prompt = `
         Use the following information to answer the question:
@@ -1091,7 +1053,7 @@ relevantDocs = bestDoc;
   }
 
 
-  async getCredits(): Promise<{ minMessages: number , cutCredits: number }> {
+  async getCredits(): Promise<{ minMessages: number, cutCredits: number }> {
     // Get user from repository
     const data = await this.configurationRepository.find();
 

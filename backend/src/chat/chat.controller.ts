@@ -141,7 +141,7 @@ export class ChatController {
       const result = await this.chatService.sendMessage(createMessageDto, req, files?.files || []);
       streamData = result;
       console.log('web search that is using in the controller', createMessageDto.websearch);
-      console.log('Result from chatService:', result);
+      // console.log('Result from chatService:', result);
 
       const user = await this.usersRepository.findOne({
         where: { id: req.user.id },
@@ -222,9 +222,9 @@ export class ChatController {
         // const outputTokenCount = finalChunk?.usage_metadata?.total_tokens
 
         const outputTokenCount =  finalChunk?.usage_metadata?.total_tokens
-        || result.stream.usage_metadata?.total_tokens
-        || 0;
+        || result.stream.usage_metadata?.total_tokens;
 
+        console.log('outputcreditCount:', outputTokenCount);
 
         let rounded = ((outputTokenCount * 1) / cutTokens)
 
@@ -238,7 +238,7 @@ export class ChatController {
           { credits: finaltoken }
         );
 
-        console.log('Updated user credits:', re);
+        // console.log('Updated user credits:', re);
 
         // ------------------------- End of token usage and credit deduction-----------------
 

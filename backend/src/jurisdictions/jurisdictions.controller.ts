@@ -24,6 +24,12 @@ export class JurisdictionsController {
     return  await this.jurisdictionsService.findAll(req.user.id);
   }
 
+  @Get('forall')
+  async find( @Request() req: any,): Promise<Jurisdiction[]> {
+
+    return  await this.jurisdictionsService.find();
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<Jurisdiction> {
     return await this.jurisdictionsService.findOne(id);
