@@ -6,8 +6,9 @@ import AppHeader from "./Header";
 import { useModel } from "@/context/Model.context";
 
 import PlanBillingContent from "@/pages/Accounts/mobilePages/PlanBillingContent";
-import {AccountInformationMobile} from "@/pages/Accounts/mobilePages/AccountInformationMobile";
-import { HelpCenterMobile } from "@/pages/Accounts/mobilePages/HelpCenterMobile";
+// import { HelpCenterMobile } from "@/pages/Accounts/mobilePages/HelpCenterMobile";
+import { HelpCenter } from "@/pages/Accounts/desktopPages/help-center";
+import { AccountInformation } from "@/pages/Accounts/desktopPages/account-information";
 
 export default function AppLayout() {
   const { ModalOpen, Modalvalue } = useModel();
@@ -21,12 +22,12 @@ export default function AppLayout() {
           {ModalOpen ? (
             Modalvalue === 'Account' ? (
               <>
-              <AccountInformationMobile />
+              <AccountInformation />
               </>
               
             ) : Modalvalue === 'PlansBilling' ? (
               <PlanBillingContent />
-            ) : (<HelpCenterMobile/>)
+            ) : (<HelpCenter/>)
           ) : (
             <Outlet />
           )}

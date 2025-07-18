@@ -9,11 +9,12 @@ import { Contract } from '@/documents/entities/contract.entity';
 import { Regulation } from '@/documents/entities/regulation.entity';
 import { Case } from '@/documents/entities/case.entity';
 import { Statute } from '@/documents/entities/statute.entity';
-import { SystemPrompt } from '@/documents/entities/system-prompt.entity';
+import { Configuration } from '@/documents/entities/configuration.entity';
+import { User } from '@/auth/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Message , Contract , Regulation , Case , Statute , SystemPrompt]),
+    TypeOrmModule.forFeature([Message , Contract , Regulation , Case , Statute , Configuration , User]),
     ConfigModule.forFeature(openaiConfig),
     
   ],

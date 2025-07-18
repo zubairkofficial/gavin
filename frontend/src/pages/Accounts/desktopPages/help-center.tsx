@@ -3,9 +3,10 @@
 import type React from "react"
 
 import { useState } from "react"
-import { ChevronDown, ChevronUp, CreditCard, Shield, Users, Lock, Globe, ExternalLink } from "lucide-react"
+import { ChevronDown, ChevronUp, CreditCard, Shield, Users, Lock, Globe, ExternalLink, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { useModel } from "@/context/Model.context"
 
 interface FAQItem {
   id: string
@@ -54,6 +55,7 @@ const faqData: FAQItem[] = [
 
 export function HelpCenter() {
   const [openItems, setOpenItems] = useState<string[]>([])
+   const { ModalOpen, setIsModalOpen } = useModel();
 
   const toggleItem = (itemId: string) => {
     setOpenItems((prev) => (prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId]))
@@ -85,6 +87,16 @@ export function HelpCenter() {
   return (
     <div className="w-full max-w-4xl mx-auto px-4 md:p-6 space-y-3">
       {/* Header */}
+      <div className="w-full flex justify-end  md:hidden">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-gray-400 hover:text-gray-600 md:hidden"
+                    onClick={() => setIsModalOpen(!ModalOpen)}
+                >
+                    <X className="w-6 h-6" />
+                </Button>
+            </div>
       <div className="space-y-2">
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">Help Center</h1>
       </div>

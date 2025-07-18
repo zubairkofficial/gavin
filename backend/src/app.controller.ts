@@ -10,7 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Status } from './documents/entities/status.entity';
 import { Repository } from 'typeorm';
 import { Cron } from './cron.entity';
-import { SystemPrompt } from './documents/entities/system-prompt.entity';
+import { Configuration } from './documents/entities/configuration.entity';
 
 let isProcessing = false;
 
@@ -23,8 +23,8 @@ export class AppController {
          private StatusRepository: Repository<Status>,
      @InjectRepository(Cron)
          private cronRepository: Repository<Cron>,
-     @InjectRepository(SystemPrompt)
-         private systemPromptRepository: Repository<SystemPrompt>,
+     @InjectRepository(Configuration)
+         private configurationRepository: Repository<Configuration>,
   ) {
 
   }
@@ -138,7 +138,7 @@ export class AppController {
     @Req() req: any,
     @Body() body: { prompt: string }
   ) {
-    let systemPrompt = await this.systemPromptRepository.find({
+    let systemPrompt = await this.configurationRepository.find({
     });
     // console.log('System prompt:', systemPrompt);
     // if(systemPrompt) {
@@ -151,17 +151,17 @@ export class AppController {
       // console.log('we are in if');
      const existingPrompt = systemPrompt[0]; // Get the first prompt since we only need one
         existingPrompt.prompt = body.prompt;
-        await this.systemPromptRepository.save(existingPrompt);
+        await this.configurationRepository.save(existingPrompt);
         return {
             message: 'System prompt updated successfully',
             systemPrompt: existingPrompt
         };
     } else {
       // console.log('we are in else');
-      const newPrompt = this.systemPromptRepository.create({
+      const newPrompt = this.configurationRepository.create({
             prompt: body.prompt
         });
-        const savedPrompt = await this.systemPromptRepository.save(newPrompt);
+        const savedPrompt = await this.configurationRepository.save(newPrompt);
         return {
             message: 'System prompt created successfully',
             systemPrompt: savedPrompt
@@ -178,10 +178,10 @@ export class AppController {
   })
   async getSystemPrompt(@Req() req: any) {
     // console.log('Fetching system prompt for user:', req.user.id);
-    const systemPrompt = await this.systemPromptRepository.find({
+    const systemPrompt = await this.configurationRepository.find({
     });
 
-    if (!systemPrompt) {
+    if (systemPrompt.length === 0) {
       return {
         message: 'No system prompt found for this user',
         systemPrompt: null

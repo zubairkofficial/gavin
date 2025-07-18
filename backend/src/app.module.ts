@@ -22,7 +22,7 @@ import { Case } from './documents/entities/case.entity';
 import { ChatModule } from './chat/chat.module';
 import { DeleteService } from './delete.service';
 import { Message } from './chat/entities/message.entity';
-import { SystemPrompt } from './documents/entities/system-prompt.entity';
+import { Configuration } from './documents/entities/configuration.entity';
 
 
 @Module({
@@ -60,7 +60,7 @@ import { SystemPrompt } from './documents/entities/system-prompt.entity';
     SharedModule,
     DocumentsModule,
     JurisdictionsModule,
-    TypeOrmModule.forFeature([Statute , Regulation , Status , Cron , Case , Message, SystemPrompt]),
+    TypeOrmModule.forFeature([Statute , Regulation , Status , Cron , Case , Message, Configuration]),
   ],
   controllers: [AppController],
   providers: [

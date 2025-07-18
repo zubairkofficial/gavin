@@ -24,11 +24,14 @@ import * as fs from 'fs';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Message } from './entities/message.entity';
+// import { getTokenCount } from "@langchain/core/utils/tiktoken";
 import { MssqlParameter, Repository } from 'typeorm';
 import { Public } from '@/auth/decorators/public.decorator';
 import { ChatOpenAI } from '@langchain/openai';
 import { ConfigService } from '@nestjs/config';
 import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
+import { Configuration } from '@/documents/entities/configuration.entity';
+import { User } from '@/auth/entities/user.entity';
 @ApiTags('Chat')
 @Controller('chat')
 export class ChatController {
@@ -40,6 +43,10 @@ export class ChatController {
     private messageRepository: Repository<Message>,
     private readonly chatService: ChatService,
 
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+    @InjectRepository(Configuration)
+    private configurationRepository: Repository<Configuration>
   ) {
 
   }
@@ -133,20 +140,34 @@ export class ChatController {
 
       const result = await this.chatService.sendMessage(createMessageDto, req, files?.files || []);
       streamData = result;
-      // const stream = await result.model.stream([new HumanMessage(result.prompt)]);
+      console.log('web search that is using in the controller', createMessageDto.websearch);
+      console.log('Result from chatService:', result);
+
+      const user = await this.usersRepository.findOne({
+        where: { id: req.user.id },
+        select: ['id', 'credits'],
+      })
+
+      const currentCredits = user?.credits || 0;
+
+      const config = await this.configurationRepository.find()
+      let cutTokens
+      if (config) {
+        cutTokens = config[0]?.cutCredits
+      }
+
 
       if (createMessageDto.websearch == 'false') {
+        let chunks 
         for await (const chunk of result.stream) {
           if (clientDisconnected || res.destroyed) {
             console.log('Response destroyed or client disconnected, stopping stream');
             break;
           }
 
+          chunks = chunk
           let token = '';
-          // if(typeof chunk.content === 'string' &&  chunk.content.includes('I did not have knowledge about that.')) {
-          //   result.documentContext = ''
-          //   console.log('No relevant documents found, skipping document context');
-          // }
+ 
           if (typeof chunk.content === 'string') {
             token = chunk.content;
 
@@ -156,9 +177,8 @@ export class ChatController {
               .map((part: any) => typeof part.text === 'string' ? part.text : '')
               .join('');
           }
-          // const event = { token };
-          // res.write(`data: ${JSON.stringify(event)}\n\n`);
-          // console.log('documentContext:', result.documentContext);
+
+
           if (!sentMetadata) {
             const event = {
               conversationId: result.conversationId,
@@ -175,13 +195,55 @@ export class ChatController {
             res.write(`data: ${JSON.stringify(event)}\n\n`);
           }
 
+          
+          
+
+
           // Flush the response to send data immediately
           if (typeof (res as any).flush === 'function') {
             (res as any).flush();
           }
 
           fullAiResponse += token;
+
+
+
+
+          // ----------------- Handle token usage and credit deduction-----------------
+          
+          
         }
+        let finalChunk: any = null;
+        if (chunks?.usage_metadata?.total_tokens) {
+          finalChunk = chunks;
+        }
+
+
+        // const outputTokenCount = finalChunk?.usage_metadata?.total_tokens
+
+        const outputTokenCount =  finalChunk?.usage_metadata?.total_tokens
+        || result.stream.usage_metadata?.total_tokens
+        || 0;
+
+
+        let rounded = ((outputTokenCount * 1) / cutTokens)
+
+        let totalCredits = Math.round(rounded);
+        console.log('rounded credits:', totalCredits);
+
+        const finaltoken = currentCredits - totalCredits
+
+        const re = await this.usersRepository.update(
+          { id: req.user.id },
+          { credits: finaltoken }
+        );
+
+        console.log('Updated user credits:', re);
+
+        // ------------------------- End of token usage and credit deduction-----------------
+
+
+
         if (fullAiResponse.includes('I did not have knowledge about that.')) {
           result.documentContext = [];
           // console.log('removing the document context beacause no response was found');
@@ -206,6 +268,9 @@ export class ChatController {
           }
           fullAiResponse += citationJson;
         }
+
+        
+
         let messageId
         if (createMessageDto.regenerate && upadtedMessageId) {
           let msgcontent
@@ -273,6 +338,27 @@ export class ChatController {
           return;
         }
 
+        console.log('token usage for the message of web search  is', result.stream.usage_metadata?.total_tokens);
+        const outputTokenCount = result.stream.usage_metadata?.total_tokens
+
+        console.log('outputcreditCount:', outputTokenCount);
+
+        let rounded = ((outputTokenCount * 1) / cutTokens)
+
+        let totalCredits = Math.round(rounded);
+        console.log('rounded credits:', totalCredits);
+
+        const finaltoken = currentCredits - totalCredits
+
+        const re = await this.usersRepository.update(
+          { id: req.user.id },
+          { credits: finaltoken }
+        );
+
+        console.log('Updated user credits:', re);
+        console.log('total tokens used:', result.stream.usage_metadata?.total_tokens
+        )
+
         // console.log(result.stream.content)
 
         // Send initial metadata with the content
@@ -308,7 +394,7 @@ export class ChatController {
           fullAiResponse += citationJson;
         }
 
-         let messageId
+        let messageId
         if (createMessageDto.regenerate && upadtedMessageId) {
           let msgcontent
           try {
@@ -359,6 +445,11 @@ export class ChatController {
           messageId = msgcontent.id
           console.log('Message saved successfully:', msgcontent);
         }
+
+
+        
+
+
         // Send final done event
         if (!clientDisconnected && !res.destroyed) {
           res.write(`data: ${JSON.stringify({
@@ -397,7 +488,9 @@ export class ChatController {
     } catch (error) {
       console.error('Streaming error:', error);
       let errorMessage = 'Failed to process your message.';
-      if (error.message?.includes('invalid_api_key')) {
+      if (error.message?.includes('You have low credits, please Add credits')) {
+        errorMessage = 'You have low credits, please Add credits';
+      } else if (error.message?.includes('invalid_api_key')) {
         errorMessage = 'OpenAI API authentication failed';
       } else if (error.message?.includes('rate_limit_exceeded') || error.status === 429) {
         errorMessage = 'Rate limit exceeded. Please try again later.';
@@ -608,5 +701,34 @@ export class ChatController {
       res.status(500).json({ success: false, message: 'Failed to delete conversation' });
     }
   }
+
+
+  @Post('add-credits')
+  async addCredits(@Req() req,
+    @Body() body: { credits: number },) {
+    const userId = req.user?.id;
+    const credits = body.credits;
+
+    console.log('creadits recived', body)
+
+    return await this.chatService.addCredits(userId, credits);
+  }
+
+  @Post('manage-credits')
+  async manageCredits(@Body() body: { cutCreditsPerToken: number, minimumCreditsToSend: number }) {
+    const minmessage = body.minimumCreditsToSend;
+    const cutcredits = body.cutCreditsPerToken;
+
+
+    return await this.chatService.manageCredits(minmessage, cutcredits);
+  }
+
+  @Get('get-credits')
+  async getCredits() {
+
+    return await this.chatService.getCredits();
+  }
+
+
 
 }

@@ -26,7 +26,8 @@ import { fi } from 'zod/dist/types/v4/locales';
 import { fileURLToPath } from 'url';
 import OpenAI from "openai";
 import { end } from 'cheerio/dist/commonjs/api/traversing';
-import { SystemPrompt } from '@/documents/entities/system-prompt.entity';
+import { Configuration } from '@/documents/entities/configuration.entity';
+import { User } from '@/auth/entities/user.entity';
 
 
 @Injectable()
@@ -35,6 +36,8 @@ export class ChatService {
   private model: ChatOpenAI;
   private searchModel: ChatOpenAI;
   private vectorStore: PGVectorStore;
+  @InjectRepository(User)
+  private usersRepository: Repository<User>;
   @InjectRepository(Message)
   private messageRepository: Repository<Message>;
   @InjectRepository(Contract)
@@ -46,8 +49,8 @@ export class ChatService {
   @InjectRepository(Statute)
   private statuteRepository: Repository<Statute>;
 
-  @InjectRepository(SystemPrompt)
-  private systemPromptRepository: Repository<SystemPrompt>;
+  @InjectRepository(Configuration)
+  private configurationRepository: Repository<Configuration>;
 
   constructor(private configService: ConfigService) {
     const openAiApiKey = this.configService.get<string>('OPENAI_API_KEY');
@@ -115,6 +118,8 @@ export class ChatService {
     const { message, conversationId, title, websearch } = createMessageDto;
     if (!message) throw new BadRequestException('Message cannot be empty');
 
+
+
     // console.log(files, 'files in chat service')
     const file = files[0];
     const fileName = file?.originalname;
@@ -138,6 +143,28 @@ export class ChatService {
 
     const convId = conversationId || uuidv4();
     const userId = req.user?.id;
+
+    const data = await this.usersRepository.findOne({
+      where: {
+        id: userId
+      }
+    })
+
+
+
+    const config = await this.configurationRepository.find()
+    let minTokens
+    if (config) {
+      minTokens = config[0]?.minTokens
+    }
+
+
+
+    console.log('data that we got for credits is ---------------------------------------------', data)
+    console.log('credits that we got for user is', data?.credits)
+    if ((data?.credits ?? 0) < minTokens) {
+      throw new BadRequestException('You have low credits, please Add credits');
+    }
 
     try {
       // Fetch previous messages for buffer memory
@@ -169,7 +196,7 @@ export class ChatService {
         outputKey: 'output',
       });
       let documentContext: Array<{ title: string; reference: string; jurisdiction?: string; citation?: string; subject_area?: string; code?: string; decision_date?: string; name?: string; case_type?: string; }> = [];
-      let annotations: Array<{ title: string; reference: string , type : string , start_index : string , end_index: string ,   }> = [];
+      let annotations: Array<{ title: string; reference: string, type: string, start_index: string, end_index: string, }> = [];
       let str  
       let ftitle 
 
@@ -183,12 +210,12 @@ export class ChatService {
       // Only include citations if relevantDocs found and not just file upload
       context += fileContent ? `File Content:\n${fileContent}\n` : '';
         // console.log('userId to fetch system prompt:', userId);
-        const data = await this.systemPromptRepository.find({})
+        const data = await this.configurationRepository.find({})
         // console.log('the data that we got from system repo is',data[0]?.prompt)
         promptfromDB = data[0]?.prompt 
-        if(data.length == 0){
-          const data = await this.systemPromptRepository.create({
-            prompt:`🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
+        if (data.length == 0) {
+          const data = await this.configurationRepository.create({
+            prompt: `🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
         Instructions:
           - *Context Understanding*: Check follow-up questions by analyzing the chat history and current question context.
           - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
@@ -196,12 +223,12 @@ export class ChatService {
           - Provide the answer in a concise manner and include proper citations.
           - `
           })
-        const dat =  await this.systemPromptRepository.save(data)
+          const dat = await this.configurationRepository.save(data)
           // console.log('System prompt created after save:', dat.prompt);
           promptfromDB = dat.prompt
         }
 
-        const systemPrompt =`${promptfromDB}` 
+        const systemPrompt = `${promptfromDB}`
       let prompt = `
         Use the following information to answer the question:
         ${fileContent ? `File Content:\n${fileContent}\n` : ''}
@@ -220,7 +247,7 @@ export class ChatService {
         //   new HumanMessage(prompt)
         // ]);
        
-        const llm = new ChatOpenAI({ model: "gpt-4o-mini" , streaming : true }).bindTools([
+        const llm = new ChatOpenAI({ model: "gpt-4o-mini", streaming: true }).bindTools([
           { type: "web_search_preview" },
         ]);
 
@@ -244,7 +271,7 @@ export class ChatService {
                     annotations.push({
                       title: annotation.title || '',
                       reference: annotation.url || '',
-                      type : annotation.type || '',
+                      type: annotation.type || '',
                       start_index: annotation.startIndex || 0,
                       end_index: annotation.endIndex || 0,
                     })
@@ -560,13 +587,13 @@ relevantDocs = bestDoc;
       const lowerMsg = message.toLowerCase();
       const isGreeting = greetings.some(greet => lowerMsg.includes(greet));
         // console.log('user id to fetch the system prompt:', userId);
-        const data = await this.systemPromptRepository.find({
+        const data = await this.configurationRepository.find({
         })
         // console.log('data that we got for the system prompt',data[0]?.prompt )
         promptfromDB = data[0]?.prompt 
-        if(data.length == 0){
-          const data = await this.systemPromptRepository.create({
-            prompt:`🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
+        if (data.length == 0) {
+          const data = await this.configurationRepository.create({
+            prompt: `🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
         Instructions:
           - *Context Understanding*: Check follow-up questions by analyzing the chat history and current question context.
           - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
@@ -574,7 +601,7 @@ relevantDocs = bestDoc;
           - Provide the answer in a concise manner and include proper citations.
           - `
           })
-        const dat =   await this.systemPromptRepository.save(data)
+          const dat = await this.configurationRepository.save(data)
         // console.log('System prompt created after save:', dat.prompt);
           promptfromDB = dat.prompt
         }
@@ -594,7 +621,13 @@ relevantDocs = bestDoc;
         `;
 
 
-        const stream = await this.model.stream([new SystemMessage(systemPrompt), new HumanMessage(prompt)]);
+        const stream = await this.model.stream([new SystemMessage(systemPrompt), new HumanMessage(prompt)],
+          {
+            stream_options: {
+              include_usage: true,
+            },
+          }
+        );
 
        str = stream
       const finalTitle = conTitle || title;
@@ -657,7 +690,7 @@ relevantDocs = bestDoc;
       messageEntity.fileType = type;
       messageEntity.fileContent = fileContent || '';
 
-    const msg =  await this.messageRepository.save(messageEntity);
+      const msg = await this.messageRepository.save(messageEntity);
       // console.log('Message saved successfully');
 
       return msg;
@@ -976,6 +1009,101 @@ relevantDocs = bestDoc;
       throw new Error('Failed to delete conversation');
     }
   }
+  async addCredits(userId: string, credits: number) {
+    // Get user from repository
+    const user = await this.usersRepository.findOne({
+      where: {
+        id: userId
+      }
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Update credits field
+    const updatedCredits = (user.credits || 0) + credits;
+
+    // Update user with new credits
+    const updatedUser = await this.usersRepository.update(userId, {
+      credits: updatedCredits
+    });
+
+    return {
+      message: 'Credits added successfully',
+      userId: userId,
+      previousCredits: user.credits || 0,
+      addedCredits: credits,
+      totalCredits: updatedCredits,
+      user: updatedUser
+    };
+  }
+
+
+  async manageCredits(minmessage: number, cutcredits: number) {
+    // Check if configuration data exists
+    const existingConfig = await this.configurationRepository.find();
+
+    if (existingConfig) {
+      console.log(existingConfig)
+    }
+
+    if (existingConfig) {
+      // Update existing configuration
+      // const updatedConfig = await this.configurationRepository.update( {
+      //   minTokens : minmessage,
+      //   cutCredits : cutcredits 
+      // });
+
+      //   const data = new Configuration()
+      //  data.minTokens = minmessage
+      //    data.cutCredits = cutcredits
+
+      const existingPrompt = existingConfig[0]; // Get the first prompt since we only need one
+      existingPrompt.minTokens = minmessage;
+      existingPrompt.cutCredits = cutcredits;
+      const updatedConfig = await this.configurationRepository.save(existingPrompt);
+
+      //  const updatedConfig =  await this.configurationRepository.update(
+      //   data)
+
+
+
+
+      return {
+        message: 'Configuration updated successfully',
+        configuration: updatedConfig,
+        action: 'updated'
+      };
+    } else {
+      // Create new configuration
+      const newConfig = await this.configurationRepository.create({
+        minTokens: minmessage,
+        cutCredits: cutcredits
+      });
+
+      return {
+        message: 'Configuration created successfully',
+        configuration: newConfig,
+        action: 'created'
+      };
+    }
+  }
+
+
+  async getCredits(): Promise<{ minMessages: number , cutCredits: number }> {
+    // Get user from repository
+    const data = await this.configurationRepository.find();
+
+    if (!data || data.length === 0) {
+      throw new Error('we dont have any configuration data');
+    }
+
+    return {
+      minMessages: data[0].minTokens || 0, // Assuming minTokens is the field for credits
+      cutCredits: data[0].cutCredits || 0 // Assuming cutCredits is the field for credits deduction
+    };
+  }
 }
 
 function cleanResponseText(input: any): string {
@@ -1055,4 +1183,8 @@ async function parseUploadedFile(files: multer.File[]): Promise<string> {
     console.error('Document parsing error:', error);
     throw new Error(`Failed to parse document: ${error.message}`);
   }
+
+
+
+
 }

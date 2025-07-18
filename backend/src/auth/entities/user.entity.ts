@@ -1,5 +1,6 @@
 import BaseEntity from '@/common/entities/BaseEntity';
 import { UserRole } from '@/common/types';
+import { IsOptional } from 'class-validator';
 import { Column, Entity } from 'typeorm';
 
 @Entity()
@@ -21,6 +22,10 @@ export class User extends BaseEntity {
 
   @Column({ type: 'varchar', length: 100, default: "" })
   companySize: string;
+
+  @Column({nullable : true})
+  credits: number;
+ 
 
   @Column({ default: false })
   isEmailVerified: boolean;

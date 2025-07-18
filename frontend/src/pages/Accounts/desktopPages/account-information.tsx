@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { User } from "lucide-react"
+import { User, X } from "lucide-react"
 import { ChangePasswordModal } from "./change.password.model"
+import { useModel } from "@/context/Model.context"
 // import { AccountSuccessModal } from "./"
 
 interface AccountInformationProps {
@@ -21,6 +22,7 @@ export function AccountInformation({ onSave, onCancel }: AccountInformationProps
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+   const { ModalOpen, setIsModalOpen } = useModel();
 
   const handleSaveAccount = async () => {
     setIsLoading(true)
@@ -53,6 +55,16 @@ export function AccountInformation({ onSave, onCancel }: AccountInformationProps
   return (
     <div className="w-full max-w-4xl mx-auto p-4 md:p-6 space-y-6">
       {/* Header */}
+            <div className="w-full flex justify-end  md:hidden">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-gray-400 hover:text-gray-600 md:hidden"
+                    onClick={() => setIsModalOpen(!ModalOpen)}
+                >
+                    <X className="w-6 h-6" />
+                </Button>
+            </div>
       <div className="space-y-2">
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">My Account</h1>
         <p className="text-gray-600">Manage your personal information and preferences</p>

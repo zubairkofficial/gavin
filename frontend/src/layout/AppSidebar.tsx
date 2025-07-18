@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon, FileUp, HomeIcon, Scale, BookOpen, Wrench, CalendarClock, Edit2Icon, Trash2Icon, Save, ArrowUpCircle, Text } from "lucide-react"
+import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon, FileUp, HomeIcon, Scale, BookOpen, Wrench, CalendarClock, Edit2Icon, Trash2Icon, Save, ArrowUpCircle, Text, Key } from "lucide-react"
 import type React from "react"
 import { useLocation } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -583,6 +583,17 @@ function AdminSidebar({ onNavClick }: { onNavClick: () => void }) {
                     <span className="truncate" style={{
                       textOverflow: "clip",
                     }}>System Prompt</span>
+                    <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </NavLink>
+              <NavLink to="/set-cut-tokens" onClick={onNavClick}>
+                <SidebarMenuItem className="px-2">
+                  <SidebarMenuButton className="gap-2 py-5 relative">
+                    <Key  size={18} />
+                    <span className="truncate" style={{
+                      textOverflow: "clip",
+                    }}>Tokens Setting</span>
                     <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_0%,_rgba(250,251,253,0)_60%,_rgba(250,251,253,1)_100%)]"></div>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
