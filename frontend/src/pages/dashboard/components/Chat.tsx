@@ -1158,7 +1158,7 @@ const Chat = ({
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <div className="flex items-center gap-2 px-2 py-1 border rounded-md bg-gray-100">
+                <div className="flex items-center gap-2 px-2 py-1">
                   <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                     {(() => {
                       const StateIcon = stateIcons[selectedJurisdiction as keyof typeof stateIcons];
