@@ -9,7 +9,7 @@ import JurisdictionsPage from "./admin/dashboard/jurisdictions";
 import ScrapeUrlPage from "./admin/dashboard/ScrapeUrl/Home";
 import SetTimePage from "./admin/dashboard/setTimeCron/Home";
 import SystemPrompt from "./admin/systemprompt/Home";
-import SetCutcredit from "./admin/dashboard/tokens/home"
+import SetCutcredit from "./admin/dashboard/tokens/Home"
 export default function AuthenticateRoutes() {
   return createRoutesFromElements(
     <>
