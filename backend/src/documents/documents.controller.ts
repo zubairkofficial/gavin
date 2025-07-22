@@ -363,6 +363,7 @@ export class DocumentsController {
         content: fullText,
         additionalMetadata: {
           document_id: savedRegulation.id,
+          jurisdiction: savedRegulation.jurisdiction,
           document_type: savedRegulation.type,
           processed_date: new Date().toISOString(),
           enabled: true
@@ -469,6 +470,7 @@ export class DocumentsController {
         content: fullText,
         additionalMetadata: {
           document_id: savedContract.id,
+          jurisdiction: savedContract.jurisdiction,
           document_type: savedContract.type,
           processed_date: new Date().toISOString(),
           enabled: true
@@ -537,7 +539,7 @@ export class DocumentsController {
       StatuteEntity.citation = analysis.citation;
       StatuteEntity.holding_summary = analysis.holding_summary;
       StatuteEntity.tags = Array.isArray(analysis.tags) ? analysis.tags : [];
-      StatuteEntity.source_url = dto.source_url || '';
+      StatuteEntity.source_url = dto.source_url || 'upload';
 
       const savedStatute = await this.statuteRepository.save(StatuteEntity);
 
@@ -548,6 +550,7 @@ export class DocumentsController {
         additionalMetadata: {
           document_id: savedStatute.id,
           document_type: savedStatute.type,
+          jurisdiction: savedStatute.jurisdiction,
           processed_at: new Date().toISOString(),
           enabled: true,
           source: dto.source || 'Upload',
@@ -621,11 +624,31 @@ export class DocumentsController {
         order: {
           createdAt: 'DESC',
         },
+
       });
+      const uniqueJurisdictions = [...new Set(
+      contracts
+        .map(contract => contract.jurisdiction)
+        .filter(jurisdiction => jurisdiction) // Remove null/undefined values
+    )];
+     const uniqueSource = [...new Set(
+      contracts
+        .map(statute => statute.source)
+        .filter(source => source) // Remove null/undefined values
+    )];
+     const uniqueEnabled = [...new Set(
+      contracts
+        .map(statute => statute.isEnabled)
+        .filter(isEnabled => isEnabled) // Remove null/undefined values
+    )];
+      
       return {
         success: true,
         data: contracts,
         count: contracts.length,
+        jurisdiction : uniqueJurisdictions,
+        Source : uniqueSource,
+        isEnabled : uniqueEnabled,
       };
     } catch (error) {
       throw new BadRequestException(`Failed to fetch contracts: ${error.message}`);
@@ -635,7 +658,7 @@ export class DocumentsController {
   async getAllCases(@Request() req: any) {
     console.log('📋 Getting contracts for user:', req.user?.id);
     try {
-      const contracts = await this.caseRepository.find({
+      const cases = await this.caseRepository.find({
         select: {
           id: true,
           case_type: true,
@@ -652,10 +675,28 @@ export class DocumentsController {
           createdAt: 'DESC',
         },
       });
+       const uniqueJurisdictions = [...new Set(
+      cases
+        .map(cases => cases.jurisdiction)
+        .filter(jurisdiction => jurisdiction) // Remove null/undefined values
+    )];
+     const uniqueSource = [...new Set(
+      cases
+        .map(cases => cases.source_url)
+        .filter(source_url => source_url) // Remove null/undefined values
+    )];
+     const uniqueEnabled = [...new Set(
+      cases
+        .map(cases => cases.isEnabled)
+        .filter(isEnabled => isEnabled) // Remove null/undefined values
+    )];
       return {
         success: true,
-        data: contracts,
-        count: contracts.length,
+        data: cases,
+        count: cases.length,
+        jurisdiction : uniqueJurisdictions,
+        Source : uniqueSource,
+        isEnabled : uniqueEnabled,
       };
     } catch (error) {
       throw new BadRequestException(`Failed to fetch contracts: ${error.message}`);
@@ -687,10 +728,28 @@ export class DocumentsController {
           createdAt: 'DESC',
         },
       });
+      const uniqueJurisdictions = [...new Set(
+      statute
+        .map(statute => statute.jurisdiction)
+        .filter(jurisdiction => jurisdiction) // Remove null/undefined values
+    )];
+     const uniqueSource = [...new Set(
+      statute
+        .map(statute => statute.source_url)
+        .filter(source_url => source_url) // Remove null/undefined values
+    )];
+     const uniqueEnabled = [...new Set(
+      statute
+        .map(statute => statute.isEnabled)
+        .filter(isEnabled => isEnabled) // Remove null/undefined values
+    )];
       return {
         success: true,
         data: statute,
         count: statute.length,
+        jurisdiction : uniqueJurisdictions,
+        Source : uniqueSource,
+        isEnabled : uniqueEnabled,
       };
     } catch (error) {
       throw new BadRequestException(`Failed to fetch statutes: ${error.message}`);
@@ -721,10 +780,29 @@ export class DocumentsController {
           createdAt: 'DESC',
         },
       });
+     const uniqueJurisdictions = [...new Set(
+      regulations
+        .map(regulations => regulations.jurisdiction)
+        .filter(jurisdiction => jurisdiction) 
+    )];
+
+     const uniqueSource = [...new Set(
+      regulations
+        .map(regulations => regulations.source_url)
+        .filter(source_url => source_url) // Remove null/undefined values
+    )];
+     const uniqueEnabled = [...new Set(
+      regulations
+        .map(regulations => regulations.isEnabled)
+        .filter(isEnabled => isEnabled) // Remove null/undefined values
+    )];
       return {
         success: true,
         data: regulations,
         count: regulations.length,
+        jurisdiction : uniqueJurisdictions,
+        Source : uniqueSource,
+        isEnabled : uniqueEnabled,
       };
     } catch (error) {
       throw new BadRequestException(`Failed to fetch regulations: ${error.message}`);

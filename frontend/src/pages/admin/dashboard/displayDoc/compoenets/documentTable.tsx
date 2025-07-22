@@ -1,8 +1,6 @@
 "use client"
-
 import { Switch } from "@/components/ui/switch"
 import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
 import { Pencil, Eye, RefreshCcw, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,6 +49,9 @@ interface ContractsResponse {
   success: boolean
   data: Contract[]
   count: number
+  jurisdiction: string[]
+  Source: string[]
+  isEnabled: boolean[]
 }
 
 interface Regulation {
@@ -68,6 +69,14 @@ interface Regulation {
   id: string
   fileName?: string // Added fileName for regulations
   status?: boolean
+}
+
+interface RegulationsResponse {
+  success: boolean
+  data: Regulation[]
+  jurisdiction: string[]
+  Source: string[]
+  isEnabled: boolean[]
 }
 
 interface Statute {
@@ -89,6 +98,14 @@ interface Statute {
   status?: boolean
 }
 
+interface StatutesResponse {
+  success: boolean
+  data: Statute[]
+  jurisdiction: string[]
+  Source: string[]
+  isEnabled: boolean[]
+}
+
 interface Case {
   createdAt: string
   updatedAt: string
@@ -99,8 +116,8 @@ interface Case {
   isEnabled: boolean
   type: string
   filePath: string
-  case_type:string
-  name:string
+  case_type: string
+  name: string
   source_url: string
   section: string
   holding_summary: string
@@ -109,19 +126,12 @@ interface Case {
   content_html?: string
 }
 
-interface RegulationsResponse {
-  success: boolean
-  data: Regulation[]
-}
-
-interface StatutesResponse {
-  success: boolean
-  data: Statute[]
-}
-
 interface CasesResponse {
   success: boolean
   data: Case[]
+  jurisdiction: string[]
+  Source: string[]
+  isEnabled: boolean[]
 }
 
 type DocumentType = "contracts" | "regulations" | "statutes" | "cases"
@@ -129,6 +139,8 @@ type DocumentType = "contracts" | "regulations" | "statutes" | "cases"
 export default function DocumentsTable() {
   const [documentType, setDocumentType] = useState<DocumentType>("contracts")
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>("all")
+  const [availableJurisdictions, setAvailableJurisdictions] = useState<string[]>([])
   const [contracts, setContracts] = useState<Contract[]>([])
   const [regulations, setRegulations] = useState<Regulation[]>([])
   const [statutes, setStatutes] = useState<Statute[]>([])
@@ -144,6 +156,20 @@ export default function DocumentsTable() {
   const [documentDetails, setDocumentDetails] = useState<any>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set())
+  const [selectedSource, setSelectedSource] = useState<string>("all")
+  const [selectedStatus, setSelectedStatus] = useState<string>("all")
+  const [availableSources, setAvailableSources] = useState<string[]>([])
+  const [availableStatuses, setAvailableStatuses] = useState<boolean[]>([])
+
+  // Helper function to get document status - MOVED BEFORE FILTER FUNCTIONS
+  const getDocumentStatus = (document: Contract | Regulation | Statute | Case): boolean => {
+    // Prioritize the status field if it exists, otherwise fall back to isEnabled
+    return document.status !== undefined
+      ? Boolean(document.status)
+      : document.isEnabled !== undefined
+        ? Boolean(document.isEnabled)
+        : false
+  }
 
   const fetchDocuments = async (type: DocumentType) => {
     setLoading(true)
@@ -155,37 +181,59 @@ export default function DocumentsTable() {
       if (response.status < 200 || response.status >= 300) {
         throw new Error(`Failed to fetch ${type}`)
       }
-
       const responseData = response.data
       console.log(`Response data for ${type}:`, responseData)
-
       if (type === "contracts") {
         const contractsResponse = responseData as ContractsResponse
         if (contractsResponse.success) {
           setContracts(contractsResponse.data)
+          setAvailableJurisdictions(contractsResponse.jurisdiction || [])
+          setAvailableSources(contractsResponse.Source || [])
+          setAvailableStatuses(contractsResponse.isEnabled || [])
         } else {
           setContracts([])
+          setAvailableJurisdictions([])
+          setAvailableSources([])
+          setAvailableStatuses([])
         }
       } else if (type === "regulations") {
         const regulationsResponse = responseData as RegulationsResponse
         if (regulationsResponse.success) {
           setRegulations(regulationsResponse.data)
+          setAvailableJurisdictions(regulationsResponse.jurisdiction || [])
+          setAvailableSources(regulationsResponse.Source || [])
+          setAvailableStatuses(regulationsResponse.isEnabled || [])
         } else {
           setRegulations([])
+          setAvailableJurisdictions([])
+          setAvailableSources([])
+          setAvailableStatuses([])
         }
       } else if (type === "statutes") {
         const statutesResponse = responseData as StatutesResponse
         if (statutesResponse.success) {
           setStatutes(statutesResponse.data)
+          setAvailableJurisdictions(statutesResponse.jurisdiction || [])
+          setAvailableSources(statutesResponse.Source || [])
+          setAvailableStatuses(statutesResponse.isEnabled || [])
         } else {
           setStatutes([])
+          setAvailableJurisdictions([])
+          setAvailableSources([])
+          setAvailableStatuses([])
         }
       } else if (type === "cases") {
         const casesResponse = responseData as CasesResponse
         if (casesResponse.success) {
           setCases(casesResponse.data)
+          setAvailableJurisdictions(casesResponse.jurisdiction || [])
+          setAvailableSources(casesResponse.Source || [])
+          setAvailableStatuses(casesResponse.isEnabled || [])
         } else {
           setCases([])
+          setAvailableJurisdictions([])
+          setAvailableSources([])
+          setAvailableStatuses([])
         }
       }
     } catch (err) {
@@ -200,6 +248,9 @@ export default function DocumentsTable() {
       } else if (type === "cases") {
         setCases([])
       }
+      setAvailableJurisdictions([])
+      setAvailableSources([])
+      setAvailableStatuses([])
     } finally {
       setLoading(false)
     }
@@ -219,37 +270,77 @@ export default function DocumentsTable() {
     })
   }
 
-  const filteredContracts = contracts.filter((contract) =>
-    Object.values(contract).some((value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())),
-  )
-
-  const filteredRegulations = regulations.filter((regulation) =>
-    Object.values(regulation).some(
+  // Filter functions with jurisdiction, source, and status filtering
+  const filteredContracts = contracts.filter((contract) => {
+    const matchesSearch = Object.values(contract).some(
       (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()),
-    ),
-  )
+    )
+    const matchesJurisdiction = selectedJurisdiction === "all" || contract.jurisdiction === selectedJurisdiction
+    const matchesSource = selectedSource === "all" || contract.source === selectedSource
+    const documentStatus = getDocumentStatus(contract)
+    const matchesStatus =
+      selectedStatus === "all" ||
+      (selectedStatus === "true" && documentStatus === true) ||
+      (selectedStatus === "false" && documentStatus === false)
 
-  const filteredStatutes = statutes.filter((statute) =>
-    Object.values(statute).some((value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())),
-  )
+    return matchesSearch && matchesJurisdiction && matchesSource && matchesStatus
+  })
 
-  const filteredCases = cases.filter((caseItem) =>
-    Object.values(caseItem).some((value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())),
-  )
+  const filteredRegulations = regulations.filter((regulation) => {
+    const matchesSearch = Object.values(regulation).some(
+      (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+    const matchesJurisdiction = selectedJurisdiction === "all" || regulation.jurisdiction === selectedJurisdiction
+    const matchesSource = selectedSource === "all" || regulation.source_url === selectedSource
+    const documentStatus = getDocumentStatus(regulation)
+    const matchesStatus =
+      selectedStatus === "all" ||
+      (selectedStatus === "true" && documentStatus === true) ||
+      (selectedStatus === "false" && documentStatus === false)
+
+    return matchesSearch && matchesJurisdiction && matchesSource && matchesStatus
+  })
+
+  const filteredStatutes = statutes.filter((statute) => {
+    const matchesSearch = Object.values(statute).some(
+      (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+    const matchesJurisdiction = selectedJurisdiction === "all" || statute.jurisdiction === selectedJurisdiction
+    const matchesSource = selectedSource === "all" || statute.source_url === selectedSource
+    const documentStatus = getDocumentStatus(statute)
+    const matchesStatus =
+      selectedStatus === "all" ||
+      (selectedStatus === "true" && documentStatus === true) ||
+      (selectedStatus === "false" && documentStatus === false)
+
+    return matchesSearch && matchesJurisdiction && matchesSource && matchesStatus
+  })
+
+  const filteredCases = cases.filter((caseItem) => {
+    const matchesSearch = Object.values(caseItem).some(
+      (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+    const matchesJurisdiction = selectedJurisdiction === "all" || caseItem.jurisdiction === selectedJurisdiction
+    const matchesSource = selectedSource === "all" || caseItem.source_url === selectedSource
+    const documentStatus = getDocumentStatus(caseItem)
+    const matchesStatus =
+      selectedStatus === "all" ||
+      (selectedStatus === "true" && documentStatus === true) ||
+      (selectedStatus === "false" && documentStatus === false)
+
+    return matchesSearch && matchesJurisdiction && matchesSource && matchesStatus
+  })
 
   // Sort the filtered data based on date
   const sortedContracts = [...filteredContracts].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
-
   const sortedRegulations = [...filteredRegulations].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
-
   const sortedStatutes = [...filteredStatutes].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
-
   const sortedCases = [...filteredCases].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )
@@ -263,7 +354,6 @@ export default function DocumentsTable() {
         : documentType === "statutes"
           ? sortedStatutes.length
           : sortedCases.length
-
   const totalPages = Math.ceil(totalItems / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
@@ -280,6 +370,14 @@ export default function DocumentsTable() {
   const handleDocumentTypeChange = (value: DocumentType) => {
     setDocumentType(value)
     setCurrentPage(1) // Reset to first page when changing document type
+    setSelectedJurisdiction("all") // Reset jurisdiction filter when changing document type
+    setSelectedSource("all") // Reset source filter when changing document type
+    setSelectedStatus("all") // Reset status filter when changing document type
+  }
+
+  const handleJurisdictionChange = (value: string) => {
+    setSelectedJurisdiction(value)
+    setCurrentPage(1) // Reset to first page when changing jurisdiction
   }
 
   const handleStatusToggle = async (documentId: string, currentStatus: boolean, type: string) => {
@@ -395,15 +493,8 @@ export default function DocumentsTable() {
     // Construct the static file URL
     const url = import.meta.env.VITE_API_URL
     const fileUrl = `${url}/static/files/${fileName}`
-
     // Open the document in a new window/tab
     window.open(fileUrl, "_blank")
-  }
-
-  // Helper function to get document status - FIXED
-  const getDocumentStatus = (document: Contract | Regulation | Statute | Case): boolean => {
-    // Prioritize the status field if it exists, otherwise fall back to isEnabled
-    return document.status !== undefined ? document.status : document.isEnabled
   }
 
   const handleClick = async () => {
@@ -416,6 +507,16 @@ export default function DocumentsTable() {
     } else {
       console.error("Error during scraping:", response.statusText)
     }
+  }
+
+  const handleSourceChange = (value: string) => {
+    setSelectedSource(value)
+    setCurrentPage(1) // Reset to first page when changing source
+  }
+
+  const handleStatusChange = (value: string) => {
+    setSelectedStatus(value)
+    setCurrentPage(1) // Reset to first page when changing status
   }
 
   return (
@@ -442,33 +543,73 @@ export default function DocumentsTable() {
           </AlertDialog>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row  gap-4 mb-6">
-            <Select value={documentType} onValueChange={handleDocumentTypeChange}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Select document type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="contracts">Contracts</SelectItem>
-                <SelectItem value="regulations">Regulations</SelectItem>
-                <SelectItem value="statutes">Statutes</SelectItem>
-                <SelectItem value="cases">Cases</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Select value={documentType} onValueChange={handleDocumentTypeChange}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Select document type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="contracts">Contracts</SelectItem>
+                  <SelectItem value="regulations">Regulations</SelectItem>
+                  <SelectItem value="statutes">Statutes</SelectItem>
+                  <SelectItem value="cases">Cases</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedJurisdiction} onValueChange={handleJurisdictionChange}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Select jurisdiction" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  <SelectItem value="all">All Jurisdictions</SelectItem>
+                  {availableJurisdictions.map((jurisdiction) => (
+                    <SelectItem key={jurisdiction} value={jurisdiction}>
+                      {jurisdiction}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedSource} onValueChange={handleSourceChange}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  <SelectItem value="all">All Sources</SelectItem>
+                  {availableSources.map((source) => (
+                    <SelectItem key={source} value={source}>
+                      {source || "Unknown"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedStatus} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="true">Enabled</SelectItem>
+                  <SelectItem value="false">Disabled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex flex-1 gap-2">
               <Input
                 placeholder="Search documents..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 w-[24px]"
+                className="flex-1"
               />
+              <Button
+                variant={"ghost"}
+                className="p-6 bg-white text-black"
+                onClick={() => fetchDocuments(documentType)}
+              >
+                <RefreshCcw />
+              </Button>
             </div>
-            <Button variant={"ghost"} className="p-6 bg-white text-black" onClick={() => fetchDocuments(documentType)}>
-              <RefreshCcw />
-            </Button>
           </div>
-
           {error && <div className="text-red-500 mb-4 p-3 bg-red-50 rounded-md">Error: {error}</div>}
-
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
@@ -711,7 +852,7 @@ export default function DocumentsTable() {
                       paginatedCases.map((caseItem, index) => (
                         <TableRow key={caseItem.id}>
                           <TableCell className="font-medium">{index + 1 + startIndex}</TableCell>
-                          <TableCell className="font-medium">{caseItem.name?.slice(0 , 20) || "--"}</TableCell>
+                          <TableCell className="font-medium">{caseItem.name?.slice(0, 20) || "--"}</TableCell>
                           <TableCell className="font-medium">{caseItem.title?.slice(0, 30) || "--"}</TableCell>
                           <TableCell className="font-medium">{caseItem.source_url || "--"}</TableCell>
                           <TableCell className="font-medium">{caseItem.jurisdiction || "--"}</TableCell>
@@ -758,11 +899,29 @@ export default function DocumentsTable() {
               )}
             </div>
           )}
-
           {totalItems > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
               <div className="text-sm text-muted-foreground">
                 Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} results
+                {(selectedJurisdiction !== "all" || selectedSource !== "all" || selectedStatus !== "all") && (
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {selectedJurisdiction !== "all" && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                        Jurisdiction: {selectedJurisdiction}
+                      </span>
+                    )}
+                    {selectedSource !== "all" && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                        Source: {selectedSource}
+                      </span>
+                    )}
+                    {selectedStatus !== "all" && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                        Status: {selectedStatus}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               {totalPages > 1 && (
                 <Pagination>
@@ -814,7 +973,6 @@ export default function DocumentsTable() {
           )}
         </CardContent>
       </Card>
-
       {/* Edit Document Modal */}
       {editModalOpen && editDocument && (
         <EditDocumentModal
@@ -825,7 +983,6 @@ export default function DocumentsTable() {
           onUpdate={handleDocumentUpdate}
         />
       )}
-
       {/* Document Details Drawer */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="right" className="w-[450px] sm:w-[540px]">
@@ -845,7 +1002,7 @@ export default function DocumentsTable() {
                       </h2>
                       <h2 className="text-sm mb-5 break-words whitespace-normal">
                         <span className="font-bold">Source URL: </span>
-                        <a href={`${selectedDocument?.filePath}`} target="_blank">
+                        <a href={`${selectedDocument?.filePath}`} target="_blank" rel="noreferrer">
                           {selectedDocument?.filePath || "URL Not Found"}
                         </a>
                       </h2>
