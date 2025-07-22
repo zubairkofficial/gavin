@@ -9,7 +9,7 @@ import { TasksService, CronJobInfo } from './tasks.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Status } from './documents/entities/status.entity';
 import { Repository } from 'typeorm';
-import { Cron } from './cron.entity';
+import { Crons } from './cron.entity';
 import { Configuration } from './documents/entities/configuration.entity';
 
 let isProcessing = false;
@@ -21,8 +21,8 @@ export class AppController {
      private readonly tasksService: TasksService,
      @InjectRepository(Status)
          private StatusRepository: Repository<Status>,
-     @InjectRepository(Cron)
-         private cronRepository: Repository<Cron>,
+     @InjectRepository(Crons)
+         private cronRepository: Repository<Crons>,
      @InjectRepository(Configuration)
          private configurationRepository: Repository<Configuration>,
   ) {
@@ -107,7 +107,7 @@ export class AppController {
       } 
       return error
     }
-     const cron = new Cron();
+     const cron = new Crons();
      cron.cronExpresion = body.cron;
      cron.jobName = body.name;
      

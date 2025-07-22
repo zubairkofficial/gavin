@@ -7,15 +7,17 @@ import { runNewYorkCodeScraper } from 'scrape/states/newyork';
 import { processAllFloridaStatutes } from 'scrape/states/florida';
 import { scrapeCaliforniaCodes } from 'scrape/states/california';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Statute } from '../src/documents/entities/statute.entity';
 import { EmbeddingService } from './documents/services/embedding.service';
 import { parseXmlTitlesFromRepo } from '../scrape/gitScrape';
 import { Regulation } from './documents/entities/regulation.entity';
 import { openBrowser } from 'scrape/usCodesScraper';
-import { Cron } from './cron.entity';
+import { Crons } from './cron.entity';
+import { Cron } from '@nestjs/schedule';
 import { scrapeCourtListener } from 'scrape/CourtListner';
 import { Case } from './documents/entities/case.entity';
+import { Message } from './chat/entities/message.entity';
 
 
 export interface CronJobInfo {
@@ -25,6 +27,55 @@ export interface CronJobInfo {
 }
 
 @Injectable()
+
+export class DeleteService {
+  private readonly logger = new Logger(DeleteService.name);
+
+  constructor(
+    @InjectRepository(Message)
+    private messageRepository: Repository<Message>
+  ) { }
+
+  @Cron(CronExpression.EVERY_DAY_AT_1AM)
+  async permanentDeleteExpiredMessages(): Promise<void> {
+    this.logger.log('Starting permanent deletion of expired messages...');
+
+    try {
+      // Calculate the cutoff date (30 days ago from now)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      // Find messages that have deletedAt timestamp and are older than 30 days
+      const expiredMessages = await this.messageRepository.createQueryBuilder('message')
+        .where('message.deletedAt IS NOT NULL')
+        .andWhere('message.deletedAt <= :thirtyDaysAgo', { thirtyDaysAgo })
+        .getMany();
+
+      if (expiredMessages.length === 0) {
+        this.logger.log('No expired messages found for permanent deletion');
+        return;
+      }
+
+      this.logger.log(`Found ${expiredMessages.length} expired messages for permanent deletion`);
+
+      // Extract message IDs
+      const messageIds = expiredMessages.map(message => message.id);
+
+      // Perform permanent deletion (hard delete)
+      const deleteResult = await this.messageRepository.delete({
+        id: In(messageIds)
+      });
+
+      this.logger.log(`Successfully permanently deleted ${deleteResult.affected || 0} messages`);
+
+    } catch (error) {
+      this.logger.error('Error during permanent deletion of expired messages:', error.stack);
+      // Instead of throwing, we log the error since this is a scheduled task
+      // We don't want the application to crash if deletion fails
+      return;
+    }
+  }
+}
 export class TasksService implements OnModuleInit {
   // export class TasksService {
   constructor(
@@ -34,8 +85,8 @@ export class TasksService implements OnModuleInit {
     private readonly caseRepository: Repository<Case>,
     @InjectRepository(Regulation)
     private regulationRepository: Repository<Regulation>,
-    @InjectRepository(Cron)
-    private cronRepository: Repository<Cron>,
+    @InjectRepository(Crons)
+    private cronRepository: Repository<Crons>,
     private embeddingService: EmbeddingService,
     private schedulerRegistry: SchedulerRegistry
   ) { }
@@ -104,8 +155,8 @@ export class TasksService implements OnModuleInit {
     this.schedulerRegistry.addCronJob(jobName, job);
     job.start();
 
-  const message = `Added job: ${jobName} with schedule: ${cronTime}`;
-  return message;
+    const message = `Added job: ${jobName} with schedule: ${cronTime}`;
+    return message;
   }
 
 
@@ -130,7 +181,7 @@ export class TasksService implements OnModuleInit {
   }
 
 
- async deleteCronJob(jobName: string): Promise<string> {
+  async deleteCronJob(jobName: string): Promise<string> {
     if (!this.schedulerRegistry.doesExist('cron', jobName)) {
       return `Job '${jobName}' does not exist.`;
     }
@@ -192,16 +243,16 @@ export class TasksService implements OnModuleInit {
       });
     }
 
-     for await (const data of scrapeCourtListener()) {
+    for await (const data of scrapeCourtListener()) {
       //   console.log(data); // Each plain_text as soon as it's available
-        // console.log('='.repeat(60))
-        // console.log('scraping started')
-        // console.log('te all data of ',data.text)
-        // console.log(data.filePath)
-        // console.log(data.id)
-        // console.log(data.type)
-        // console.log(data.pageCount)
-        // console.log(data.opinions_cited)
+      // console.log('='.repeat(60))
+      // console.log('scraping started')
+      // console.log('te all data of ',data.text)
+      // console.log(data.filePath)
+      // console.log(data.id)
+      // console.log(data.type)
+      // console.log(data.pageCount)
+      // console.log(data.opinions_cited)
       // console.log(data.text)   
 
 
@@ -210,8 +261,8 @@ export class TasksService implements OnModuleInit {
       cases.source_url = 'Api';
       cases.name = data.filePath.split('//')[1];
       cases.filePath = data.filePath;
-      cases.case_type= data.type;
-      cases.type='case';
+      cases.case_type = data.type;
+      cases.type = 'case';
       cases.jurisdiction = '';
 
 
@@ -230,11 +281,11 @@ export class TasksService implements OnModuleInit {
           jurisdiction : '',
         }
       });
-}
-    
+    }
 
 
-    
+
+
 
 
     for await (const { title, content, url } of processAllFloridaStatutes()) {

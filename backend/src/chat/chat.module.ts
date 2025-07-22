@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ChatController } from './chat.controller';
 import { Message } from './entities/message.entity';
-import openaiConfig from '../config/gemini.config';
 import { ChatService } from './chat.service';
 import { Contract } from '@/documents/entities/contract.entity';
 import { Regulation } from '@/documents/entities/regulation.entity';
@@ -14,9 +13,7 @@ import { User } from '@/auth/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Message , Contract , Regulation , Case , Statute , Configuration , User]),
-    ConfigModule.forFeature(openaiConfig),
-    
+    TypeOrmModule.forFeature([Message, Contract, Regulation, Case, Statute, Configuration, User]),
   ],
   controllers: [ChatController],
   providers: [ChatService],

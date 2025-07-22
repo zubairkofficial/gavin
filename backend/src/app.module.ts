@@ -17,10 +17,9 @@ import { Statute } from './documents/entities/statute.entity';
 import { EmbeddingService } from './documents/services/embedding.service';
 import { Regulation } from './documents/entities/regulation.entity';
 import { Status } from './documents/entities/status.entity';
-import { Cron } from './cron.entity';
+import { Crons } from './cron.entity';
 import { Case } from './documents/entities/case.entity';
 import { ChatModule } from './chat/chat.module';
-import { DeleteService } from './delete.service';
 import { Message } from './chat/entities/message.entity';
 import { Configuration } from './documents/entities/configuration.entity';
 
@@ -60,12 +59,11 @@ import { Configuration } from './documents/entities/configuration.entity';
     SharedModule,
     DocumentsModule,
     JurisdictionsModule,
-    TypeOrmModule.forFeature([Statute , Regulation , Status , Cron , Case , Message, Configuration]),
+    TypeOrmModule.forFeature([Statute , Regulation , Status , Crons , Case , Message, Configuration]),
   ],
   controllers: [AppController],
   providers: [
     TasksService,
-    DeleteService,
     AppService,
     EmbeddingService,
     {
