@@ -81,7 +81,36 @@ export class ChatService {
         user: duser,
         password: pass,
         database: data,
-        
+        ssl: {
+          rejectUnauthorized: false,
+          ca: `-----BEGIN CERTIFICATE-----
+MIIEUDCCArigAwIBAgIUFMY7g/gl96OaxPd/8S2wnI/bavYwDQYJKoZIhvcNAQEM
+BQAwQDE+MDwGA1UEAww1NzYyNzYwOWYtOGI5NC00YTNkLTg1OTItZTliZWZhYTJj
+ZmNlIEdFTiAxIFByb2plY3QgQ0EwHhcNMjUwNjE3MTIyMTQxWhcNMzUwNjE1MTIy
+MTQxWjBAMT4wPAYDVQQDDDU3NjI3NjA5Zi04Yjk0LTRhM2QtODU5Mi1lOWJlZmFh
+MmNmY2UgR0VOIDEgUHJvamVjdCBDQTCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCC
+AYoCggGBAN6G/DqFjk79qSzLlo3rAQHZMKWYTQYBUf3sGnZGkdtD/SaETn2QNHvR
+eEXUG7BKIqoz8ruczkij90YAiH/cSOdL0bS9rfZB2/lMy1oUMGjgrtdAS8X7nTPP
+7zthy6EOzMfmb+WXtXzfXXUUvhlVKRO1MNecYp6PWGZTKRwwQeGvWPMVBruyvkgs
+V/Se70WU6XZ3YJtj/+7f8548KliDnxPNBDo27A7AflXVpj4X7uTXV4fXu5WL1s5m
+eQOBoYRoY1kbcf/OQyoaZCe13HbulIkpqrzpQ4EKNG7zOf3TlDovlYlKpAHA9uvm
+y4vlYLjaTMH6B34WFdVBpRcJPahgyD3axvqHShdyXgQEKt1r70Sgvm0D1CV2nQqA
+W0YUajfr+QrK89eqXnXyU43XL1ulhrtNjl4bcSOAJDVR3CjwHVI95ZJcGL5+m/5K
+9AmNVIRfpO/p569fG46HwP2cy4xmBfcZOjw7XMbmdXtVnd2y9kjos7/yZkJ1lgTT
+UBuUxwxJPwIDAQABo0IwQDAdBgNVHQ4EFgQUKIGjJLXwW23PrJ2chOGPWRg+4z8w
+EgYDVR0TAQH/BAgwBgEB/wIBADALBgNVHQ8EBAMCAQYwDQYJKoZIhvcNAQEMBQAD
+ggGBABRAzDjsF2+hzYgUfZncheqBIlXuP3eOcPav838fsgCMUeQNq/2QovWHpIP5
+k8g2BwIXhdhZqOn4WIYWIQ8T1UwmE3gLic64rfUPkeOOJx10BHpkqCawW1AuFfQV
+9LQH/GCQd78xtbvvgoDX0DTGFBJ8j/UeWhuNZtC/Gaw0vMeJ7x2pljdfsCyby0Rp
+h4NqO2k6j8optr5WkH47UrP6fiB6mUbFBwm6OAvUhTRF61uPXUkUaYQch8oIQwW4
+0Ij4aU95p3WToSfBdOXiHQKgrqthQvKwJZKnWfnH1w3VQT39uzPADm7+jLw06rpX
+IeR/weWk5kPQas3jaN0hIEsV/TyjpOPqRlIpkvXCtJXuB1U3Ha0hh9FcF/Qccky5
+RLIg/EqouWzVfgqoHejsgLX/lfweRYOYjXcsG1/OSgLDkVIrimkLxRpLKjs+QHlK
+Bl8yI+HhlS1hA9AsVfY8DRpssIUszmmXpJBGYdcN5qDkZx6Rv811RcVUhaRHak3X
+OL/0OA==
+-----END CERTIFICATE-----
+`},
+
       },
       tableName: "document_embeddings",
       columns: {
@@ -125,8 +154,6 @@ export class ChatService {
     let fileContent = '';
     if (files && files.length > 0) {
       fileContent = await parseUploadedFile(files);
-      // You can now use fileContent as needed
-      // console.log('Extracted file content:', fileContent);
     }
 
     const convId = conversationId || uuidv4();
@@ -178,36 +205,20 @@ export class ChatService {
       });
       let documentContext: Array<{ title: string; reference: string; jurisdiction?: string; citation?: string; subject_area?: string; code?: string; decision_date?: string; name?: string; case_type?: string; }> = [];
       let annotations: Array<{ title: string; reference: string, type: string, start_index: string, end_index: string, }> = [];
-      let str  
-      let ftitle 
+      let str
+      let ftitle
 
 
-      // condionally handle web search or document context
-      
+      if (websearch == 'true') {
+        console.log('Web search enabled for this message');
         let context = '';
-        let promptfromDB = '';
-      // Only include citations if relevantDocs found and not just file upload
 
-        const data = await this.configurationRepository.find({})
-        // console.log('the data that we got from system repo is',data[0]?.prompt)
-        promptfromDB = data[0]?.prompt 
-        if (data.length == 0) {
-          const data = await this.configurationRepository.create({
-            prompt: `🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
-        Instructions:
-          - *Context Understanding*: Check follow-up questions by analyzing the chat history and current question context.
-          - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
-          - If you do not find an answer in the Document Context, File Content, or chat history, respond with what you can based on the provided information also web search as well.
-          - Provide the answer in a concise manner and include proper citations.
-          - `
-          })
-          const dat = await this.configurationRepository.save(data)
-          // console.log('System prompt created after save:', dat.prompt);
-          promptfromDB = dat.prompt
-        }
-
+        context += fileContent ? `File Content:\n${fileContent}\n` : '';
+        
+        const promptfromDB = await this.promptManagerService.getSystemPrompt();
+        console.log('Prompt from DB:', promptfromDB);
         const systemPrompt = `${promptfromDB}`
-      let prompt = `
+        let prompt = `
         Use the following information to answer the question:
         ${fileContent ? `File Content:\n${fileContent}\n` : ''}
         ${context ? `Context:\n${context}\n` : ''}
@@ -218,19 +229,16 @@ export class ChatService {
         Question:
         ${message}
         `;
-       
+
         const llm = new ChatOpenAI({ model: "gpt-4o-mini", streaming: true }).bindTools([
           { type: "web_search_preview" },
         ]);
 
-       const stream = await llm.invoke([
+        const stream = await llm.invoke([
           new SystemMessage(systemPrompt),
           new HumanMessage(prompt)
         ]);
-        // console.log('stream:', stream, 'stream type:', typeof stream);
-        // console.log('stream:', stream);
 
-        // Safely check and process output array with nested content and annotations
         if (stream?.response_metadata?.output) {
           stream.response_metadata.output.forEach((output: any, index: number) => {
             // console.log(`Processing Output[${index}]`);
@@ -247,7 +255,7 @@ export class ChatService {
                       start_index: annotation.startIndex || 0,
                       end_index: annotation.endIndex || 0,
                     })
-                    
+
                   });
                 }
               });
@@ -255,278 +263,167 @@ export class ChatService {
           });
         }
 
-      
-       str = stream
-      const finalTitle = conTitle || title;
-      ftitle = finalTitle 
-      if (fileContent) {
-        documentContext = []
-      }
 
-        console.log('Document context:', websearch);
+        str = stream
+        const finalTitle = conTitle || title;
+        ftitle = finalTitle
+        if (fileContent) {
+          documentContext = []
+        }
 
-
-        // You can implement web search logic here if needed
       } else if (websearch == 'false') {
-        console.log('Web search disabled for this message, using document context and file content');
-      let relevantDocs: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
-      let enabledDocs: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
-      // let filteredDoc: import('@langchain/core/documents').DocumentInterface<Record<string, any>>[] = [];
-      try {
 
-          console.log('jurisdiction in createMessageDto', createMessageDto.jurisdiction)
-          const filter = createMessageDto.jurisdiction 
-            ? { enabled: true , jurisdiction: createMessageDto.jurisdiction }
-            : { enabled: true };
-          console.log('filter that we are using for similarity search', filter)
+        const ragTool = tool(
+          async ({ message, jurisdiction }) => {
+            try {
+              console.log('RAG search for:', message, 'in jurisdiction:', createMessageDto.jurisdiction);
 
-        const enabledDocsWithScores = await this.vectorStore.similaritySearchWithScore(message, 7, {
-            filter: {   enabled: true , jurisdiction: createMessageDto.jurisdiction}, 
-        });
-          console.log('enabledDocsWithScores:', enabledDocsWithScores.length, 'documents found');
-        enabledDocs = enabledDocsWithScores.map(([doc, _score]) => doc);
-        // console.log('documnet that we got from similarity',enabledDocsWithScores)
+              let relevantDocs: any[] = [];
 
-        const sortedDocs = enabledDocsWithScores.sort((a, b) => a[1] - b[1]);
-        const top3DocsWithScores = sortedDocs.slice(0, 3); // Get top 3
-const bestDoc = top3DocsWithScores.map(([doc]) => doc);
-// const bestDoc = sortedDocs[0][0];
+              const enabledDocsWithScores = await this.vectorStore.similaritySearchWithScore(message, 7, {
+                filter: { enabled: true, jurisdiction: createMessageDto.jurisdiction || jurisdiction },
+              });
+
+              console.log('Found documents:', enabledDocsWithScores.length);
+
+              const sortedDocs = enabledDocsWithScores.sort((a, b) => a[1] - b[1]);
+              const top3DocsWithScores = sortedDocs.slice(0, 3);
+              relevantDocs = top3DocsWithScores.map(([doc]) => doc);
+
+              let context = '';
+
+              if (relevantDocs.length > 0) {
+                console.log('jurisdictionfromuser:', createMessageDto.jurisdiction);
+                const enabledDocs = relevantDocs.filter(doc =>
+                  doc.metadata &&
+                  doc.metadata.enabled === true &&
+                 (!createMessageDto.jurisdiction || (createMessageDto.jurisdiction && doc.metadata.jurisdiction === createMessageDto.jurisdiction))
+                );
+                console.log('Enabled documents:', enabledDocs.length);
+
+                if (enabledDocs.length > 0) {
+                  const seenIds = new Set();
+
+                  for (const doc of enabledDocs) {
+                    if (seenIds.has(doc.metadata.document_id)) continue;
+                    seenIds.add(doc.metadata.document_id);
+
+                    try {
+                      if (doc.metadata.document_type === 'contract') {
+                        const document = await this.contractRepository
+                          .createQueryBuilder('c')
+                          .select(['c.jurisdiction', 'c.title', 'c.fileName', 'c.filePath', 'c.isEnabled'])
+                          .where('c.id = :id', { id: doc.metadata.document_id })
+                          .getOne();
+
+                        if (document) {
+                          let finalPath = document.filePath?.startsWith('http')
+                            ? `<${document.filePath}>`
+                            : `${process.env.BASE_URL}/static/files/${document.filePath}`;
+
+                          documentContext.push({
+                            title: document.title || '',
+                            reference: finalPath,
+                            jurisdiction: document.jurisdiction || '',
+                          });
+                        }
+                      } else if (doc.metadata.document_type === 'regulation') {
+                        const document = await this.regulationRepository
+                          .createQueryBuilder('c')
+                          .select(['c.jurisdiction', 'c.title', 'c.citation', 'c.filePath', 'c.subject_area'])
+                          .where('c.id = :id', { id: doc.metadata.document_id })
+                          .getOne();
+
+                        if (document) {
+                          let finalPath = document.filePath?.startsWith('http')
+                            ? document.filePath
+                            : `${process.env.BASE_URL}/static/files/${document.filePath}`;
+
+                          documentContext.push({
+                            title: document.title || '',
+                            reference: finalPath,
+                            citation: document.citation || '',
+                            subject_area: document.subject_area || '',
+                          });
+                        }
+                      } else if (doc.metadata.document_type === 'case') {
+                        const document = await this.caseRepository
+                          .createQueryBuilder('c')
+                          .select(['c.court', 'c.citation', 'c.name', 'c.filePath', 'c.case_type', 'c.decision_date'])
+                          .where('c.id = :id', { id: doc.metadata.document_id })
+                          .getOne();
+
+                        if (document) {
+                          let finalPath = document.filePath?.startsWith('http')
+                            ? `<${document.filePath} target="_blank">`
+                            : `${process.env.BASE_URL}/static/files/${document.filePath}`;
+
+                          documentContext.push({
+                            title: document.court || '',
+                            reference: finalPath,
+                            citation: document.citation || '',
+                            name: document.name || '',
+                            case_type: document.case_type || '',
+                            decision_date: document.decision_date || '',
+                          });
+                        }
+                      } else if (doc.metadata.document_type === 'statute') {
+                        const document = await this.statuteRepository
+                          .createQueryBuilder('c')
+                          .select(['c.title', 'c.filePath', 'c.code', 'c.section'])
+                          .where('c.id = :id', { id: doc.metadata.document_id })
+                          .getRawOne();
+
+                        if (document) {
+                          let finalPath = document.c_filePath?.startsWith('http')
+                            ? `<${document.c_filePath}>`
+                            : `${process.env.BASE_URL}/static/files/${document.c_filePath}`;
+
+                          documentContext.push({
+                            title: document.c_title || '',
+                            reference: finalPath,
+                            code: document.c_code || '',
+                          });
+                        }
+                      }
+                    } catch (docError) {
+                      console.error(`Error fetching document ${doc.metadata.document_id}:`, docError);
+                    }
+                  }
 
 
-
-// console.log(relevantDocs, 'relevantDocs')
-relevantDocs = bestDoc;
-          
-        if (relevantDocs.length > 0) {
-          // console.log('Relevant docs found:', relevantDocs.length);
-        } else {
-          // console.log('No relevant docs found');
-        }
-      } catch (err) {
-          console.log('Error retrieving relevant docs:', err);
-      }
-
-      let context = '';
-      context += fileContent ? `File Content:\n${fileContent}\n` : '';
-      if (relevantDocs.length > 0) {
-
-          const disableDocs = relevantDocs.filter(doc => doc.metadata && doc.metadata.jurisdiction == createMessageDto.jurisdiction );
-          const enable = relevantDocs.filter(doc => doc.metadata && doc.metadata.enabled === true && doc.metadata.jurisdiction == createMessageDto.jurisdiction);
-          console.log( 'Disabled docs:', disableDocs.length);
-          console.log('Enabled docs:', enable.length, 'Relevant docs:', relevantDocs.length);
-
-        if (enable.length === 0) {
-
-        } else {
-          if (chatHistoryContext) {
-          context += chatHistoryContext + '\n';
-        }
-        const seenIds = new Set<string>();
-          // Only process enabled docs
-            for (const doc of enable) {
-          if (seenIds.has(doc.metadata.document_id)) continue;
-          seenIds.add(doc.metadata.document_id);
-          try {
-            // console.log('Processing document:', doc.metadata.document_id, 'Type:', doc.metadata.document_type);
-            if (doc.metadata.document_type === 'contract') {
-              const document = await this.contractRepository
-                .createQueryBuilder('c')
-                .select([
-                  'c.jurisdiction',
-                  'c.title',
-                  'c.fileName',
-                  'c.filePath',
-                  'c.isEnabled',
-                ])
-                .where('c.id = :id', { id: doc.metadata.document_id })
-                .getOne();
-              if (document) {
-                let filePath = document.filePath || '';
-                let finalPath = '';
-                if (!document.filePath.startsWith('http://') && !document.filePath.startsWith('https://')) {
-                  filePath = `${process.env.BASE_URL}/static/files/${filePath}`;
-                  finalPath = filePath;
-                } else {
-                      finalPath = ` <${filePath || '#'} >`;
+                  context = enabledDocs.map(doc => doc.pageContent).join('\n');
                 }
-                // documentContext += [
-                //   document.title ? ` \n\n [*Reference:* ${document.title}](${finalPath})` : `\n\n **Reference:** [${document.fileName}](${filePath})`,
-                //   document.jurisdiction ? `**Jurisdiction:** ${document.jurisdiction}` : '',
-                // ]
-                //   .filter(Boolean)
-                //   .join(', ') + '\n';
-                documentContext.push({
-                  title: document.title || '',
-                  reference: finalPath,
-                  jurisdiction: document.jurisdiction || '',
-                })
               }
-            } else if (doc.metadata.document_type === 'regulation') {
-              const document = await this.regulationRepository
-                .createQueryBuilder('c')
-                .select([
-                  'c.jurisdiction',
-                  'c.title',
-                  'c.isEnabled',
-                  'c.citation',
-                  'c.fileName',
-                  'c.filePath',
-                  'c.subject_area',
-                  'c.summary',
-                ])
-                .where('c.id = :id', { id: doc.metadata.document_id })
-                .getOne();
-              if (document) {
-                let filePath = document.filePath || '';
-                let finalPath = '';
-                if (!filePath.startsWith('http://') && !filePath.startsWith('https://')) {
-                      filePath = ` ${process.env.BASE_URL}/static/files/${filePath}`;
-                  finalPath = filePath;
-                } else {
-                  finalPath = filePath;
-                }
-                // documentContext += [
-                //   document.title ? `\n\n [**Reference:** ${document.title}](${finalPath})` : `\n\n **Reference:** [${document.fileName}](${filePath})`,
-                //   document.citation ? `**Citation:** ${document.citation}` : '',
-                //   document.subject_area ? `**Subject:** ${document.subject_area}` : '',
-                // ]
-                //   .filter(Boolean)
-                //   .join(', ') + '\n';
 
-                documentContext.push({
-                  title: document.title || '',
-                  reference: finalPath,
-                  citation: document.citation || '',
-                  subject_area: document.subject_area || '',
-                })
-              }
-            } else if (doc.metadata.document_type === 'case') {
-              const document = await this.caseRepository
-                .createQueryBuilder('c')
-                .select([
-                  'c.jurisdiction',
-                  'c.court',
-                  'c.decision_date',
-                  'c.citation',
-                  'c.name',
-                  'c.filePath',
-                  'c.case_type',
-                  'c.holding_summary',
-                ])
-                .where('c.id = :id', { id: doc.metadata.document_id })
-                .getOne();
-
-              // if (!document) console.log('No document found for case ID:', doc.metadata.document_id);
-              if (document) {
-                let filePath = document.filePath || '';
-                let finalPath = '';
-                if (!filePath.startsWith('http://') && !filePath.startsWith('https://')) {
-                  filePath = `${process.env.BASE_URL}/static/files/${filePath}`;
-                  finalPath = filePath;
-                } else {
-                  finalPath = `<${filePath || '#'} target="_blank">`;
-                }
-                // console.log(document, 'document in case')
-                // documentContext += [
-                //   document.court ? `\n\n [**Reference:** ${document.court}](${finalPath})` : `\n\n **Reference:** [${document.name}](${filePath})`,
-                //   document.citation ? `**Citation:** ${document.citation}` : '',
-                //   document.decision_date ? `**Decision Date:** ${document.decision_date}` : '',
-                // ]
-                //   .filter(Boolean)
-                //   .join(', ') + '\n';
-                documentContext.push({
-                  title: document.court || '',
-                  reference: finalPath,
-                  citation: document.citation || '',
-                  decision_date: document.decision_date || '',
-                  name: document.name || '',
-                  case_type: document.case_type || '',
-                })
-              }
-            } else if (doc.metadata.document_type === 'statute') {
-              const document = await this.statuteRepository
-                .createQueryBuilder('c')
-                .select([
-                  'c.jurisdiction',
-                  'c.title',
-                  'c.filePath',
-                  'c.fileName',
-                  'c.code',
-                  'c.section',
-                  'c.holding_summary',
-                ])
-                .where('c.id = :id', { id: doc.metadata.document_id })
-                .getRawOne();
-              if (document) {
-                let filePath = document.c_filePath || '';
-                let finalPath = '';
-                if (!filePath.startsWith('http://') && !filePath.startsWith('https://')) {
-                  filePath = `${process.env.BASE_URL}/static/files/${filePath}`;
-                  finalPath = filePath;
-                } else {
-                  finalPath = `<${filePath || '#'} >`;
-                }
-                // documentContext += [
-                //   document.c_title ? `\n\n [**Reference:** ${document.c_title}](${finalPath})` : `\n\n **Reference:** [${document.c_fileName}](${filePath})`,
-                //   document.c_code ? `**Code:** ${document.c_code}` : '',
-                //   document.c_section ?` **Section:** ${document.c_section}` : ''
-                // ]
-                //   .filter(Boolean)
-                //   .join(', ') + '\n';
-                documentContext.push({
-                  title: document.c_title || '',
-                  reference: finalPath,
-                  code: document.c_code || '',
-                })
-              }
+              return {
+                context,
+                documentContext,
+                documentsFound: relevantDocs.length
+              };
+            } catch (error) {
+              console.error('RAG Tool Error:', error);
+              return {
+                context: '',
+                documentContext: [],
+                documentsFound: 0,
+                error: error.message
+              };
             }
-          } catch (docError) {
-            console.error(`Error fetching document ${doc.metadata.document_id}:`, docError);
+          },
+          {
+            name: "rag_search",
+            description: "Searches legal documents using RAG for the given message and jurisdiction. .",
+            schema: z.object({
+              message: z.string().min(1, "Message is required"),
+              jurisdiction: z.string().describe("Legal jurisdiction (e.g., 'federal', 'TX', 'NY', etc.)"),
+            }),
           }
-        }
-          context += enable
-            .map(doc => doc.pageContent)
-            .join('\n');
-        }
-      }
-
-      // else if (fileContent) {
-      //   // Only file uploaded, no citations
-      //   context += File Content:\n${fileContent}\n;
-      //   documentContext = '';
-      // } else if (chatHistoryContext) {
-      //   context += chatHistoryContext + '\n';
-      //   // documentContext = '';
-      // }
+        );
 
 
-      // console.log('chatHistoryContext:', context);
-
-      // Follow-up detection logic
-      const followUpIndicators = [
-        'explain more', 'tell me more', 'expand on this', 'clarify', 'give more details',
-        'what does that mean', 'elaborate', 'refer back', 'continue', 'go on', 'can you elaborate',
-        'can you clarify', 'can you explain', 'add more', 'further details', 'more information',
-        'continue previous', 'follow up', 'as above', 'as before', 'as previously discussed'
-      ];
-      function isFollowUpQuestion(message) {
-        return followUpIndicators.some(indicator => message.toLowerCase().includes(indicator));
-      }
-
-
-      // console.log('context before using in the prompt :', context);
-
-      const greetings = [
-        // 'hi', 'hello', 'hey', 'how are you', 'can you help', 'help me', 'assist me', 'can you please help', 'good morning', 'good afternoon', 'good evening',
-        // 'welcome', 'greetings', 'what can you do', 'what can you help with', 'how can you assist', 'can you assist me', 'can you help me',
-        // 'can you answer my question', 'can you provide information', 'can you give me advice', 'can you explain something', 'can you clarify something',
-        // 'hy'
-      ];
         let promptfromDB = '';
 
-      const lowerMsg = message.toLowerCase();
-      const isGreeting = greetings.some(greet => lowerMsg.includes(greet));
-        // console.log('user id to fetch the system prompt:', userId);
         const data = await this.configurationRepository.find({
         })
         // console.log('data that we got for the system prompt',data[0]?.prompt )
@@ -538,53 +435,62 @@ relevantDocs = bestDoc;
           - *Context Understanding*: Check follow-up questions by analyzing the chat history and current question context.
           - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
           - If you do not find an answer in the Document Context, File Content, or chat history, respond with what you can based on the provided information also web search as well.
-          - Provide the answer in a concise manner and include proper citations.
+          - Provide the answer in a concise manner.
           - `
           })
           const dat = await this.configurationRepository.save(data)
         // console.log('System prompt created after save:', dat.prompt);
           promptfromDB = dat.prompt
         }
-          console.log(context , 'context that we are using in the prompt')
         const systemPrompt = `${promptfromDB}`
-      let prompt = `
-        Use the following information to answer the question:
-
-        ${documentContext ? `Document Context:\n${documentContext}\n` : ''}
-        ${fileContent ? `File Content:\n${fileContent}\n` : ''}
-        ${context ? `Context:\n${context}\n` : ''}
-
-        if ${fileContent} just use the file content and chat history context to answer the question.
-
-        Question:
-        ${message}
-        `;
 
 
-        const stream = await this.model.stream([new SystemMessage(systemPrompt), new HumanMessage(prompt)],
-          {
-            stream_options: {
-              include_usage: true,
-            },
+        const createReActAgent = () => {
+          const tools = [ragTool];
+
+          return createReactAgent({
+            llm: this.model,
+            tools,
+            prompt: ` ${systemPrompt}
+                    if file content is provided, use it to answer the question and dont use rag_search.
+                    Instructions:
+                    - If only message is provided, ask the user for jurisdiction first
+                    ${chatHistoryContext ? `- Use chat history for additional context: ${chatHistoryContext}` : ''}
+                    ${fileContent ? `- Use file content for additional context: ${fileContent}` : ''}
+
+                    `,
+          });
+        };
+
+        let inputs = { messages: [{ role: "user", content:  `${message} in jurisdiction ${createMessageDto.jurisdiction}` }] };
+
+        const result = await createReActAgent().invoke(inputs, {
+          streamMode: "values",
+        });
+
+        str = await result;
+        let combinedResponse = '';
+
+        // Handle message chunks from the result
+        for (const message of str.messages) {
+          if (message.content) {
+            combinedResponse += message.content;
           }
-        );
 
-       str = stream
-      const finalTitle = conTitle || title;
-      ftitle = finalTitle 
-      if (fileContent) {
-        documentContext = []
+          // Handle tool calls if present
+          if (message.additional_kwargs?.tool_calls) {
+            for (const toolCall of message.additional_kwargs.tool_calls) {
+            }
+          }
+        }
+
+        const finalTitle = conTitle || title;
+        ftitle = finalTitle;
+        if (fileContent) {
+          documentContext = [];
+        }
+        
       }
-      }
-      
-      // console.log('User ID:', userId);
-
-      // Use the vector store as retriever
-      
-
-      // Optionally, you can reconstruct the stream if needed, or just return the chunks as response
-      // If you need to return the original stream, you may need to handle this logic differently
-
       return {
         stream: str, // or stream, if you want to keep streaming
         documentContext,
@@ -644,7 +550,7 @@ relevantDocs = bestDoc;
     messageId: string,
     updateData: {
       humanMessage: string,
-      aiMessage: string, 
+      aiMessage: string,
       title: string,
       userId: string | undefined,
       conversationId: string,
@@ -653,10 +559,10 @@ relevantDocs = bestDoc;
       type: string,
       fileContent?: string
     }
-): Promise<Message> {
+  ): Promise<Message> {
     try {
       // Find existing message
-      const existingMessage = await this.messageRepository.findOne({ 
+      const existingMessage = await this.messageRepository.findOne({
         where: { id: messageId }
       });
 
@@ -680,7 +586,7 @@ relevantDocs = bestDoc;
       console.log('Message updated successfully');
 
       return updatedMessage;
-      
+
     } catch (updateError) {
       console.error('Error updating message:', updateError);
       throw updateError;
