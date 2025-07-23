@@ -1,4 +1,5 @@
 "use client"
+
 import { Switch } from "@/components/ui/switch"
 import { useState, useEffect } from "react"
 import { Pencil, Eye, RefreshCcw, Loader2 } from "lucide-react"
@@ -31,6 +32,66 @@ import API from "@/lib/api"
 import { toast } from "sonner"
 import { EditDocumentModal } from "./edit-documet-model" // Adjust path as needed
 import { Sheet, SheetContent } from "@/components/ui/sheet"
+
+// State to code mapping
+const usStatesWithCodes = [
+  { name: "Alabama", code: "AL" },
+  { name: "Alaska", code: "AK" },
+  { name: "Arizona", code: "AZ" },
+  { name: "Arkansas", code: "AR" },
+  { name: "California", code: "CA" },
+  { name: "Colorado", code: "CO" },
+  { name: "Connecticut", code: "CT" },
+  { name: "Delaware", code: "DE" },
+  { name: "Florida", code: "FL" },
+  { name: "Georgia", code: "GA" },
+  { name: "Hawaii", code: "HI" },
+  { name: "Idaho", code: "ID" },
+  { name: "Illinois", code: "IL" },
+  { name: "Indiana", code: "IN" },
+  { name: "Iowa", code: "IA" },
+  { name: "Kansas", code: "KS" },
+  { name: "Kentucky", code: "KY" },
+  { name: "Louisiana", code: "LA" },
+  { name: "Maine", code: "ME" },
+  { name: "Maryland", code: "MD" },
+  { name: "Massachusetts", code: "MA" },
+  { name: "Michigan", code: "MI" },
+  { name: "Minnesota", code: "MN" },
+  { name: "Mississippi", code: "MS" },
+  { name: "Missouri", code: "MO" },
+  { name: "Montana", code: "MT" },
+  { name: "Nebraska", code: "NE" },
+  { name: "Nevada", code: "NV" },
+  { name: "New Hampshire", code: "NH" },
+  { name: "New Jersey", code: "NJ" },
+  { name: "New Mexico", code: "NM" },
+  { name: "New York", code: "NY" },
+  { name: "North Carolina", code: "NC" },
+  { name: "North Dakota", code: "ND" },
+  { name: "Ohio", code: "OH" },
+  { name: "Oklahoma", code: "OK" },
+  { name: "Oregon", code: "OR" },
+  { name: "Pennsylvania", code: "PA" },
+  { name: "Rhode Island", code: "RI" },
+  { name: "South Carolina", code: "SC" },
+  { name: "South Dakota", code: "SD" },
+  { name: "Tennessee", code: "TN" },
+  { name: "Texas", code: "TX" },
+  { name: "Utah", code: "UT" },
+  { name: "Vermont", code: "VT" },
+  { name: "Virginia", code: "VA" },
+  { name: "Washington", code: "WA" },
+  { name: "West Virginia", code: "WV" },
+  { name: "Wisconsin", code: "WI" },
+  { name: "Wyoming", code: "WY" },
+]
+
+// Helper function to convert state code to full name
+const getStateNameByCode = (stateCode: string): string => {
+  const state = usStatesWithCodes.find((s) => s.code === stateCode)
+  return state ? state.name : stateCode
+}
 
 interface Contract {
   id: string
@@ -183,6 +244,7 @@ export default function DocumentsTable() {
       }
       const responseData = response.data
       console.log(`Response data for ${type}:`, responseData)
+
       if (type === "contracts") {
         const contractsResponse = responseData as ContractsResponse
         if (contractsResponse.success) {
@@ -354,6 +416,7 @@ export default function DocumentsTable() {
         : documentType === "statutes"
           ? sortedStatutes.length
           : sortedCases.length
+
   const totalPages = Math.ceil(totalItems / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
@@ -562,11 +625,14 @@ export default function DocumentsTable() {
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px]">
                   <SelectItem value="all">All Jurisdictions</SelectItem>
-                  {availableJurisdictions.map((jurisdiction) => (
-                    <SelectItem key={jurisdiction} value={jurisdiction}>
-                      {jurisdiction}
-                    </SelectItem>
-                  ))}
+                  {availableJurisdictions.map((jurisdiction) => {
+                    const fullStateName = getStateNameByCode(jurisdiction)
+                    return (
+                      <SelectItem key={jurisdiction} value={jurisdiction}>
+                        {fullStateName} ({jurisdiction})
+                      </SelectItem>
+                    )
+                  })}
                 </SelectContent>
               </Select>
               <Select value={selectedSource} onValueChange={handleSourceChange}>
@@ -609,7 +675,9 @@ export default function DocumentsTable() {
               </Button>
             </div>
           </div>
+
           {error && <div className="text-red-500 mb-4 p-3 bg-red-50 rounded-md">Error: {error}</div>}
+
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
@@ -643,7 +711,9 @@ export default function DocumentsTable() {
                           <TableCell className="font-medium">{contract.fileName?.slice(0, 30) || "--"}</TableCell>
                           <TableCell className="font-medium">{contract.title?.slice(0, 30) || "--"}</TableCell>
                           <TableCell>{contract.type || "--"}</TableCell>
-                          <TableCell>{contract.jurisdiction || "--"}</TableCell>
+                          <TableCell>
+                            {getStateNameByCode(contract.jurisdiction)} ({contract.jurisdiction})
+                          </TableCell>
                           <TableCell>{contract.source || "--"}</TableCell>
                           <TableCell>{formatDate(contract.createdAt)}</TableCell>
                           <TableCell className="flex justify-center items-center">
@@ -714,7 +784,9 @@ export default function DocumentsTable() {
                           <TableCell className="font-medium">{regulation.title.slice(0, 30) || "--"}</TableCell>
                           <TableCell className="font-medium">{regulation.source_url}</TableCell>
                           <TableCell>{regulation.citation?.slice(0, 30) || "--"}</TableCell>
-                          <TableCell>{regulation.jurisdiction || "--"}</TableCell>
+                          <TableCell>
+                            {getStateNameByCode(regulation.jurisdiction)} ({regulation.jurisdiction})
+                          </TableCell>
                           <TableCell>{formatDate(regulation.createdAt)}</TableCell>
                           <TableCell className="flex justify-center items-center">
                             {loadingIds.has(regulation.id) ? (
@@ -786,7 +858,9 @@ export default function DocumentsTable() {
                           <TableCell className="font-medium">{statute.source_url || "--"}</TableCell>
                           <TableCell>{statute.citation?.slice(0, 30) || "--"}</TableCell>
                           <TableCell>{statute.code?.slice(0, 15) || "--"}</TableCell>
-                          <TableCell>{statute.jurisdiction || "--"}</TableCell>
+                          <TableCell>
+                            {getStateNameByCode(statute.jurisdiction)} ({statute.jurisdiction})
+                          </TableCell>
                           <TableCell>{formatDate(statute.createdAt)}</TableCell>
                           <TableCell className="flex justify-center items-center">
                             {loadingIds.has(statute.id) ? (
@@ -855,7 +929,9 @@ export default function DocumentsTable() {
                           <TableCell className="font-medium">{caseItem.name?.slice(0, 20) || "--"}</TableCell>
                           <TableCell className="font-medium">{caseItem.title?.slice(0, 30) || "--"}</TableCell>
                           <TableCell className="font-medium">{caseItem.source_url || "--"}</TableCell>
-                          <TableCell className="font-medium">{caseItem.jurisdiction || "--"}</TableCell>
+                          <TableCell className="font-medium">
+                            {getStateNameByCode(caseItem.jurisdiction)} ({caseItem.jurisdiction})
+                          </TableCell>
                           <TableCell>{caseItem.case_type || "--"}</TableCell>
                           <TableCell>{formatDate(caseItem.createdAt)}</TableCell>
                           <TableCell className="flex justify-center items-center">
@@ -899,6 +975,7 @@ export default function DocumentsTable() {
               )}
             </div>
           )}
+
           {totalItems > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
               <div className="text-sm text-muted-foreground">
@@ -907,7 +984,7 @@ export default function DocumentsTable() {
                   <div className="mt-1 flex flex-wrap gap-2">
                     {selectedJurisdiction !== "all" && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                        Jurisdiction: {selectedJurisdiction}
+                        Jurisdiction: {getStateNameByCode(selectedJurisdiction)}
                       </span>
                     )}
                     {selectedSource !== "all" && (
@@ -973,6 +1050,7 @@ export default function DocumentsTable() {
           )}
         </CardContent>
       </Card>
+
       {/* Edit Document Modal */}
       {editModalOpen && editDocument && (
         <EditDocumentModal
@@ -983,6 +1061,7 @@ export default function DocumentsTable() {
           onUpdate={handleDocumentUpdate}
         />
       )}
+
       {/* Document Details Drawer */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="right" className="w-[450px] sm:w-[540px]">
