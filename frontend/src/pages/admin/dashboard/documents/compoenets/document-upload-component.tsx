@@ -1,37 +1,30 @@
-import React, { useState, useRef, useEffect } from "react";
-import { toast } from "sonner";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Check, ChevronsUpDown, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import API from "@/lib/api";
+"use client"
+
+import type React from "react"
+import { useState, useRef, useEffect } from "react"
+import { toast } from "sonner"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Check, ChevronsUpDown, X } from "lucide-react"
+import { cn } from "@/lib/utils"
+import API from "@/lib/api"
 
 interface AttachedDocument {
-  id: string;
-  name: string;
-  type: string;
-  category: string;
-  size: string;
-  title: string;
-  file?: File; // Made optional since it's removed after upload
+  id: string
+  name: string
+  type: string
+  category: string
+  size: string
+  title: string
+  file?: File // Made optional since it's removed after upload
 }
 
 interface DocumentType {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  acceptedFormats: string[];
+  id: string
+  name: string
+  description: string
+  icon: React.ReactNode
+  acceptedFormats: string[]
 }
 
 const documentTypes: DocumentType[] = [
@@ -40,12 +33,7 @@ const documentTypes: DocumentType[] = [
     name: "Contracts",
     description: "Employment contracts, NDAs, service agreements",
     icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -54,19 +42,14 @@ const documentTypes: DocumentType[] = [
         />
       </svg>
     ),
-    acceptedFormats: [".pdf", ".doc", ".docx", ".txt" , ".png" , ".jpeg"],
+    acceptedFormats: [".pdf", ".doc", ".docx", ".txt", ".png", ".jpeg"],
   },
   {
     id: "Regulation",
     name: "Regulations",
     description: "Articles of incorporation, bylaws, board resolutions",
     icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -75,20 +58,14 @@ const documentTypes: DocumentType[] = [
         />
       </svg>
     ),
-    acceptedFormats: [".pdf", ".doc", ".docx", ".txt", ".png" , ".jpeg"],
+    acceptedFormats: [".pdf", ".doc", ".docx", ".txt", ".png", ".jpeg"],
   },
   {
     id: "Statute",
     name: "Statutes",
-    description:
-      "Legislative acts, laws, regulations, codes, and statutory texts",
+    description: "Legislative acts, laws, regulations, codes, and statutory texts",
     icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -97,41 +74,96 @@ const documentTypes: DocumentType[] = [
         />
       </svg>
     ),
-    acceptedFormats: [".pdf", ".doc", ".docx", ".txt", ".rtf" , ".png" , ".jpeg"],
+    acceptedFormats: [".pdf", ".doc", ".docx", ".txt", ".rtf", ".png", ".jpeg"],
   },
-];
+]
+
+// State to code mapping
+const usStatesWithCodes = [
+  { name: "Alabama", code: "AL" },
+  { name: "Alaska", code: "AK" },
+  { name: "Arizona", code: "AZ" },
+  { name: "Arkansas", code: "AR" },
+  { name: "California", code: "CA" },
+  { name: "Colorado", code: "CO" },
+  { name: "Connecticut", code: "CT" },
+  { name: "Delaware", code: "DE" },
+  { name: "Florida", code: "FL" },
+  { name: "Georgia", code: "GA" },
+  { name: "Hawaii", code: "HI" },
+  { name: "Idaho", code: "ID" },
+  { name: "Illinois", code: "IL" },
+  { name: "Indiana", code: "IN" },
+  { name: "Iowa", code: "IA" },
+  { name: "Kansas", code: "KS" },
+  { name: "Kentucky", code: "KY" },
+  { name: "Louisiana", code: "LA" },
+  { name: "Maine", code: "ME" },
+  { name: "Maryland", code: "MD" },
+  { name: "Massachusetts", code: "MA" },
+  { name: "Michigan", code: "MI" },
+  { name: "Minnesota", code: "MN" },
+  { name: "Mississippi", code: "MS" },
+  { name: "Missouri", code: "MO" },
+  { name: "Montana", code: "MT" },
+  { name: "Nebraska", code: "NE" },
+  { name: "Nevada", code: "NV" },
+  { name: "New Hampshire", code: "NH" },
+  { name: "New Jersey", code: "NJ" },
+  { name: "New Mexico", code: "NM" },
+  { name: "New York", code: "NY" },
+  { name: "North Carolina", code: "NC" },
+  { name: "North Dakota", code: "ND" },
+  { name: "Ohio", code: "OH" },
+  { name: "Oklahoma", code: "OK" },
+  { name: "Oregon", code: "OR" },
+  { name: "Pennsylvania", code: "PA" },
+  { name: "Rhode Island", code: "RI" },
+  { name: "South Carolina", code: "SC" },
+  { name: "South Dakota", code: "SD" },
+  { name: "Tennessee", code: "TN" },
+  { name: "Texas", code: "TX" },
+  { name: "Utah", code: "UT" },
+  { name: "Vermont", code: "VT" },
+  { name: "Virginia", code: "VA" },
+  { name: "Washington", code: "WA" },
+  { name: "West Virginia", code: "WV" },
+  { name: "Wisconsin", code: "WI" },
+  { name: "Wyoming", code: "WY" },
+]
+
+// Helper functions to convert between state names and codes
+const getStateNameByCode = (stateCode: string): string => {
+  const state = usStatesWithCodes.find((s) => s.code === stateCode)
+  return state ? state.name : stateCode
+}
 
 interface Jurisdiction {
-  id: number;
-  jurisdiction: string;
-  created_at: string;
+  id: number
+  jurisdiction: string // This will be the code from backend (e.g., "NY")
+  created_at: string
 }
 
 interface OverlayProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 const Overlay: React.FC<OverlayProps> = ({ children }) => (
-  <div className="fixed inset-0 bg-white/70 flex items-center justify-center z-50 p-4 ">
-    {children}
-  </div>
-);
+  <div className="fixed inset-0 bg-white/70 flex items-center justify-center z-50 p-4 ">{children}</div>
+)
 
 const DocumentUploadComponent = () => {
-  const [typeSelectionOpen, setTypeSelectionOpen] = useState<boolean>(false);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState<boolean>(false);
-  const [selectedType, setSelectedType] = useState<DocumentType | null>(null);
-  const [tempSelectedDocs, setTempSelectedDocs] = useState<AttachedDocument[]>(
-    []
-  );
-  const [progressMessageIndex, setProgressMessageIndex] = useState<number>(0);
-  const [documentTitle, setDocumentTitle] = useState<string>("");
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [jurisdictions, setJurisdictions] = useState<Jurisdiction[]>([]);
-  const [selectedJurisdiction, setSelectedJurisdiction] =
-    useState<Jurisdiction | null>(null);
-  const [jurisdictionOpen, setJurisdictionOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [typeSelectionOpen, setTypeSelectionOpen] = useState<boolean>(false)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState<boolean>(false)
+  const [selectedType, setSelectedType] = useState<DocumentType | null>(null)
+  const [tempSelectedDocs, setTempSelectedDocs] = useState<AttachedDocument[]>([])
+  const [progressMessageIndex, setProgressMessageIndex] = useState<number>(0)
+  const [documentTitle, setDocumentTitle] = useState<string>("")
+  const [isUploading, setIsUploading] = useState<boolean>(false)
+  const [jurisdictions, setJurisdictions] = useState<Jurisdiction[]>([])
+  const [selectedJurisdiction, setSelectedJurisdiction] = useState<Jurisdiction | null>(null)
+  const [jurisdictionOpen, setJurisdictionOpen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Progress messages for upload
   const messages = [
@@ -140,35 +172,31 @@ const DocumentUploadComponent = () => {
     "Hang tight! Your documents are being prepared for analysis",
     "Thanks for your patience. It's almost done...",
     "Just a little bit more... your documents are being processed",
-  ];
+  ]
 
   // Fetch jurisdictions when component mounts
   useEffect(() => {
     const fetchJurisdictions = async () => {
       try {
-        const response = await API.get("/jurisdictions");
-        setJurisdictions(response.data);
+        const response = await API.get("/jurisdictions")
+        setJurisdictions(response.data)
       } catch (error) {
-        toast.error("Failed to load jurisdictions");
+        toast.error("Failed to load jurisdictions")
       }
-    };
-
-    fetchJurisdictions();
-  }, []);
+    }
+    fetchJurisdictions()
+  }, [])
 
   const handleTypeSelection = (type: DocumentType): void => {
-    setSelectedType(type);
-    setTypeSelectionOpen(false);
-    setUploadDialogOpen(true);
-  };
+    setSelectedType(type)
+    setTypeSelectionOpen(false)
+    setUploadDialogOpen(true)
+  }
 
-  const handleFileSelect = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ): void => {
-    const files = event.target.files;
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const files = event.target.files
     if (files && selectedType) {
-      const newDocs: AttachedDocument[] = [];
-
+      const newDocs: AttachedDocument[] = []
       Array.from(files).forEach((file, index) => {
         const newDoc: AttachedDocument = {
           id: `${Date.now()}-${index}`,
@@ -178,96 +206,79 @@ const DocumentUploadComponent = () => {
             : file.type.includes("png") || file.type.includes("jpeg") || file.type.includes("jpg")
               ? "Image"
               : "Document",
-
           category: selectedType.name,
           size: `${(file.size / 1024).toFixed(1)} KB`,
           title: "",
           file: file,
-        };
-        newDocs.push(newDoc);
-      });
-
-      setTempSelectedDocs((prev) => [...prev, ...newDocs]);
-
+        }
+        newDocs.push(newDoc)
+      })
+      setTempSelectedDocs((prev) => [...prev, ...newDocs])
       // Clear the input so user can select more files
       if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        fileInputRef.current.value = ""
       }
     }
-  };
+  }
 
   const removeDocument = (docId: string): void => {
-    setTempSelectedDocs((prev) => prev.filter((doc) => doc.id !== docId));
-  };
+    setTempSelectedDocs((prev) => prev.filter((doc) => doc.id !== docId))
+  }
 
   // Helper function to start timer for progress messages
   const startProgressTimer = (): [NodeJS.Timeout, () => void] => {
-    let messageCount = 0;
-
-    setProgressMessageIndex(0);
-
+    let messageCount = 0
+    setProgressMessageIndex(0)
     const timer = setInterval(() => {
       if (messageCount < messages.length - 1) {
-        messageCount++;
-        setProgressMessageIndex(messageCount);
+        messageCount++
+        setProgressMessageIndex(messageCount)
       }
-    }, 10000);
-
+    }, 10000)
     const clearTimer = () => {
-      clearInterval(timer);
-    };
+      clearInterval(timer)
+    }
+    return [timer, clearTimer]
+  }
 
-    return [timer, clearTimer];
-  };
-
-  const uploadToBackend = async (
-    documents: AttachedDocument[]
-  ): Promise<void> => {
-    if (
-      !selectedType ||
-      !documentTitle.trim() ||
-      documents.length === 0 ||
-      !selectedJurisdiction
-    ) {
-      toast.error(
-        "Please fill in all required fields and select a jurisdiction"
-      );
-      return;
+  const uploadToBackend = async (documents: AttachedDocument[]): Promise<void> => {
+    if (!selectedType || !documentTitle.trim() || documents.length === 0 || !selectedJurisdiction) {
+      toast.error("Please fill in all required fields and select a jurisdiction")
+      return
     }
 
-    setIsUploading(true);
-    let currentTimer: NodeJS.Timeout | null = null;
-    let clearCurrentTimer: (() => void) | null = null;
+    setIsUploading(true)
+    let currentTimer: NodeJS.Timeout | null = null
+    let clearCurrentTimer: (() => void) | null = null
 
     try {
-      [currentTimer, clearCurrentTimer] = startProgressTimer();
+      ;[currentTimer, clearCurrentTimer] = startProgressTimer()
 
       for (let i = 0; i < documents.length; i++) {
-        const doc = documents[i];
-
+        const doc = documents[i]
         if (!doc.file) {
-          throw new Error(`File object missing for document: ${doc.name}`);
+          throw new Error(`File object missing for document: ${doc.name}`)
         }
 
-        const formData = new FormData();
+        const formData = new FormData()
+        const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
 
-        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
         if (doc.file.size > MAX_FILE_SIZE) {
-          throw new Error(`File exceeding 10MB: ${doc.file.name}`);
+          throw new Error(`File exceeding 10MB: ${doc.file.name}`)
         }
 
-        formData.append("file", doc.file);
-        formData.append("title", documentTitle.trim());
-        formData.append("fileName", doc.file.name.trim());
-        formData.append("type", selectedType.id);
-        formData.append("jurisdiction", selectedJurisdiction.jurisdiction);
+        formData.append("file", doc.file)
+        formData.append("title", documentTitle.trim())
+        formData.append("fileName", doc.file.name.trim())
+        formData.append("type", selectedType.id)
+        formData.append("jurisdiction", selectedJurisdiction.jurisdiction) // Send only the code
 
         console.log("Sending to backend:", {
           title: documentTitle.trim(),
           type: selectedType.id,
           fileName: doc.file.name,
-          jurisdiction: selectedJurisdiction.jurisdiction,
-        });
+          jurisdiction: selectedJurisdiction.jurisdiction, // This is the code
+        })
 
         // For uploading documents with formData
         const response = await API.post("/documents/upload", formData, {
@@ -275,92 +286,80 @@ const DocumentUploadComponent = () => {
             "Content-Type": "multipart/form-data", // Important for file uploads
             Accept: "application/json",
           },
-        });
+        })
 
         if (response.status < 200 || response.status >= 300) {
-          throw new Error(
-            `Upload failed for ${doc.file.name}: ${response.statusText}`
-          );
+          throw new Error(`Upload failed for ${doc.file.name}: ${response.statusText}`)
         }
 
         // Clear current timer
         if (clearCurrentTimer) {
-          clearCurrentTimer();
+          clearCurrentTimer()
         }
 
         // Show success message for current file
-        toast.success(`✅ ${doc.file.name} uploaded successfully!`);
+        toast.success(`✅ ${doc.file.name} uploaded successfully!`)
 
         // If there are more files to upload, start timer for next file
         if (i < documents.length - 1) {
-          [currentTimer, clearCurrentTimer] = startProgressTimer();
+          ;[currentTimer, clearCurrentTimer] = startProgressTimer()
         }
       }
 
       // Clear temporary state
-      setTempSelectedDocs([]);
-      setDocumentTitle("");
-      setSelectedType(null);
-      setUploadDialogOpen(false);
+      setTempSelectedDocs([])
+      setDocumentTitle("")
+      setSelectedType(null)
+      setUploadDialogOpen(false)
 
       // Final success message
       if (documents.length > 1) {
-        toast.success(
-          `🎉 All ${documents.length} documents uploaded successfully!`
-        );
+        toast.success(`🎉 All ${documents.length} documents uploaded successfully!`)
       }
     } catch (error: unknown) {
-      console.error("Upload error:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "An error occurred during upload.";
-      toast.error(errorMessage);
+      console.error("Upload error:", error)
+      const errorMessage = error instanceof Error ? error.message : "An error occurred during upload."
+      toast.error(errorMessage)
     } finally {
       // Clear the timer when upload is done or failed
       if (clearCurrentTimer) {
-        clearCurrentTimer();
+        clearCurrentTimer()
       }
-      setIsUploading(false);
+      setIsUploading(false)
     }
-  };
+  }
 
   const handleUpload = async () => {
     if (!selectedType) {
-      toast.error("Please select a document type");
-      return;
+      toast.error("Please select a document type")
+      return
     }
-
     if (!documentTitle.trim()) {
-      toast.error("Please enter a document title");
-      return;
+      toast.error("Please enter a document title")
+      return
     }
-
     if (!selectedJurisdiction) {
-      toast.error("Please select a jurisdiction");
-      return;
+      toast.error("Please select a jurisdiction")
+      return
     }
-
     if (tempSelectedDocs.length === 0) {
-      toast.error("Please select files to upload");
-      return;
+      toast.error("Please select files to upload")
+      return
     }
 
-    await uploadToBackend(tempSelectedDocs);
-  };
+    await uploadToBackend(tempSelectedDocs)
+  }
 
   const cancelUpload = (): void => {
-    setTempSelectedDocs([]);
-    setDocumentTitle("");
-    setSelectedType(null);
-    setUploadDialogOpen(false);
-  };
+    setTempSelectedDocs([])
+    setDocumentTitle("")
+    setSelectedType(null)
+    setUploadDialogOpen(false)
+  }
 
   const renderJurisdictionSelect = () => (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Jurisdiction
-      </label>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Jurisdiction</label>
       <div className="relative">
         <Popover open={jurisdictionOpen} onOpenChange={setJurisdictionOpen}>
           <PopoverTrigger asChild>
@@ -373,95 +372,76 @@ const DocumentUploadComponent = () => {
               <div className="flex items-center justify-between">
                 <span className="block truncate text-gray-900">
                   {selectedJurisdiction
-                    ? selectedJurisdiction.jurisdiction
+                    ? `${getStateNameByCode(selectedJurisdiction.jurisdiction)} (${selectedJurisdiction.jurisdiction})`
                     : "Select jurisdiction..."}
                 </span>
                 <ChevronsUpDown className="h-4 w-4 shrink-0 text-gray-500" />
               </div>
             </button>
           </PopoverTrigger>
-          <PopoverContent
-            className="w-[var(--radix-popover-trigger-width)] p-0"
-            align="start"
-            sideOffset={4}
-          >
+          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" sideOffset={4}>
             <Command className="max-h-[300px] overflow-auto rounded-md border border-gray-200 bg-white shadow-md">
-              <CommandInput
-                placeholder="Search jurisdiction..."
-                className="h-10 px-3 border-b text-sm"
-              />
-              <CommandEmpty className="py-2 px-3 text-sm text-gray-500">
-                No jurisdiction found.
-              </CommandEmpty>
-              <CommandGroup>
-                {jurisdictions.map((jurisdiction) => (
-                  <CommandItem
-                    key={jurisdiction.id}
-                    value={jurisdiction.jurisdiction}
-                    onSelect={() => {
-                      setSelectedJurisdiction(jurisdiction);
-                      setJurisdictionOpen(false);
-                    }}
-                    className="px-3 py-2 cursor-pointer text-sm text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                  >
-                    <div className="flex items-center">
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4 text-blue-600",
-                          selectedJurisdiction?.id === jurisdiction.id
-                            ? "opacity-100"
-                            : "opacity-0"
-                        )}
-                      />
-                      <span>{jurisdiction.jurisdiction}</span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+              <CommandInput placeholder="Search jurisdiction..." className="h-10 px-3 border-b text-sm" />
+              <CommandList>
+                <CommandEmpty className="py-2 px-3 text-sm text-gray-500">No jurisdiction found.</CommandEmpty>
+                <CommandGroup>
+                  {jurisdictions.map((jurisdiction) => {
+                    const fullStateName = getStateNameByCode(jurisdiction.jurisdiction)
+                    return (
+                      <CommandItem
+                        key={jurisdiction.id}
+                        value={`${fullStateName} ${jurisdiction.jurisdiction}`} // Search by both name and code
+                        onSelect={() => {
+                          setSelectedJurisdiction(jurisdiction)
+                          setJurisdictionOpen(false)
+                        }}
+                        className="px-3 py-2 cursor-pointer text-sm text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                      >
+                        <div className="flex items-center">
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4 text-blue-600",
+                              selectedJurisdiction?.id === jurisdiction.id ? "opacity-100" : "opacity-0",
+                            )}
+                          />
+                          <span>
+                            {fullStateName} ({jurisdiction.jurisdiction})
+                          </span>
+                        </div>
+                      </CommandItem>
+                    )
+                  })}
+                </CommandGroup>
+              </CommandList>
             </Command>
           </PopoverContent>
         </Popover>
       </div>
     </div>
-  );
+  )
 
   const renderUploadDialog = () => (
     <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full mx-4">
-
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">{selectedType?.name}</h2>
           <button
             onClick={() => {
-              setUploadDialogOpen(false);
-              setSelectedJurisdiction(null);
-              setDocumentTitle("");
-              setTempSelectedDocs([]);
+              setUploadDialogOpen(false)
+              setSelectedJurisdiction(null)
+              setDocumentTitle("")
+              setTempSelectedDocs([])
             }}
             className="text-gray-500 hover:text-gray-700"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-
         <div className="space-y-4">
           <div>
-            <label
-              htmlFor="title"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700">
               Document Title
             </label>
             <input
@@ -473,9 +453,7 @@ const DocumentUploadComponent = () => {
               placeholder="Enter document title"
             />
           </div>
-
           {selectedType && renderJurisdictionSelect()}
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Upload Documents ({selectedType?.acceptedFormats.join(", ")})
@@ -512,13 +490,10 @@ const DocumentUploadComponent = () => {
                 Browse Files
               </button>
             </div>
-
             {tempSelectedDocs.length > 0 && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center mb-2">
-                  <h4 className="text-sm font-medium text-gray-700">
-                    Selected Documents ({tempSelectedDocs.length})
-                  </h4>
+                  <h4 className="text-sm font-medium text-gray-700">Selected Documents ({tempSelectedDocs.length})</h4>
                   <button
                     onClick={() => setTempSelectedDocs([])}
                     className="text-gray-400 hover:text-gray-600"
@@ -527,14 +502,10 @@ const DocumentUploadComponent = () => {
                     Clear All
                   </button>
                 </div>
-
                 {/* Scrollable container - shows 1 document by default, rest in scroll */}
                 <div className="max-h-22 overflow-y-auto space-y-2">
                   {tempSelectedDocs.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between bg-white p-3 rounded-md shadow-sm"
-                    >
+                    <div key={doc.id} className="flex items-center justify-between bg-white p-3 rounded-md shadow-sm">
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
                         <svg
                           className="w-5 h-5 text-blue-500 flex-shrink-0"
@@ -550,9 +521,7 @@ const DocumentUploadComponent = () => {
                           />
                         </svg>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-700 truncate">
-                            {doc.name}
-                          </p>
+                          <p className="text-sm font-medium text-gray-700 truncate">{doc.name}</p>
                           <p className="text-xs text-gray-500">
                             {doc.type} • {doc.size}
                           </p>
@@ -568,29 +537,21 @@ const DocumentUploadComponent = () => {
                     </div>
                   ))}
                 </div>
-
                 {tempSelectedDocs.length > 1 && (
                   <p className="text-xs text-gray-500 mt-2 text-center">
-                    Scroll to see all {tempSelectedDocs.length} selected
-                    documents
+                    Scroll to see all {tempSelectedDocs.length} selected documents
                   </p>
                 )}
               </div>
             )}
           </div>
         </div>
-
         <div className="flex justify-end gap-2 pt-4">
-
           {isUploading && (
             <div className="flex-1 flex items-center">
-              <span className="text-sm text-gray-500">
-                {messages[progressMessageIndex]}
-              </span>
+              <span className="text-sm text-gray-500">{messages[progressMessageIndex]}</span>
             </div>
           )}
-
-
           <button
             onClick={cancelUpload}
             className="px-4 py-2 border rounded hover:bg-gray-50"
@@ -601,17 +562,12 @@ const DocumentUploadComponent = () => {
           </button>
           <button
             onClick={handleUpload}
-            disabled={
-              tempSelectedDocs.length === 0 ||
-              !documentTitle.trim() ||
-              isUploading
-            }
-            className={`px-4 py-2 text-white rounded transition flex items-center gap-2 ${tempSelectedDocs.length === 0 ||
-                !documentTitle.trim() ||
-                isUploading
+            disabled={tempSelectedDocs.length === 0 || !documentTitle.trim() || isUploading}
+            className={`px-4 py-2 text-white rounded transition flex items-center gap-2 ${
+              tempSelectedDocs.length === 0 || !documentTitle.trim() || isUploading
                 ? "bg-gray-600 opacity-50 cursor-not-allowed"
                 : "bg-gray-600 hover:bg-gray-700"
-              }`}
+            }`}
             type="button"
           >
             {isUploading && (
@@ -621,14 +577,7 @@ const DocumentUploadComponent = () => {
                 fill="none"
                 viewBox="0 0 24 24"
               >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path
                   className="opacity-75"
                   fill="currentColor"
@@ -638,34 +587,25 @@ const DocumentUploadComponent = () => {
             )}
             {isUploading
               ? "Uploading..."
-              : `Upload ${tempSelectedDocs.length} Document${tempSelectedDocs.length > 1 ? "s" : ""
-              }`}
+              : `Upload ${tempSelectedDocs.length} Document${tempSelectedDocs.length > 1 ? "s" : ""}`}
           </button>
         </div>
       </div>
     </div>
-  );
+  )
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6 space-y-6  ">
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold">Document Upload Center</h1>
-        <p className="text-gray-600">
-          Select document type first, then upload your files for analysis
-        </p>
+        <p className="text-gray-600">Select document type first, then upload your files for analysis</p>
       </div>
-
       <div className="flex justify-center">
         <button
           onClick={() => setTypeSelectionOpen(true)}
           className="flex items-center gap-2 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
         >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -679,34 +619,21 @@ const DocumentUploadComponent = () => {
           </div>
         </button>
       </div>
-
       {typeSelectionOpen && (
         <Overlay>
           <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 border-gray-200 border-1 rounded-lg shadow-sm">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h2 className="text-xl font-semibold">Select Document Type</h2>
-                <p className="text-gray-600">
-                  Choose the category that best describes your documents
-                </p>
+                <p className="text-gray-600">Choose the category that best describes your documents</p>
               </div>
               <button
                 onClick={() => setTypeSelectionOpen(false)}
                 className="p-1 hover:bg-gray-100 rounded"
                 type="button"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -720,7 +647,7 @@ const DocumentUploadComponent = () => {
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
-                      handleTypeSelection(type);
+                      handleTypeSelection(type)
                     }
                   }}
                 >
@@ -728,12 +655,8 @@ const DocumentUploadComponent = () => {
                     <div className="text-blue-600">{type.icon}</div>
                     <div>
                       <h4 className="font-medium">{type.name}</h4>
-                      <p className="text-sm text-gray-600">
-                        {type.description}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Accepts: {type.acceptedFormats.join(", ")}
-                      </p>
+                      <p className="text-sm text-gray-600">{type.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">Accepts: {type.acceptedFormats.join(", ")}</p>
                     </div>
                   </div>
                 </div>
@@ -742,10 +665,9 @@ const DocumentUploadComponent = () => {
           </div>
         </Overlay>
       )}
-
       {uploadDialogOpen && <Overlay>{renderUploadDialog()}</Overlay>}
     </div>
-  );
-};
+  )
+}
 
-export default DocumentUploadComponent;
+export default DocumentUploadComponent

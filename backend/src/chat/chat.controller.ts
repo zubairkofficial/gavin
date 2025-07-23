@@ -143,68 +143,57 @@ export class ChatController {
       console.log('web search that is using in the controller', createMessageDto.websearch);
       // console.log('Result from chatService:', result);
 
-      const user = await this.usersRepository.findOne({
-        where: { id: req.user.id },
-        select: ['id', 'credits'],
-      })
+      // const user = await this.usersRepository.findOne({
+      //   where: { id: req.user.id },
+      //   select: ['id', 'credits'],
+      // })
 
-      const currentCredits = user?.credits || 0;
+      // const currentCredits = user?.credits || 0;
 
-      const config = await this.configurationRepository.find()
-      let cutTokens
-      if (config) {
-        cutTokens = config[0]?.cutCredits
-      }
+      // const config = await this.configurationRepository.find()
+      // let cutTokens
+      // if (config) {
+      //   cutTokens = config[0]?.cutCredits
+      // }
 
 
       if (createMessageDto.websearch == 'false') {
-        let chunks 
-        for await (const chunk of result.stream) {
+        try {
+          console.log('Received result from chatService:', result.stream);
+          
           if (clientDisconnected || res.destroyed) {
-            console.log('Response destroyed or client disconnected, stopping stream');
-            break;
+            console.log('Response destroyed or client disconnected');
+            return;
           }
 
-          chunks = chunk
-          let token = '';
- 
-          if (typeof chunk.content === 'string') {
-            token = chunk.content;
+          // Get the AIMessageChunk that contains the actual response
+          const aiMessage = result.stream.messages?.find(msg => 
+            msg.id?.startsWith('chatcmpl-') && msg.content
+          );
 
-            // console.log('anotation:' , chunk)
-          } else if (Array.isArray(chunk.content)) {
-            token = chunk.content
-              .map((part: any) => typeof part.text === 'string' ? part.text : '')
-              .join('');
+          if (!aiMessage) {
+            throw new Error('No valid AI response found in the result');
           }
 
-
-          if (!sentMetadata) {
-            const event = {
-              conversationId: result.conversationId,
-              userId: result.userId,
-              title: result.title,
-              token,
-              filesProcessed: files?.files?.length || 0
-            };
-            res.write(`data: ${JSON.stringify(event)}\n\n`);
-            sentMetadata = true;
-
-          } else {
-            const event = { token };
-            res.write(`data: ${JSON.stringify(event)}\n\n`);
-          }
-
+          let token = aiMessage.content || '';
           
-          
-
+          // Send metadata first
+          const event = {
+            conversationId: result.conversationId,
+            userId: result.userId,
+            title: result.title,
+            token,
+            filesProcessed: files?.files?.length || 0
+          };
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+          sentMetadata = true;
 
           // Flush the response to send data immediately
           if (typeof (res as any).flush === 'function') {
             (res as any).flush();
           }
 
-          fullAiResponse += token;
+          fullAiResponse = token;
 
 
 
@@ -212,31 +201,46 @@ export class ChatController {
           // ----------------- Handle token usage and credit deduction-----------------
           
           
+        }catch (error) {
+          console.error('Streaming error:', error);
+          let errorMessage = 'Failed to process your message.';
+          if (error.message?.includes('You have low credits, please Add credits')) {
+            errorMessage = 'You have low credits, please Add credits';
+          } else if (error.message?.includes('invalid_api_key')) {
+            errorMessage = 'OpenAI API authentication failed';
+          } else if (error.message?.includes('rate_limit_exceeded') || error.status === 429) {
+            errorMessage = 'Rate limit exceeded. Please try again later.';
+          } else if (error.message?.includes('content_policy_violation')) {
+            errorMessage = 'Content was blocked by OpenAI filters.';
+          } else if (error.message?.includes('File type') && error.message?.includes('not allowed')) {
+            errorMessage = error.message;
+          }
+          if (!clientDisconnected && !res.destroyed) {
+            res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`);
+            res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+          }
         }
-        let finalChunk: any = null;
-        if (chunks?.usage_metadata?.total_tokens) {
-          finalChunk = chunks;
-        }
-
-
-        // const outputTokenCount = finalChunk?.usage_metadata?.total_tokens
-
-        const outputTokenCount =  finalChunk?.usage_metadata?.total_tokens
-        || result.stream.usage_metadata?.total_tokens;
-
-        console.log('outputcreditCount:', outputTokenCount);
-
-        let rounded = ((outputTokenCount * 1) / cutTokens)
-
-        let totalCredits = Math.round(rounded);
-        console.log('rounded credits:', totalCredits);
-
-        const finaltoken = currentCredits - totalCredits
-
-        const re = await this.usersRepository.update(
-          { id: req.user.id },
-          { credits: finaltoken }
+        // Get message with usage metadata
+        const messageWithUsage = result.stream.messages.find(msg => 
+          msg.usage_metadata?.total_tokens
         );
+
+        // const outputTokenCount = messageWithUsage?.usage_metadata?.total_tokens
+        //   || result.stream.usage_metadata?.total_tokens;
+
+        // console.log('outputcreditCount:', outputTokenCount);
+
+        // let rounded = ((outputTokenCount * 1) / cutTokens)
+
+        // let totalCredits = Math.round(rounded);
+        // console.log('rounded credits:', totalCredits);
+
+        // const finaltoken = currentCredits - totalCredits
+
+        // const re = await this.usersRepository.update(
+        //   { id: req.user.id },
+        //   { credits: finaltoken }
+        // );
 
         // console.log('Updated user credits:', re);
 
@@ -338,26 +342,26 @@ export class ChatController {
           return;
         }
 
-        console.log('token usage for the message of web search  is', result.stream.usage_metadata?.total_tokens);
-        const outputTokenCount = result.stream.usage_metadata?.total_tokens
+        // console.log('token usage for the message of web search  is', result.stream.usage_metadata?.total_tokens);
+        // const outputTokenCount = result.stream.usage_metadata?.total_tokens
 
-        console.log('outputcreditCount:', outputTokenCount);
+        // console.log('outputcreditCount:', outputTokenCount);
 
-        let rounded = ((outputTokenCount * 1) / cutTokens)
+        // let rounded = ((outputTokenCount * 1) / cutTokens)
 
-        let totalCredits = Math.round(rounded);
-        console.log('rounded credits:', totalCredits);
+        // let totalCredits = Math.round(rounded);
+        // console.log('rounded credits:', totalCredits);
 
-        const finaltoken = currentCredits - totalCredits
+        // const finaltoken = currentCredits - totalCredits
 
-        const re = await this.usersRepository.update(
-          { id: req.user.id },
-          { credits: finaltoken }
-        );
+        // const re = await this.usersRepository.update(
+        //   { id: req.user.id },
+        //   { credits: finaltoken }
+        // );
 
-        console.log('Updated user credits:', re);
-        console.log('total tokens used:', result.stream.usage_metadata?.total_tokens
-        )
+        // console.log('Updated user credits:', re);
+        // console.log('total tokens used:', result.stream.usage_metadata?.total_tokens
+        // )
 
         // console.log(result.stream.content)
 

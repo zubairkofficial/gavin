@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
@@ -21,6 +21,10 @@ import * as pdfParse from 'pdf-parse';
 import * as mammoth from 'mammoth';
 import { Configuration } from '@/documents/entities/configuration.entity';
 import { User } from '@/auth/entities/user.entity';
+import { tool } from '@langchain/core/tools';
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import {PromptManagerService} from './prompt-manager.service';
+
 
 
 @Injectable()
@@ -45,7 +49,7 @@ export class ChatService {
   @InjectRepository(Configuration)
   private configurationRepository: Repository<Configuration>;
 
-  constructor(private configService: ConfigService) {
+  constructor(private configService: ConfigService , private promptManagerService: PromptManagerService) {
     const openAiApiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!openAiApiKey) {
       throw new Error('OPENAI_API_KEY is not configured');
@@ -118,12 +122,6 @@ export class ChatService {
     const fileName = file?.originalname;
     const fileSize = file?.size;
     const fileType = file?.mimetype;
-    // console.log('File details:', {
-    //   fileName,
-    //   fileSize,
-    //   fileType,
-    // });
-
     let fileContent = '';
     if (files && files.length > 0) {
       fileContent = await parseUploadedFile(files);
@@ -131,33 +129,26 @@ export class ChatService {
       // console.log('Extracted file content:', fileContent);
     }
 
-
-
-
     const convId = conversationId || uuidv4();
     const userId = req.user?.id;
 
-    const data = await this.usersRepository.findOne({
-      where: {
-        id: userId
-      }
-    })
+    // const data = await this.usersRepository.findOne({
+    //   where: {
+    //     id: userId
+    //   }
+    // })
 
 
 
-    const config = await this.configurationRepository.find()
-    let minTokens
-    if (config) {
-      minTokens = config[0]?.minTokens
-    }
+    // const config = await this.configurationRepository.find()
+    // let minTokens
+    // if (config) {
+    //   minTokens = config[0]?.minTokens
+    // }
 
-
-
-    // console.log('data that we got for credits is ---------------------------------------------', data)
-    // console.log('credits that we got for user is', data?.credits)
-    if ((data?.credits ?? 0) < minTokens) {
-      throw new BadRequestException('You have low credits, please Add credits');
-    }
+    // if ((data?.credits ?? 0) < minTokens) {
+    //   throw new BadRequestException('You have low credits, please Add credits');
+    // }
 
     try {
       // Fetch previous messages for buffer memory
@@ -172,9 +163,6 @@ export class ChatService {
         const messages = await this.createNewConversation(createMessageDto.message);
         conTitle = messages.title;
       }
-
-      // console.log('Previous messages:', previousMessages);
-
       // Build chat history string
       let chatHistoryContext = '';
       if (previousMessages.length > 0) {
@@ -196,13 +184,10 @@ export class ChatService {
 
       // condionally handle web search or document context
       
-      if (websearch == 'true') {
-        console.log('Web search enabled for this message');
         let context = '';
         let promptfromDB = '';
       // Only include citations if relevantDocs found and not just file upload
-      context += fileContent ? `File Content:\n${fileContent}\n` : '';
-        // console.log('userId to fetch system prompt:', userId);
+
         const data = await this.configurationRepository.find({})
         // console.log('the data that we got from system repo is',data[0]?.prompt)
         promptfromDB = data[0]?.prompt 

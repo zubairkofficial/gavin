@@ -10,13 +10,19 @@ import { Case } from '@/documents/entities/case.entity';
 import { Statute } from '@/documents/entities/statute.entity';
 import { Configuration } from '@/documents/entities/configuration.entity';
 import { User } from '@/auth/entities/user.entity';
+import { PromptManagerService } from './prompt-manager.service';
+
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Message, Contract, Regulation, Case, Statute, Configuration, User]),
   ],
   controllers: [ChatController],
-  providers: [ChatService],
+  providers: [
+    ChatService, 
+    PromptManagerService,
+     // Add this provider
+  ],
   exports: [],
 })
 export class ChatModule {}

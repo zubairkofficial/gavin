@@ -34,14 +34,83 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Search, Plus, Trash2, Loader2, Pencil } from "lucide-react"
+import { Search, Plus, Trash2, Loader2, Pencil, Check, ChevronsUpDown } from "lucide-react"
 import { toast } from "sonner"
 import API from "@/lib/api"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { cn } from "@/lib/utils"
 
 interface Jurisdiction {
   id: number
   jurisdiction: string
   createdAt: string
+}
+
+const usStatesWithCodes = [
+  { name: "Federal", code: "FD" },
+  { name: "Alabama", code: "AL" },
+  { name: "Alaska", code: "AK" },
+  { name: "Arizona", code: "AZ" },
+  { name: "Arkansas", code: "AR" },
+  { name: "California", code: "CA" },
+  { name: "Colorado", code: "CO" },
+  { name: "Connecticut", code: "CT" },
+  { name: "Delaware", code: "DE" },
+  { name: "Florida", code: "FL" },
+  { name: "Georgia", code: "GA" },
+  { name: "Hawaii", code: "HI" },
+  { name: "Idaho", code: "ID" },
+  { name: "Illinois", code: "IL" },
+  { name: "Indiana", code: "IN" },
+  { name: "Iowa", code: "IA" },
+  { name: "Kansas", code: "KS" },
+  { name: "Kentucky", code: "KY" },
+  { name: "Louisiana", code: "LA" },
+  { name: "Maine", code: "ME" },
+  { name: "Maryland", code: "MD" },
+  { name: "Massachusetts", code: "MA" },
+  { name: "Michigan", code: "MI" },
+  { name: "Minnesota", code: "MN" },
+  { name: "Mississippi", code: "MS" },
+  { name: "Missouri", code: "MO" },
+  { name: "Montana", code: "MT" },
+  { name: "Nebraska", code: "NE" },
+  { name: "Nevada", code: "NV" },
+  { name: "New Hampshire", code: "NH" },
+  { name: "New Jersey", code: "NJ" },
+  { name: "New Mexico", code: "NM" },
+  { name: "New York", code: "NY" },
+  { name: "North Carolina", code: "NC" },
+  { name: "North Dakota", code: "ND" },
+  { name: "Ohio", code: "OH" },
+  { name: "Oklahoma", code: "OK" },
+  { name: "Oregon", code: "OR" },
+  { name: "Pennsylvania", code: "PA" },
+  { name: "Rhode Island", code: "RI" },
+  { name: "South Carolina", code: "SC" },
+  { name: "South Dakota", code: "SD" },
+  { name: "Tennessee", code: "TN" },
+  { name: "Texas", code: "TX" },
+  { name: "Utah", code: "UT" },
+  { name: "Vermont", code: "VT" },
+  { name: "Virginia", code: "VA" },
+  { name: "Washington", code: "WA" },
+  { name: "West Virginia", code: "WV" },
+  { name: "Wisconsin", code: "WI" },
+  { name: "Wyoming", code: "WY" },
+]
+
+
+// Helper functions to convert between state names and codes
+const getStateCodeByName = (stateName: string): string => {
+  const state = usStatesWithCodes.find((s) => s.name === stateName)
+  return state ? state.code : stateName
+}
+
+const getStateNameByCode = (stateCode: string): string => {
+  const state = usStatesWithCodes.find((s) => s.code === stateCode)
+  return state ? state.name : stateCode
 }
 
 export default function JurisdictionsManager() {
@@ -53,17 +122,21 @@ export default function JurisdictionsManager() {
   const [isEditingDialogOpen, setIsEditingDialogOpen] = useState(false)
   const [isAddingJurisdiction, setIsAddingJurisdiction] = useState(false)
   const [isEditingJurisdiction, setIsEditingJurisdiction] = useState(false)
-  const [newJurisdictionName, setNewJurisdictionName] = useState("")
+  const [selectedState, setSelectedState] = useState<string>("") // State for selected US state
   const [editingJurisdiction, setEditingJurisdiction] = useState<Jurisdiction | null>(null)
+  const [editingSelectedState, setEditingSelectedState] = useState<string>("") // For editing dialog
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
+  const [isComboboxOpen, setIsComboboxOpen] = useState(false)
+  const [isEditComboboxOpen, setIsEditComboboxOpen] = useState(false)
 
   // Load jurisdictions on component mount
   useEffect(() => {
     const loadJurisdictions = async () => {
       setIsLoading(true)
       try {
+        // Simulate API call
         const response = await API.get("/jurisdictions")
         setJurisdictions(response.data)
         setFilteredJurisdictions(response.data)
@@ -81,41 +154,43 @@ export default function JurisdictionsManager() {
     if (searchQuery.trim() === "") {
       setFilteredJurisdictions(jurisdictions)
     } else {
-      const filtered = jurisdictions.filter((jurisdiction) =>
-        jurisdiction.jurisdiction.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
+      const filtered = jurisdictions.filter((jurisdiction) => {
+        // Search by both the stored value and the full state name
+        const fullStateName = getStateNameByCode(jurisdiction.jurisdiction)
+        return (
+          jurisdiction.jurisdiction.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          fullStateName.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      })
       setFilteredJurisdictions(filtered)
     }
   }, [searchQuery, jurisdictions])
 
   // Add new jurisdiction
   const handleAddJurisdiction = async () => {
-    if (!newJurisdictionName.trim()) {
-      toast.error("Jurisdiction name is required")
+    if (!selectedState.trim()) {
+      toast.error("Please select a jurisdiction")
       return
     }
 
-    // Check if jurisdiction already exists
-    const exists = jurisdictions.some(
-      (j) => j.jurisdiction.toLowerCase() === newJurisdictionName.toLowerCase(),
-    )
+    const stateCode = getStateCodeByName(selectedState)
 
+    // Check if jurisdiction already exists (by code)
+    const exists = jurisdictions.some((j) => j.jurisdiction.toLowerCase() === stateCode.toLowerCase())
     if (exists) {
       toast.error("Jurisdiction already exists")
       return
     }
 
     setIsAddingJurisdiction(true)
-
     try {
+      // Send state code to API
       const response = await API.post("/jurisdictions", {
-        jurisdiction: newJurisdictionName.trim(),
+        jurisdiction: stateCode,
       })
-
       setJurisdictions((prev) => [response.data, ...prev])
-      setNewJurisdictionName("")
+      setSelectedState("") // Reset selected state
       setIsAddDialogOpen(false)
-
       toast.success("Jurisdiction added successfully")
     } catch (error) {
       toast.error("Failed to add jurisdiction")
@@ -126,37 +201,32 @@ export default function JurisdictionsManager() {
 
   // Handle edit jurisdiction
   const handleEditJurisdiction = async () => {
-    if (!editingJurisdiction) return
-    if (!editingJurisdiction.jurisdiction.trim()) {
-      toast.error("Jurisdiction name is required")
+    if (!editingJurisdiction || !editingSelectedState.trim()) {
+      toast.error("Please select a jurisdiction")
       return
     }
 
-    // Check if jurisdiction already exists
-    const exists = jurisdictions.some(
-      (j) =>
-        j.id !== editingJurisdiction.id &&
-        j.jurisdiction.toLowerCase() === editingJurisdiction.jurisdiction.toLowerCase(),
-    )
+    const stateCode = getStateCodeByName(editingSelectedState)
 
+    // Check if jurisdiction already exists (by code)
+    const exists = jurisdictions.some(
+      (j) => j.id !== editingJurisdiction.id && j.jurisdiction.toLowerCase() === stateCode.toLowerCase(),
+    )
     if (exists) {
       toast.error("Jurisdiction already exists")
       return
     }
 
     setIsEditingJurisdiction(true)
-
     try {
+      // Send state code to API
       const response = await API.patch(`/jurisdictions/${editingJurisdiction.id}`, {
-        jurisdiction: editingJurisdiction.jurisdiction.trim(),
+        jurisdiction: stateCode,
       })
-
-      setJurisdictions((prev) =>
-        prev.map((j) => (j.id === editingJurisdiction.id ? response.data : j)),
-      )
+      setJurisdictions((prev) => prev.map((j) => (j.id === editingJurisdiction.id ? response.data : j)))
       setIsEditingDialogOpen(false)
       setEditingJurisdiction(null)
-
+      setEditingSelectedState("")
       toast.success("Jurisdiction updated successfully")
     } catch (error) {
       toast.error("Failed to update jurisdiction")
@@ -168,8 +238,8 @@ export default function JurisdictionsManager() {
   // Delete jurisdiction
   const handleDeleteJurisdiction = async (id: number) => {
     setDeletingId(id)
-    console.log("Deleting jurisdiction with ID:", id)
     try {
+      // Simulate API call
       await API.delete(`/jurisdictions/${id}`)
       setJurisdictions((prev) => prev.filter((j) => j.id !== id))
       toast.success("Jurisdiction deleted successfully")
@@ -215,9 +285,8 @@ export default function JurisdictionsManager() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} >
-          <DialogTrigger asChild >
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
             <Button className="h-12">
               <Plus className="h-4 w-4 mr-2 " />
               Add Jurisdiction
@@ -226,25 +295,56 @@ export default function JurisdictionsManager() {
           <DialogContent className="sm:max-w-[425px] p-6">
             <DialogHeader>
               <DialogTitle>Add New Jurisdiction</DialogTitle>
-              <DialogDescription>Enter the name of the new jurisdiction you want to add.</DialogDescription>
+              <DialogDescription>Select the US state you want to add as a jurisdiction.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="jurisdiction" className="text-right">
                   Jurisdiction
                 </Label>
-                <Input
-                  id="jurisdiction"
-                  placeholder="Enter jurisdiction name"
-                  className="col-span-3"
-                  value={newJurisdictionName}
-                  onChange={(e) => setNewJurisdictionName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleAddJurisdiction()
-                    }
-                  }}
-                />
+                <Popover open={isComboboxOpen} onOpenChange={setIsComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={isComboboxOpen}
+                      className="col-span-3 justify-between bg-transparent"
+                    >
+                      {selectedState
+                        ? usStatesWithCodes.find((state) => state.name === selectedState)?.name
+                        : "Select state..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[200px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search state..." />
+                      <CommandList className="max-h-[200px] overflow-y-auto">
+                        <CommandEmpty>No state found.</CommandEmpty>
+                        <CommandGroup>
+                          {usStatesWithCodes.map((state) => (
+                            <CommandItem
+                              key={state.code}
+                              value={state.name}
+                              onSelect={(currentValue) => {
+                                setSelectedState(currentValue === selectedState ? "" : currentValue)
+                                setIsComboboxOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedState === state.name ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              {state.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <DialogFooter>
@@ -253,7 +353,7 @@ export default function JurisdictionsManager() {
                 variant="outline"
                 onClick={() => {
                   setIsAddDialogOpen(false)
-                  setNewJurisdictionName("")
+                  setSelectedState("")
                 }}
               >
                 Cancel
@@ -297,11 +397,12 @@ export default function JurisdictionsManager() {
                     // Calculate the absolute index based on current page
                     const startIndex = (currentPage - 1) * itemsPerPage
                     const absoluteIndex = startIndex + index + 1
-
+                    // Display full state name in table
+                    const displayName = getStateNameByCode(jurisdiction.jurisdiction)
                     return (
                       <TableRow key={jurisdiction.id}>
                         <TableCell className="font-medium">{absoluteIndex}</TableCell>
-                        <TableCell className="font-medium">{jurisdiction.jurisdiction}</TableCell>
+                        <TableCell className="font-medium">{displayName}</TableCell>
                         <TableCell>
                           {new Date(jurisdiction.createdAt).toLocaleDateString("en-US", {
                             year: "numeric",
@@ -316,9 +417,10 @@ export default function JurisdictionsManager() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="hover:bg-gray-300"
+                              className="hover:bg-gray-300 bg-transparent"
                               onClick={() => {
                                 setEditingJurisdiction(jurisdiction)
+                                setEditingSelectedState(getStateNameByCode(jurisdiction.jurisdiction))
                                 setIsEditingDialogOpen(true)
                               }}
                             >
@@ -326,7 +428,12 @@ export default function JurisdictionsManager() {
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="hover:bg-gray-300" disabled={deletingId === jurisdiction.id}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="hover:bg-gray-300 bg-transparent"
+                                  disabled={deletingId === jurisdiction.id}
+                                >
                                   {deletingId === jurisdiction.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
@@ -338,8 +445,8 @@ export default function JurisdictionsManager() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    This will permanently delete the jurisdiction "{jurisdiction.jurisdiction}". This action
-                                    cannot be undone.
+                                    This will permanently delete the jurisdiction "{displayName}". This action cannot be
+                                    undone.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -361,14 +468,13 @@ export default function JurisdictionsManager() {
                 )}
               </TableBody>
             </Table>
-
             {/* Pagination */}
             {filteredJurisdictions.length > itemsPerPage && (
               <div className="flex items-center justify-between px-4 py-4 border-t">
                 <div className="text-sm text-gray-500">
-                  Showing {((currentPage - 1) * itemsPerPage) + 1} to{" "}
-                  {Math.min(currentPage * itemsPerPage, filteredJurisdictions.length)} of{" "}
-                  {filteredJurisdictions.length} jurisdictions
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                  {Math.min(currentPage * itemsPerPage, filteredJurisdictions.length)} of {filteredJurisdictions.length}{" "}
+                  jurisdictions
                   {searchQuery && ` matching "${searchQuery}"`}
                 </div>
                 <Pagination>
@@ -384,11 +490,7 @@ export default function JurisdictionsManager() {
                         }}
                       />
                     </PaginationItem>
-
-                    {Array.from(
-                      { length: Math.ceil(filteredJurisdictions.length / itemsPerPage) },
-                      (_, i) => i + 1,
-                    )
+                    {Array.from({ length: Math.ceil(filteredJurisdictions.length / itemsPerPage) }, (_, i) => i + 1)
                       .filter((page) => {
                         // Show first page, last page, current page, and pages around current page
                         return (
@@ -406,7 +508,6 @@ export default function JurisdictionsManager() {
                             </PaginationItem>
                           )
                         }
-
                         return (
                           <PaginationItem key={page}>
                             <PaginationLink
@@ -422,7 +523,6 @@ export default function JurisdictionsManager() {
                           </PaginationItem>
                         )
                       })}
-
                     <PaginationItem>
                       <PaginationNext
                         href="#"
@@ -451,29 +551,56 @@ export default function JurisdictionsManager() {
         <DialogContent className="sm:max-w-[425px] p-6">
           <DialogHeader>
             <DialogTitle>Edit Jurisdiction</DialogTitle>
-            <DialogDescription>Edit the name of the jurisdiction.</DialogDescription>
+            <DialogDescription>Select the US state for this jurisdiction.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-jurisdiction" className="text-right">
                 Jurisdiction
               </Label>
-              <Input
-                id="edit-jurisdiction"
-                placeholder="Enter jurisdiction name"
-                className="col-span-3"
-                value={editingJurisdiction?.jurisdiction || ""}
-                onChange={(e) =>
-                  setEditingJurisdiction(
-                    (prev) => (prev ? { ...prev, jurisdiction: e.target.value } : null),
-                  )
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleEditJurisdiction()
-                  }
-                }}
-              />
+              <Popover open={isEditComboboxOpen} onOpenChange={setIsEditComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isEditComboboxOpen}
+                    className="col-span-3 justify-between bg-transparent"
+                  >
+                    {editingSelectedState
+                      ? usStatesWithCodes.find((state) => state.name === editingSelectedState)?.name
+                      : "Select state..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search state..." />
+                    <CommandList className="max-h-[200px] overflow-y-auto">
+                      <CommandEmpty>No state found.</CommandEmpty>
+                      <CommandGroup>
+                        {usStatesWithCodes.map((state) => (
+                          <CommandItem
+                            key={state.code}
+                            value={state.name}
+                            onSelect={(currentValue) => {
+                              setEditingSelectedState(currentValue === editingSelectedState ? "" : currentValue)
+                              setIsEditComboboxOpen(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                editingSelectedState === state.name ? "opacity-100" : "opacity-0",
+                              )}
+                            />
+                            {state.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           <DialogFooter>
@@ -483,6 +610,7 @@ export default function JurisdictionsManager() {
               onClick={() => {
                 setIsEditingDialogOpen(false)
                 setEditingJurisdiction(null)
+                setEditingSelectedState("")
               }}
             >
               Cancel
