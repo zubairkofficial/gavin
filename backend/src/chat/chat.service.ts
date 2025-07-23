@@ -272,9 +272,9 @@ OL/0OA==
         }
 
       } else if (websearch == 'false') {
-
+        const jurisdictionFromUser = createMessageDto.jurisdiction
         const ragTool = tool(
-          async ({ message, jurisdiction }) => {
+          async ({ message, jurisdiction , jurisdictionFromUser }) => {
             try {
               console.log('RAG search for:', message, 'in jurisdiction:', createMessageDto.jurisdiction);
 
@@ -417,6 +417,7 @@ OL/0OA==
             schema: z.object({
               message: z.string().min(1, "Message is required"),
               jurisdiction: z.string().describe("Legal jurisdiction (e.g., 'federal', 'TX', 'NY', etc.)"),
+              jurisdictionFromUser: z.string().optional().describe("Legal jurisdiction (e.g., 'federal', 'TX', 'NY', etc.)"),
             }),
           }
         );

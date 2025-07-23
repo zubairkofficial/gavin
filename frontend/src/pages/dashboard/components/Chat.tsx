@@ -14,6 +14,7 @@ import {
   Globe,
   WrenchIcon,
   Paperclip,
+  Scale,
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import CitationTooltip from "./CitationTooltip"
@@ -1108,7 +1109,7 @@ const Chat = ({
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="h-8 hover:bg-gray-100">
                       <span>Jurisdiction</span>
-                      <WrenchIcon className="h-4 w-4" />
+                      <Scale className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" side="bottom" className="w-[200px]">
