@@ -1,4 +1,5 @@
 "use client"
+
 import type React from "react"
 import {
   ChevronLeft,
@@ -10,16 +11,9 @@ import {
   ThumbsDown,
   ThumbsUp,
   X,
-  Plus,
   Globe,
   WrenchIcon,
   Paperclip,
-  Scale, // Florida
-  Building2, // New York
-  Trees, 
-  Beef,
-  Landmark, 
-  TreePalm, 
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import CitationTooltip from "./CitationTooltip"
@@ -33,17 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "../../../components/ui/hover-card";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { useEffect, useRef, useState } from "react"
@@ -58,8 +42,6 @@ import API from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate, useParams } from "react-router-dom"
-import { boolean } from "zod"
-import { ms } from "date-fns/locale"
 
 interface AttachedDocument {
   id: string
@@ -68,13 +50,71 @@ interface AttachedDocument {
   size: string
   file?: File // Add the actual file object
 }
-const stateIcons = {
-  'Florida': TreePalm ,
-  'NewYork': Building2,
-  'California': Trees,
-  'Texas': Beef,
-  'delaware': Landmark,
-};
+
+// State to code mapping
+const usStatesWithCodes = [
+  { name: "Alabama", code: "AL" },
+  { name: "Alaska", code: "AK" },
+  { name: "Arizona", code: "AZ" },
+  { name: "Arkansas", code: "AR" },
+  { name: "California", code: "CA" },
+  { name: "Colorado", code: "CO" },
+  { name: "Connecticut", code: "CT" },
+  { name: "Delaware", code: "DE" },
+  { name: "Florida", code: "FL" },
+  { name: "Georgia", code: "GA" },
+  { name: "Hawaii", code: "HI" },
+  { name: "Idaho", code: "ID" },
+  { name: "Illinois", code: "IL" },
+  { name: "Indiana", code: "IN" },
+  { name: "Iowa", code: "IA" },
+  { name: "Kansas", code: "KS" },
+  { name: "Kentucky", code: "KY" },
+  { name: "Louisiana", code: "LA" },
+  { name: "Maine", code: "ME" },
+  { name: "Maryland", code: "MD" },
+  { name: "Massachusetts", code: "MA" },
+  { name: "Michigan", code: "MI" },
+  { name: "Minnesota", code: "MN" },
+  { name: "Mississippi", code: "MS" },
+  { name: "Missouri", code: "MO" },
+  { name: "Montana", code: "MT" },
+  { name: "Nebraska", code: "NE" },
+  { name: "Nevada", code: "NV" },
+  { name: "New Hampshire", code: "NH" },
+  { name: "New Jersey", code: "NJ" },
+  { name: "New Mexico", code: "NM" },
+  { name: "New York", code: "NY" },
+  { name: "North Carolina", code: "NC" },
+  { name: "North Dakota", code: "ND" },
+  { name: "Ohio", code: "OH" },
+  { name: "Oklahoma", code: "OK" },
+  { name: "Oregon", code: "OR" },
+  { name: "Pennsylvania", code: "PA" },
+  { name: "Rhode Island", code: "RI" },
+  { name: "South Carolina", code: "SC" },
+  { name: "South Dakota", code: "SD" },
+  { name: "Tennessee", code: "TN" },
+  { name: "Texas", code: "TX" },
+  { name: "Utah", code: "UT" },
+  { name: "Vermont", code: "VT" },
+  { name: "Virginia", code: "VA" },
+  { name: "Washington", code: "WA" },
+  { name: "West Virginia", code: "WV" },
+  { name: "Wisconsin", code: "WI" },
+  { name: "Wyoming", code: "WY" },
+]
+
+// Helper functions to convert between state names and codes
+const getStateCodeByName = (stateName: string): string => {
+  const state = usStatesWithCodes.find((s) => s.name === stateName)
+  return state ? state.code : stateName
+}
+
+const getStateNameByCode = (stateCode: string): string => {
+  const state = usStatesWithCodes.find((s) => s.code === stateCode)
+  return state ? state.name : stateCode
+}
 
 interface ChatMessage {
   id: string
@@ -108,10 +148,11 @@ const Chat = ({
   const [hasNavigatedToNewConversation, setHasNavigatedToNewConversation] = useState(false)
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null)
   const [searchWithWeb, setSearchWithWeb] = useState(false)
-  const [jurisdiction, setJurisdiction] = useState('')
+  const [jurisdiction, setJurisdiction] = useState("")
   const [jurisdictions, setJurisdictions] = useState<string[]>([])
-  const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>('')
-  const [jurisdictionSearch, setJurisdictionSearch] = useState('')
+  const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>("") // This will store the code
+  const [jurisdictionSearch, setJurisdictionSearch] = useState("")
+
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
@@ -120,35 +161,30 @@ const Chat = ({
   const urlConversationId = params.conversationId
   const queryClient = useQueryClient()
 
-  // Fetch jurisdictions from API
-  useEffect(() => {
-    const fetchJurisdictions = async () => {
+
+  const fetchJurisdictions = async () => {
       try {
         const response = await API.get("/jurisdictions/forall")
         if (response.data) {
+          // Store the jurisdiction codes from API
           setJurisdictions(response.data?.map((jurisdiction: any) => jurisdiction.jurisdiction))
-          console.log(response.data, 'jurisdictions fetched')
+          console.log(response.data, "jurisdictions fetched")
         }
       } catch (error) {
         console.error("Error fetching jurisdictions:", error)
       }
     }
-    fetchJurisdictions()
-  }, [])
 
-  // Ref for smooth scroll
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  // Ref to hold streaming content for assistant message
   const streamingContentRef = useRef("")
 
-  // Cleanup copy timeout on unmount
   useEffect(() => {
     return () => {
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
     }
   }, [])
 
-  // Fetch conversation messages when URL conversation ID changes
+
   const fetchConversationMessages = async () => {
     if (!urlConversationId) {
       setMessages([])
@@ -173,6 +209,7 @@ const Chat = ({
         const data = response.data
         setConversationId(urlConversationId)
         console.log("Fetched conversation data:", data)
+
         if (data.title) {
           setTitle(data.title)
         }
@@ -183,9 +220,7 @@ const Chat = ({
             let transformedDocuments: AttachedDocument[] | undefined = undefined
 
             if (msg.documents && Array.isArray(msg.documents) && msg.documents.length > 0) {
-
               transformedDocuments = msg.documents.map((doc: any, docIndex: number) => ({
-
                 id: `${msg.id}-doc-${docIndex}`,
                 name: doc.fileName || doc.name || `Document ${docIndex + 1}`,
                 type: doc.fileType || doc.type || "Document",
@@ -205,7 +240,9 @@ const Chat = ({
                 },
               ]
             }
-            console.log("Transformed documents for message:", msg.id,)
+
+            console.log("Transformed documents for message:", msg.id)
+
             const userMsg: ChatMessage = {
               id: `${msg.id}-user`,
               role: "user",
@@ -214,7 +251,9 @@ const Chat = ({
               documents: transformedDocuments,
               isStreaming: false,
             }
+
             console.log("Transformed user message:", msg.id)
+
             const aiMsg: ChatMessage = {
               id: msg.id, // Use the original message ID directly
               role: "assistant",
@@ -251,6 +290,7 @@ const Chat = ({
       setTitle("")
     }
     queryClient.invalidateQueries({ queryKey: ["conversations"] })
+    fetchJurisdictions()
   }, [urlConversationId])
 
   useEffect(() => {
@@ -334,23 +374,22 @@ const Chat = ({
       // Create FormData to handle file uploads
       const formData = new FormData()
       formData.append("message", newMessage.content)
+
       if (currentConversationId) {
         formData.append("conversationId", currentConversationId)
       }
+
       if (title) {
         formData.append("title", title)
       }
-      if( selectedJurisdiction) {
-        formData.append("jurisdiction", selectedJurisdiction)
-        console.log('Selected jurisdiction:', selectedJurisdiction)
+
+      if (selectedJurisdiction) {
+        formData.append("jurisdiction", selectedJurisdiction) 
+        console.log("Selected jurisdiction for message:", selectedJurisdiction)
       }
 
       formData.append("websearch", searchWithWeb ? "true" : "false")
-      console.log('web search:', searchWithWeb)
 
-
-
-      // Add files to FormData
       if (newMessage.documents && newMessage.documents.length > 0) {
         newMessage.documents.forEach((doc, index) => {
           if (doc.file) {
@@ -359,23 +398,15 @@ const Chat = ({
         })
       }
 
-
-      // Log FormData entries
       console.log("FormData contents:")
       for (const pair of formData.entries()) {
         console.log(pair[0], pair[1])
       }
 
-      // console.log(searchWithWeb, 'data of web serach')
-
       const response = await fetch(`${baseURL}/chat/message`, {
         method: "POST",
-        headers:
-        {
-          // Don't set Content-Type header when sending FormData
-          // The browser will set it automatically with the boundary
+        headers: {
           Accept: "text/event-stream",
-          // "content-type": "multipart/form-data",
           Authorization: token ? `Bearer ${token}` : "",
         },
         body: formData, // Send FormData instead of JSON
@@ -397,10 +428,8 @@ const Chat = ({
       try {
         while (true) {
           const { value, done } = await reader.read()
-          // console.log(`Received chunk:`, value, `Done:`, done)
 
           if (done) {
-            // console.log("Stream completed")
             break
           }
 
@@ -416,11 +445,8 @@ const Chat = ({
               try {
                 const jsonStr = line.slice(6).trim()
                 if (jsonStr === "") continue
-
                 const data = JSON.parse(jsonStr)
-                // console.log(`Received chunk data:`, data)
 
-                // Handle conversation metadata (first chunk)
                 if (data.conversationId && !hasNavigated) {
                   setConversationId(data.conversationId)
                   if (!urlConversationId || urlConversationId !== data.conversationId) {
@@ -433,15 +459,12 @@ const Chat = ({
                   }
                 }
 
-                // Handle title update
                 if (data.title) {
                   setTitle(data.title)
                 }
 
-                // Handle streaming tokens
                 if (data.token) {
                   streamingContentRef.current += data.token
-                  // console.log("Current streaming content:", streamingContentRef.current)
                   setMessages((prev) =>
                     prev.map((msg) =>
                       msg.id === assistantMessageId
@@ -455,12 +478,14 @@ const Chat = ({
                 if (data.done) {
                   setMessages((prev) =>
                     prev.map((msg) =>
-                      msg.id === assistantMessageId ? {
-                        ...msg,
-                        id: data.messageid || msg.id, // Use the backend messageid if available
-                        originalId: data.messageid || msg.id, // Store it as originalId too
-                        isStreaming: false
-                      } : msg
+                      msg.id === assistantMessageId
+                        ? {
+                            ...msg,
+                            id: data.messageid || msg.id, // Use the backend messageid if available
+                            originalId: data.messageid || msg.id, // Store it as originalId too
+                            isStreaming: false,
+                          }
+                        : msg,
                     ),
                   )
                   setIsLoading(false)
@@ -478,10 +503,10 @@ const Chat = ({
                     prev.map((msg) =>
                       msg.id === assistantMessageId
                         ? {
-                          ...msg,
-                          content: `Error: ${data.error}`,
-                          isStreaming: false,
-                        }
+                            ...msg,
+                            content: `Error: ${data.error}`,
+                            isStreaming: false,
+                          }
                         : msg,
                     ),
                   )
@@ -516,10 +541,10 @@ const Chat = ({
         prev.map((msg) =>
           msg.id === assistantMessageId
             ? {
-              ...msg,
-              content: errorMessage,
-              isStreaming: false,
-            }
+                ...msg,
+                content: errorMessage,
+                isStreaming: false,
+              }
             : msg,
         ),
       )
@@ -527,9 +552,7 @@ const Chat = ({
     }
   }
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setMessage(suggestion) // Set selected suggestion to the message input
-  }
+
 
   const handleCopy = (msgId: string, content: string) => {
     navigator.clipboard.writeText(content)
@@ -543,17 +566,13 @@ const Chat = ({
     // Find the assistant message index
     const assistantIndex = messages.findIndex((msg) => msg.id === assistantMsgId)
     console.log("Regenerating message for assistant ID:", assistantMsgId)
+
     if (assistantIndex === -1 || assistantIndex === 0) return
 
-    // The user message is usually just before the assistant message
-    const assistantMsg = messages[assistantIndex]
     const userMsg = messages[assistantIndex - 1]
+
     if (!userMsg || userMsg.role !== "user") return
 
-    // Use the assistant message ID directly since it's the original backend ID
-    console.log("Using message ID for regeneration:", assistantMsgId)
-
-    // Remove the old assistant message and insert a new streaming one
     const tempId = `${Date.now()}-regen`
     setMessages((prev) => {
       const newMsgs = [...prev]
@@ -566,7 +585,6 @@ const Chat = ({
       return newMsgs
     })
 
-    // Send the user message again with both IDs for regeneration
     await sendMessageForRegenerate(userMsg, assistantMsgId, tempId)
   }
 
@@ -581,16 +599,17 @@ const Chat = ({
     // Create FormData to handle file uploads
     const formData = new FormData()
     formData.append("message", userMsg.content)
+
     if (currentConversationId) {
       formData.append("conversationId", currentConversationId)
     }
+
     if (title) {
       formData.append("title", title)
     }
 
-    // Add websearch value to FormData
     formData.append("websearch", searchWithWeb ? "true" : "false")
-    console.log('Using websearch value for regeneration:', searchWithWeb)
+    console.log("Using websearch value for regeneration:", searchWithWeb)
 
     // Add files to FormData
     if (userMsg.documents && userMsg.documents.length > 0) {
@@ -647,7 +666,6 @@ const Chat = ({
               try {
                 const jsonStr = line.slice(6).trim()
                 if (jsonStr === "") continue
-
                 const data = JSON.parse(jsonStr)
 
                 // Handle streaming tokens
@@ -655,9 +673,7 @@ const Chat = ({
                   streamingContentRef.current += data.token
                   setMessages((prev) =>
                     prev.map((msg) =>
-                      msg.id === tempId
-                        ? { ...msg, content: streamingContentRef.current, isStreaming: true }
-                        : msg,
+                      msg.id === tempId ? { ...msg, content: streamingContentRef.current, isStreaming: true } : msg,
                     ),
                   )
                 }
@@ -666,12 +682,14 @@ const Chat = ({
                 if (data.done) {
                   setMessages((prev) =>
                     prev.map((msg) =>
-                      msg.id === tempId ? {
-                        ...msg,
-                        id: data.messageid || assistantMessageId,
-                        originalId: data.messageid || assistantMessageId,
-                        isStreaming: false
-                      } : msg
+                      msg.id === tempId
+                        ? {
+                            ...msg,
+                            id: data.messageid || assistantMessageId,
+                            originalId: data.messageid || assistantMessageId,
+                            isStreaming: false,
+                          }
+                        : msg,
                     ),
                   )
                   setIsLoading(false)
@@ -750,45 +768,33 @@ const Chat = ({
         <div className="space-y-3 ">
           <p className="text-gray-800  text-[14px] leading-[26px] ">
             <span style={{ display: "inline-block" }}>
-              {/* <ReactMarkdown>
-            {msg.content}
-            </ReactMarkdown> */}
               <AnnotationTooltip msgId={msg.id} msgContent={msg.content} containerRef={messagesEndRef}>
                 {({ handleLinkInteraction, clickedLink, annotations, currentIndex, tooltipRef, setCurrentIndex }) => (
                   <ReactMarkdown
                     components={{
                       a: ({ href, children }) => {
-                        if (!href) return children;
-
-                        const annotation = annotations?.find((a: any) => a?.reference === href);
-                        const isActive = clickedLink === href;
-
+                        if (!href) return children
+                        const annotation = annotations?.find((a: any) => a?.reference === href)
+                        const isActive = clickedLink === href
                         return (
                           <>
                             <div className="relative inline-block">
                               <Popover>
                                 <PopoverTrigger asChild>
-                                  <p
-                                    // href={href}
-                                    className="cursor-pointer bg-white border-2 border-gray-200 hover:bg-black py-1 px-2 mt-1 rounded-sm text-black hover:text-white transition-all duration-200 ease-in-out"
-                                  // target="_blank"
-                                  >
+                                  <p className="cursor-pointer bg-white border-2 border-gray-200 hover:bg-black py-1 px-2 mt-1 rounded-sm text-black hover:text-white transition-all duration-200 ease-in-out">
                                     {children}
                                   </p>
                                 </PopoverTrigger>
                                 {annotation && (
-                                  <PopoverContent
-                                    className="min-w-[300px] md:min-w-[350px] max-w-xs p-0"
-                                    side="top"
-                                  >
+                                  <PopoverContent className="min-w-[300px] md:min-w-[350px] max-w-xs p-0" side="top">
                                     <div className="flex items-center rounded-t-md justify-between w-full bg-[#F9F9F9] p-2">
                                       <div className="flex items-center space-x-1">
                                         <button
                                           className="p-1 disabled:opacity-30 hover:bg-gray-200 text-[#a7a4a4] rounded"
                                           disabled={currentIndex === 0}
                                           onClick={(e: React.MouseEvent) => {
-                                            e.stopPropagation();
-                                            setCurrentIndex(Math.max(0, currentIndex - 1));
+                                            e.stopPropagation()
+                                            setCurrentIndex(Math.max(0, currentIndex - 1))
                                           }}
                                         >
                                           <ChevronLeft className="h-4 w-4" />
@@ -797,8 +803,8 @@ const Chat = ({
                                           className="p-1 disabled:opacity-30 hover:bg-gray-200 text-[#a7a4a4] rounded"
                                           disabled={currentIndex === annotations.length - 1}
                                           onClick={(e: React.MouseEvent) => {
-                                            e.stopPropagation();
-                                            setCurrentIndex(Math.min(annotations.length - 1, currentIndex + 1));
+                                            e.stopPropagation()
+                                            setCurrentIndex(Math.min(annotations.length - 1, currentIndex + 1))
                                           }}
                                         >
                                           <ChevronRight className="h-4 w-4" />
@@ -818,16 +824,18 @@ const Chat = ({
                                             alt="icon"
                                             className="h-[18px] w-[18px] rounded-lg border-amber-200"
                                             onError={(e) => {
-                                              e.currentTarget.style.display = 'none'
+                                              e.currentTarget.style.display = "none"
                                             }}
                                           />
                                         )}
                                         <div className=" text-[#343434]  font-medium text-[12px]">
-                                          {annotation.reference ? new URL(annotation.reference).hostname : 'Reference'}
+                                          {annotation.reference ? new URL(annotation.reference).hostname : "Reference"}
                                         </div>
                                       </div>
                                       {annotation.title && (
-                                        <h4 className="text-[#343434]  font-medium text-[14px] mb-2">{annotation.title}</h4>
+                                        <h4 className="text-[#343434]  font-medium text-[14px] mb-2">
+                                          {annotation.title}
+                                        </h4>
                                       )}
                                       <div className="text-[#343434]  font-normal text-[12px] break-all">
                                         <a
@@ -846,11 +854,11 @@ const Chat = ({
                             </div>
                             <br />
                           </>
-                        );
+                        )
                       },
                     }}
                   >
-                    {msg.content.split(/Citation00 :|annotations :/)[0].replace(/\(([^)]*)\)/g, '$1')}
+                    {msg.content.split(/Citation00 :|annotations :/)[0].replace(/$$([^)]*)$$/g, "$1")}
                   </ReactMarkdown>
                 )}
               </AnnotationTooltip>
@@ -860,23 +868,13 @@ const Chat = ({
                 msgContent={msg.content}
                 citationIndexes={citationIndexes}
                 setCitationIndexes={setCitationIndexes}
-
               />
-
               {msg.isStreaming && !msg.content.trim() && (
                 <span className="inline-block w-[4px] rounded h-5 bg-gray-400 ml-1 animate-pulse" />
               )}
-              {/* {msg.isStreaming && !msg.content.trim() && (
-              <span className="inline-flex ml-2 align-middle">
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5"></span>
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5 [animation-delay:0.2s]"></span>
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce mx-0.5 [animation-delay:0.4s]"></span>
-              </span>
-            )} */}
             </span>
           </p>
         </div>
-
         {/* Action buttons - only show when not streaming */}
         {!msg.isStreaming && (
           <div className="flex space-x-2 mt-3 md:mt-4">
@@ -945,13 +943,7 @@ const Chat = ({
     >
       {/* Messages Section */}
       {messages.length > 0 && (
-        <div
-          className="flex-1 pb-2 w-full "
-        // style={{
-        //   maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
-        //   WebkitMaskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
-        // }}
-        >
+        <div className="flex-1 pb-2 w-full ">
           <div className="w-full max-w-5xl px-5  flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px]">
             <div className="w-full space-y-4 pt-3 pb-[200px]">
               {messages.map(renderMessage)}
@@ -1016,7 +1008,6 @@ const Chat = ({
                     <ChevronLeft className="h-2.5 w-2.5 md:h-3 md:w-3" />
                   </Button>
                 </div>
-
                 {selectedDocuments.map((doc) => (
                   <SwiperSlide key={doc.id} className="max-w-28 md:max-w-32 lg:max-w-56 py-2 group">
                     <Button className="rounded-sm text-foreground bg-transparent hover:bg-transparent border w-full !px-1.5 md:!px-2 pe-3 md:pe-4 py-2 h-10 md:h-12 text-xs md:text-sm flex justify-start">
@@ -1034,9 +1025,7 @@ const Chat = ({
                     </button>
                   </SwiperSlide>
                 ))}
-
                 <div className="absolute top-0 right-0 mx-auto w-32 md:w-48 h-full bg-[linear-gradient(90deg,_rgba(250,251,253,0)_38%,_rgba(250,251,253,1)_100%)] z-10"></div>
-
                 <div className="swiper-button-next absolute right-0 top-1/2 transform z-10 after:!content-none">
                   <Button
                     variant="ghost"
@@ -1049,8 +1038,6 @@ const Chat = ({
               </Swiper>
             </div>
           )}
-
-
 
           <textarea
             value={message}
@@ -1098,22 +1085,23 @@ const Chat = ({
                 </DropdownMenuContent>
               </DropdownMenu>
 
-
               {/* Search with Web Badge */}
               {searchWithWeb && (
                 <div className="flex items-center gap-2 px-2 py-1">
                   <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                     <Globe className="h-3 w-3" />
                     Search
-                    <button onClick={() => setSearchWithWeb(false)} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
+                    <button
+                      onClick={() => setSearchWithWeb(false)}
+                      className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                    >
                       <X className="h-2.5 w-2.5" />
                     </button>
                   </Badge>
                 </div>
               )}
-              
 
-            
+              {/* Jurisdiction Dropdown */}
               {!selectedJurisdiction ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1133,42 +1121,44 @@ const Chat = ({
                       />
                     </div>
                     <div className="max-h-[120px] overflow-y-auto">
-                    {jurisdictions
-                      ?.filter(state => 
-                        state.toLowerCase().includes(jurisdictionSearch.toLowerCase())
-                      )
-                      .map((state) => {
-                        const StateIcon = stateIcons[state as keyof typeof stateIcons];
-                        return (
-                          <DropdownMenuItem
-                            key={state}
-                            onClick={() => {
-                              setSelectedJurisdiction(state);
-                              setJurisdiction(state);
-                              setJurisdictionSearch(''); // Reset search after selection
-                            }}
-                            className="flex items-center gap-2"
-                          >
-                            {state}
-                            {selectedJurisdiction === state && <span className="ml-auto">✓</span>}
-                          </DropdownMenuItem>
-                      );
-                    })}
+                      {jurisdictions
+                        ?.filter((jurisdictionCode) => {
+
+                          const fullStateName = getStateNameByCode(jurisdictionCode)
+                          return (
+                            jurisdictionCode.toLowerCase().includes(jurisdictionSearch.toLowerCase()) ||
+                            fullStateName.toLowerCase().includes(jurisdictionSearch.toLowerCase())
+                          )
+                        })
+                        .map((jurisdictionCode) => {
+                          // Display the full state name but store the code
+                          const fullStateName = getStateNameByCode(jurisdictionCode)
+                          return (
+                            <DropdownMenuItem
+                              key={jurisdictionCode}
+                              onClick={() => {
+                                setSelectedJurisdiction(jurisdictionCode) // Store the code
+                                setJurisdiction(jurisdictionCode) // Store the code
+                                setJurisdictionSearch("") // Reset search after selection
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              {fullStateName} ({jurisdictionCode})
+                              {selectedJurisdiction === jurisdictionCode && <span className="ml-auto">✓</span>}
+                            </DropdownMenuItem>
+                          )
+                        })}
                     </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
                 <div className="flex items-center gap-2 px-2 py-1">
                   <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                    {(() => {
-                      const StateIcon = stateIcons[selectedJurisdiction as keyof typeof stateIcons];
-                      return StateIcon && <StateIcon className="h-3 w-3" />;
-                    })()}
-                    {selectedJurisdiction}
+                    {getStateNameByCode(selectedJurisdiction)} ({selectedJurisdiction})
                     <button
                       onClick={() => {
-                        setSelectedJurisdiction('');
-                        setJurisdiction('');
+                        setSelectedJurisdiction("")
+                        setJurisdiction("")
                       }}
                       className="ml-1 hover:bg-gray-300 rounded-full p-0.5 "
                     >
