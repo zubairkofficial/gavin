@@ -53,6 +53,7 @@ interface AttachedDocument {
 
 // State to code mapping
 const usStatesWithCodes = [
+  { name: "Federal", code: "FEDERAL" },
   { name: "Alabama", code: "AL" },
   { name: "Alaska", code: "AK" },
   { name: "Arizona", code: "AZ" },

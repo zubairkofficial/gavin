@@ -48,7 +48,7 @@ interface Jurisdiction {
 }
 
 const usStatesWithCodes = [
-  { name: "Federal", code: "FD" },
+  { name: "Federal", code: "FEDERAL" },
   { name: "Alabama", code: "AL" },
   { name: "Alaska", code: "AK" },
   { name: "Arizona", code: "AZ" },
