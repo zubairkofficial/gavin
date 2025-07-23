@@ -768,7 +768,7 @@ const Chat = ({
         <div className="space-y-3 ">
           <p className="text-gray-800  text-[14px] leading-[26px] ">
             <span style={{ display: "inline-block" }}>
-              <AnnotationTooltip msgId={msg.id} msgContent={msg.content} containerRef={messagesEndRef}>
+              <AnnotationTooltip msgId={msg.id} msgContent={msg.content} containerRef={messagesEndRef} >
                 {({ handleLinkInteraction, clickedLink, annotations, currentIndex, tooltipRef, setCurrentIndex }) => (
                   <ReactMarkdown
                     components={{
@@ -858,7 +858,7 @@ const Chat = ({
                       },
                     }}
                   >
-                    {msg.content.split(/Citation00 :|annotations :/)[0].replace(/$$([^)]*)$$/g, "$1")}
+                    {msg.content.split(/Citation00 :|annotations :/)[0].replace(/\(([^)]*)\)/g, '$1')}
                   </ReactMarkdown>
                 )}
               </AnnotationTooltip>
