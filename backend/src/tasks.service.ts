@@ -210,116 +210,116 @@ export class TasksService implements OnModuleInit {
 
 
 
-    for await (const { url, content, code, section, Title, subject_area } of scrapeCaliforniaCodes()) {
+    // for await (const { url, content, code, section, Title, subject_area } of scrapeCaliforniaCodes()) {
 
 
-      const statute = new Statute();
-      statute.content_html = content;
-      statute.source_url = 'scaper';
-      statute.fileName = url.split('/').pop() || '';
-      statute.title = Title;
-      statute.section = section;
-      statute.code = code;
-      statute.jurisdiction = 'California';
-      statute.type = 'statute';
-      statute.holding_summary = subject_area;
-      statute.filePath = url;
-
-
-
-      const document = await this.statuteRepository.save(statute);
-
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          document_type: document.type,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-          jurisdiction : 'California'
-        }
-      });
-    }
-
-    for await (const data of scrapeCourtListener()) {
-      //   console.log(data); // Each plain_text as soon as it's available
-      // console.log('='.repeat(60))
-      // console.log('scraping started')
-      // console.log('te all data of ',data.text)
-      // console.log(data.filePath)
-      // console.log(data.id)
-      // console.log(data.type)
-      // console.log(data.pageCount)
-      // console.log(data.opinions_cited)
-      // console.log(data.text)   
-
-
-      const cases = new Case();
-      cases.content_html = data.text;
-      cases.source_url = 'Api';
-      cases.name = data.filePath.split('//')[1];
-      cases.filePath = data.filePath;
-      cases.case_type = data.type;
-      cases.type = 'case';
-      cases.jurisdiction = '';
+    //   const statute = new Statute();
+    //   statute.content_html = content;
+    //   statute.source_url = 'scaper';
+    //   statute.fileName = url.split('/').pop() || '';
+    //   statute.title = Title;
+    //   statute.section = section;
+    //   statute.code = code;
+    //   statute.jurisdiction = 'California';
+    //   statute.type = 'statute';
+    //   statute.holding_summary = subject_area;
+    //   statute.filePath = url;
 
 
 
-      const document = await this.caseRepository.save(cases);
+    //   const document = await this.statuteRepository.save(statute);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          document_type: document.type,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Api',
-          jurisdiction : '',
-        }
-      });
-    }
+    //   await this.embeddingService.processDocument({
+    //     documentId: document.id,
+    //     content: document.content_html || '',
+    //     additionalMetadata: {
+    //       document_id: document.id,
+    //       document_type: document.type,
+    //       processed_at: new Date().toISOString(),
+    //       enabled: true,
+    //       source: 'Scraper',
+    //       jurisdiction : 'CA'
+    //     }
+    //   });
+    // }
 
-
-
-
-
-
-    for await (const { title, content, url } of processAllFloridaStatutes()) {
-      this.logger.log(`Processing Florida statute: ${title} and contat ${content.length}`);
-
-      const domain = new URL(url).hostname; // "www.leg.state.fl.us"
-      const filename = url.substring(url.lastIndexOf('/') + 1); // "0001.html"
-
-      const finalPath = `${domain}/${filename}`;
-      const statute = new Statute();
-      statute.title = title;
-      statute.content_html = content;
-      statute.jurisdiction = 'Florida';
-      statute.source_url = 'scaper';
-      statute.fileName = finalPath;
-      statute.type = 'statute';
-      statute.filePath = url;
+    // for await (const data of scrapeCourtListener()) {
+    //   //   console.log(data); // Each plain_text as soon as it's available
+    //   // console.log('='.repeat(60))
+    //   // console.log('scraping started')
+    //   // console.log('te all data of ',data.text)
+    //   // console.log(data.filePath)
+    //   // console.log(data.id)
+    //   // console.log(data.type)
+    //   // console.log(data.pageCount)
+    //   // console.log(data.opinions_cited)
+    //   // console.log(data.text)   
 
 
-      const document = await this.statuteRepository.save(statute);
+    //   const cases = new Case();
+    //   cases.content_html = data.text;
+    //   cases.source_url = 'Api';
+    //   cases.name = data.filePath.split('//')[1];
+    //   cases.filePath = data.filePath;
+    //   cases.case_type = data.type;
+    //   cases.type = 'case';
+    //   cases.jurisdiction = '';
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          document_type: document.type,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-          jurisdiction : 'Florida'
-        }
-      });
-    }
+
+
+    //   const document = await this.caseRepository.save(cases);
+
+    //   await this.embeddingService.processDocument({
+    //     documentId: document.id,
+    //     content: document.content_html || '',
+    //     additionalMetadata: {
+    //       document_id: document.id,
+    //       document_type: document.type,
+    //       processed_at: new Date().toISOString(),
+    //       enabled: true,
+    //       source: 'Api',
+    //       jurisdiction : '',
+    //     }
+    //   });
+    // }
+
+
+
+
+
+
+    // for await (const { title, content, url } of processAllFloridaStatutes()) {
+    //   this.logger.log(`Processing Florida statute: ${title} and contat ${content.length}`);
+
+    //   const domain = new URL(url).hostname; // "www.leg.state.fl.us"
+    //   const filename = url.substring(url.lastIndexOf('/') + 1); // "0001.html"
+
+    //   const finalPath = `${domain}/${filename}`;
+    //   const statute = new Statute();
+    //   statute.title = title;
+    //   statute.content_html = content;
+    //   statute.jurisdiction = 'Florida';
+    //   statute.source_url = 'scaper';
+    //   statute.fileName = finalPath;
+    //   statute.type = 'statute';
+    //   statute.filePath = url;
+
+
+    //   const document = await this.statuteRepository.save(statute);
+
+    //   await this.embeddingService.processDocument({
+    //     documentId: document.id,
+    //     content: document.content_html || '',
+    //     additionalMetadata: {
+    //       document_id: document.id,
+    //       document_type: document.type,
+    //       processed_at: new Date().toISOString(),
+    //       enabled: true,
+    //       source: 'Scraper',
+    //       jurisdiction : 'FL'
+    //     }
+    //   });
+    // }
 
 
     for await (const statuteData of runTexasStatuteScraper()) {
@@ -337,18 +337,18 @@ export class TasksService implements OnModuleInit {
 
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          document_type: document.type,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-          jurisdiction : 'Texas'
-        }
-      });
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     document_type: document.type,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //     jurisdiction : 'TE'
+      //   }
+      // });
 
 
     }
@@ -369,18 +369,18 @@ export class TasksService implements OnModuleInit {
       // Save to database
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          document_type: document.type,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-          jurisdiction : 'delaware'
-        }
-      });
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     document_type: document.type,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //     jurisdiction : 'DE'
+      //   }
+      // });
     }
 
     for await (const sectionData of runNewYorkCodeScraper()) {
@@ -401,18 +401,18 @@ export class TasksService implements OnModuleInit {
       // Save to database
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          document_type: document.type,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-          jurisdiction : 'NewYork'
-        }
-      });
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     document_type: document.type,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //     jurisdiction : 'NY'
+      //   }
+      // });
     }
 
 
@@ -430,18 +430,18 @@ export class TasksService implements OnModuleInit {
 
       const document = await this.regulationRepository.save(RegulationEntity);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          document_type: document.type,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-          jurisdiction : 'federal',
-        }
-      });
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     document_type: document.type,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //     jurisdiction : 'FEDERAL',
+      //   }
+      // });
     }
 
     // console.log('Scraping US Codes...');
@@ -463,18 +463,18 @@ export class TasksService implements OnModuleInit {
       // Save to database
       const document = await this.statuteRepository.save(StatuteEntity);
 
-      await this.embeddingService.processDocument({
-        documentId: document.id,
-        content: document.content_html || '',
-        additionalMetadata: {
-          document_id: document.id,
-          document_type: document.type,
-          processed_at: new Date().toISOString(),
-          enabled: true,
-          source: 'Scraper',
-          jurisdiction : 'federal'
-        }
-      });
+      // await this.embeddingService.processDocument({
+      //   documentId: document.id,
+      //   content: document.content_html || '',
+      //   additionalMetadata: {
+      //     document_id: document.id,
+      //     document_type: document.type,
+      //     processed_at: new Date().toISOString(),
+      //     enabled: true,
+      //     source: 'Scraper',
+      //     jurisdiction : 'FEDERAL'
+      //   }
+      // });
     }
   }
 }

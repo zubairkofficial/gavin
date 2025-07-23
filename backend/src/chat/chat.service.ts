@@ -416,8 +416,8 @@ OL/0OA==
             description: "Searches legal documents using RAG for the given message and jurisdiction. .",
             schema: z.object({
               message: z.string().min(1, "Message is required"),
-              jurisdiction: z.string().describe("Legal jurisdiction (e.g., 'federal', 'TX', 'NY', etc.)"),
-              jurisdictionFromUser: z.string().optional().describe("Legal jurisdiction (e.g., 'federal', 'TX', 'NY', etc.)"),
+              jurisdiction: z.string().describe("Legal jurisdiction (e.g., 'FEDERAL', 'TX', 'NY', etc.)"),
+              jurisdictionFromUser: z.string().optional().describe("Legal jurisdiction (e.g., 'FEDERAL', 'TX', 'NY', etc.)"),
             }),
           }
         );
