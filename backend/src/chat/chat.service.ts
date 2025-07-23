@@ -463,7 +463,7 @@ OL/0OA==
           });
         };
 
-        let inputs = { messages: [{ role: "user", content:  `${message} in jurisdiction ${createMessageDto.jurisdiction}` }] };
+        let inputs = { messages: [{ role: "user", content:  `${message}  ${!createMessageDto.jurisdiction ? `in jurisdiction ${createMessageDto.jurisdiction}` : '' }` }] };
 
         const result = await createReActAgent().invoke(inputs, {
           streamMode: "values",
