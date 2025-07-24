@@ -873,7 +873,7 @@ const Chat = ({
         "w-full max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-4xl flex flex-col m-0 p-0 min-w-0 ",
         messages.length > 0 ? "h-[84vh] " : "",
         // Responsive padding and centering
-        "px-2 sm:px-4 md:px-6 lg:px-8 xl:px-0",
+        "px-0 sm:px-3 md:px-6 lg:px-8 xl:px-0",
       )}
       style={{ boxSizing: "border-box" }}
     >
@@ -894,7 +894,7 @@ const Chat = ({
         className={cn(
           // Responsive chat input section
           "mx-auto w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-4xl bg-background px-2 sm:px-4  flex-shrink-0 min-w-0",
-          messages.length > 0 ? "pb-6 fixed bottom-10 md:bottom-0" : "mt-auto absolute sm:bottom-0  md:bottom-40",
+          messages.length > 0 ? "pb-6 fixed bottom-10 md:bottom-0 " : "mt-auto absolute bottom-10  md:bottom-40",
         )}
       >
         <div
