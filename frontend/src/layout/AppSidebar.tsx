@@ -12,11 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 
 import {
   Sidebar,
@@ -33,8 +28,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { AppSidebarHeader } from "./AppSidebarHeader"
 import { useAuth } from "@/context/Auth.context"
 import { NavLink, useNavigate } from "react-router-dom"
-import { useConversationsQuery, useCreateConversationMutation, useUpdateConversationTitleMutation, useDeleteConversationMutation } from "./hook"
-import { useEffect, useState } from "react"
+import { useCreateConversationMutation, useUpdateConversationTitleMutation, useDeleteConversationMutation } from "./hook"
+import { useState } from "react"
 // import '../pages/admin/dashboard/chat.css' // Import your custom styles for the chat
 
 // Define Conversation type if not imported from elsewhere
@@ -78,6 +73,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [permanentDeleteOpen, setPermanentDeleteOpen] = useState(false)
+  const [deletingChatIds, setDeletingChatIds] = useState<string[]>([])
   const createConversationMutation = useCreateConversationMutation()
   const updateTitleMutation = useUpdateConversationTitleMutation()
   const deleteChatMutation = useDeleteConversationMutation()
@@ -154,6 +150,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
 
   const handleDelete = async (conversationId: string) => {
     try {
+      setDeletingChatIds(prev => [...prev, conversationId])
       await deleteChatMutation.mutateAsync(conversationId)
       // If deleted conversation is currently being edited, reset editing state
       if (editingId === conversationId) {
@@ -162,6 +159,8 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
       }
     } catch (error) {
       console.error("Failed to delete chat:", error)
+    } finally {
+      setDeletingChatIds(prev => prev.filter(id => id !== conversationId))
     }
   }
 
@@ -175,11 +174,14 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
 
   const handlePermanentDelete = async (conversationId: string) => {
     try {
+      setDeletingChatIds(prev => [...prev, conversationId])
       await API.post(`/chat/permanent-delete/${conversationId}`)
       // Invalidate conversations query to refresh the list
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     } catch (error) {
       console.error("Failed to permanently delete chat:", error)
+    } finally {
+      setDeletingChatIds(prev => prev.filter(id => id !== conversationId))
     }
   }
 
@@ -294,8 +296,13 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
                                       }}
                                       className="p-1 hover:bg-muted/60 rounded text-muted-foreground hover:text-destructive hover:cursor-pointer"
                                       title="Delete permanently"
+                                      disabled={deletingChatIds.includes(chat.conversationid || chat.conversationId)}
                                     >
-                                      <Trash2Icon size={14} />
+                                      {deletingChatIds.includes(chat.conversationid || chat.conversationId) ? (
+                                        <span className="animate-spin">⌛</span>
+                                      ) : (
+                                        <Trash2Icon size={14} />
+                                      )}
                                     </button>
                                   </div>
                                 </div>
@@ -377,8 +384,13 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
                                           }}
                                           className="p-1 hover:bg-muted/60 rounded text-muted-foreground hover:text-destructive hover:cursor-pointer"
                                           title="Move to trash"
+                                          disabled={deletingChatIds.includes(chat.conversationid)}
                                         >
-                                          <Trash2Icon size={14} />
+                                          {deletingChatIds.includes(chat.conversationid) ? (
+                                            <span className="animate-spin">⌛</span>
+                                          ) : (
+                                            <Trash2Icon size={14} />
+                                          )}
                                         </button>
                                       </div>
                                     </>
@@ -440,13 +452,17 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
             <Button
               variant="default"
               onClick={async () => {
+                setDeleteConfirmOpen(false)
                 if (currentChatId) {
                   await handleDelete(currentChatId)
                   setCurrentChatId(null)
                 }
-                setDeleteConfirmOpen(false)
               }}
+              disabled={currentChatId ? deletingChatIds.includes(currentChatId) : false}
             >
+              {currentChatId && deletingChatIds.includes(currentChatId) ? (
+                <span className="animate-spin mr-2">⌛</span>
+              ) : null}
               Move to Trash
             </Button>
           </DialogFooter>
@@ -469,13 +485,17 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
             <Button
               variant="default"
               onClick={async () => {
+                setPermanentDeleteOpen(false)
                 if (currentChatId) {
                   await handlePermanentDelete(currentChatId)
                   setCurrentChatId(null)
                 }
-                setPermanentDeleteOpen(false)
               }}
+              disabled={currentChatId ? deletingChatIds.includes(currentChatId) : false}
             >
+              {currentChatId && deletingChatIds.includes(currentChatId) ? (
+                <span className="animate-spin mr-2">⌛</span>
+              ) : null}
               Delete Permanently
             </Button>
           </DialogFooter>
