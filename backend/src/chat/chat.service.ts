@@ -416,26 +416,12 @@ export class ChatService {
 
         let inputs = { messages: [{ role: "user", content:  `${message}  ${!createMessageDto.jurisdiction ? `in jurisdiction ${createMessageDto.jurisdiction}` : '' }` }] };
 
-        const result = await createReActAgent().invoke(inputs, {
-          streamMode: "values",
-        });
-
-        str = await result;
-        let combinedResponse = '';
-
-        // Handle message chunks from the result
-        for (const message of str.messages) {
-          if (message.content) {
-            combinedResponse += message.content;
-          }
-
-          // Handle tool calls if present
-          if (message.additional_kwargs?.tool_calls) {
-            for (const toolCall of message.additional_kwargs.tool_calls) {
-            }
-          }
-        }
-
+        const result = await createReActAgent().streamEvents(inputs, { version: "v2" });
+        // To log the streamed content, iterate over the stream
+        
+        str = result
+        
+        console.log('Result from ReAct Agent:', str);
         const finalTitle = conTitle || title;
         ftitle = finalTitle;
         if (fileContent) {

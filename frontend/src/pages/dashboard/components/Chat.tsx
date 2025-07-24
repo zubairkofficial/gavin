@@ -382,6 +382,7 @@ const Chat = ({
                 const jsonStr = line.slice(6).trim()
                 if (jsonStr === "") continue
                 const data = JSON.parse(jsonStr)
+                console.log("Parsed data:", data)
 
                 if (data.conversationId && !hasNavigated) {
                   setConversationId(data.conversationId)
@@ -399,8 +400,15 @@ const Chat = ({
                   setTitle(data.title)
                 }
 
-                if (data.token) {
-                  streamingContentRef.current += data.token
+                if (data) {
+                  console.log("Streaming token:", data.token)
+                  console.log("Streaming token:", data)
+                  // Only append the token if it exists and is a string
+                  if (typeof data.token === 'string') {
+                    streamingContentRef.current += data.token
+                  } else if (typeof data === 'string') {
+                    streamingContentRef.current += data
+                  }
                   setMessages((prev) =>
                     prev.map((msg) =>
                       msg.id === assistantMessageId

@@ -32,6 +32,7 @@ import { ConfigService } from '@nestjs/config';
 import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import { Configuration } from '@/documents/entities/configuration.entity';
 import { User } from '@/auth/entities/user.entity';
+import { json } from 'stream/consumers';
 @ApiTags('Chat')
 @Controller('chat')
 export class ChatController {
@@ -158,72 +159,51 @@ export class ChatController {
 
 
       if (createMessageDto.websearch == 'false') {
-        try {
-          console.log('Received result from chatService:', result.stream);
-          
-          if (clientDisconnected || res.destroyed) {
-            console.log('Response destroyed or client disconnected');
-            return;
-          }
+        console.log('Received result from chatService:', result.stream);
 
-          // Get the AIMessageChunk that contains the actual response
-          const aiMessage = result.stream.messages?.find(msg => 
-            msg.id?.startsWith('chatcmpl-') && msg.content
-          );
-
-          if (!aiMessage) {
-            throw new Error('No valid AI response found in the result');
-          }
-
-          let token = aiMessage.content || '';
-          
-          // Send metadata first
-          const event = {
-            conversationId: result.conversationId,
-            userId: result.userId,
-            title: result.title,
-            token,
-            filesProcessed: files?.files?.length || 0
-          };
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
-          sentMetadata = true;
-
-          // Flush the response to send data immediately
-          if (typeof (res as any).flush === 'function') {
-            (res as any).flush();
-          }
-
-          fullAiResponse = token;
-
-
-
-
-          // ----------------- Handle token usage and credit deduction-----------------
-          
-          
-        }catch (error) {
-          console.error('Streaming error:', error);
-          let errorMessage = 'Failed to process your message.';
-          if (error.message?.includes('You have low credits, please Add credits')) {
-            errorMessage = 'You have low credits, please Add credits';
-          } else if (error.message?.includes('invalid_api_key')) {
-            errorMessage = 'OpenAI API authentication failed';
-          } else if (error.message?.includes('rate_limit_exceeded') || error.status === 429) {
-            errorMessage = 'Rate limit exceeded. Please try again later.';
-          } else if (error.message?.includes('content_policy_violation')) {
-            errorMessage = 'Content was blocked by OpenAI filters.';
-          } else if (error.message?.includes('File type') && error.message?.includes('not allowed')) {
-            errorMessage = error.message;
-          }
-          if (!clientDisconnected && !res.destroyed) {
-            res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`);
-            res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-          }
+        if (clientDisconnected || res.destroyed) {
+          console.log('Response destroyed or client disconnected');
+          return;
         }
-        // Get message with usage metadata
-        const messageWithUsage = result.stream.messages.find(msg => 
-          msg.usage_metadata?.total_tokens
-        );
+
+        // Send initial metadata
+        const initialEvent = {
+          conversationId: result.conversationId,
+          userId: result.userId,
+          title: result.title,
+          token: '',
+          filesProcessed: files?.files?.length || 0
+        };
+        res.write(`data: ${JSON.stringify(initialEvent)}\n\n`);
+        sentMetadata = true;
+
+        fullAiResponse = '';
+
+        try {
+          for await (const chunk of result.stream) {
+            if (clientDisconnected || res.destroyed) break;
+            const chunkContent = chunk?.data?.chunk?.content || ''; 
+
+            if (chunkContent) {
+              fullAiResponse += chunkContent;
+              res.write(`data: ${JSON.stringify(chunkContent)}\n\n`);
+
+              if (typeof (res as any).flush === 'function') {
+                (res as any).flush();  
+              }
+            } else {
+              console.warn('Received chunk with no content:', chunk);
+            }
+          }
+        } catch (streamError) {
+          console.error('Error processing stream:', streamError);
+          throw streamError;
+        }
+        // ----------------- Handle token usage and credit deduction-----------------
+
+        // const messageWithUsage = result.stream.messages.find(msg => 
+        //   msg.usage_metadata?.total_tokens
+        // );
 
         // const outputTokenCount = messageWithUsage?.usage_metadata?.total_tokens
         //   || result.stream.usage_metadata?.total_tokens;
@@ -246,13 +226,6 @@ export class ChatController {
 
         // ------------------------- End of token usage and credit deduction-----------------
 
-
-
-        if (fullAiResponse.includes('I did not have knowledge about that.')) {
-          result.documentContext = [];
-          // console.log('removing the document context beacause no response was found');
-        }
-
         if (!clientDisconnected && !res.destroyed && result.documentContext) {
           // 1. Send the citation label as a chunk
           const citationLabel = "";
@@ -273,7 +246,7 @@ export class ChatController {
           fullAiResponse += citationJson;
         }
 
-        
+
 
         let messageId
         if (createMessageDto.regenerate && upadtedMessageId) {
@@ -450,10 +423,6 @@ export class ChatController {
           console.log('Message saved successfully:', msgcontent);
         }
 
-
-        
-
-
         // Send final done event
         if (!clientDisconnected && !res.destroyed) {
           res.write(`data: ${JSON.stringify({
@@ -467,27 +436,6 @@ export class ChatController {
           }
         }
       }
-
-
-      // Save message to database after streaming is complete
-      // try {
-      //   await this.chatService.saveMessage(
-      //     createMessageDto.message,
-      //     fullAiResponse,
-      //     streamData.title,
-      //     streamData.userId,
-      //     streamData.conversationId,
-      //     result.filename || '',
-      //     result.size || '',
-      //     result.type || '',
-      //     result.fileContent || ''
-      //   );
-      // } catch (saveError) {
-      //   console.error('Error saving message:', saveError);
-      //   if (!clientDisconnected && !res.destroyed) {
-      //     res.write(`data: ${JSON.stringify({ error: 'Failed to save message' })}\n\n`);
-      //   }
-      // }
 
     } catch (error) {
       console.error('Streaming error:', error);
