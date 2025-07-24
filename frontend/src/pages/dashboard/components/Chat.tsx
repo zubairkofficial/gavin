@@ -990,8 +990,8 @@ const Chat = ({
             style={{ minWidth: 0 }}
           />
 
-          <div className="flex w-full items-center justify-between absolute bottom-0 right-2 px-2 md:px-0">
-            <div className="flex items-center gap-1 mr-auto">
+          <div className="flex w-full items-center justify-between absolute bottom-0 right-2 px-1 ">
+            <div className="flex items-center gap-0 md:gap-1 mr-auto  overflow-x-auto">
               {/* Attach Document Button */}
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
@@ -1005,7 +1005,7 @@ const Chat = ({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="h-8 hover:bg-gray-100">
-                    <span>Tools</span>
+                    <span className="hidden md:block">Tools</span>
                     <WrenchIcon className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -1023,10 +1023,10 @@ const Chat = ({
 
               {/* Search with Web Badge */}
               {searchWithWeb && (
-                <div className="flex items-center gap-2 px-2 py-1">
+                <div className="flex items-center gap-0 md:gap-2 px-0 md:px-2 py-1">
                   <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                     <Globe className="h-3 w-3" />
-                    Search
+                    <span className="hidden md:block">Search</span>
                     <button
                       onClick={() => setSearchWithWeb(false)}
                       className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
@@ -1042,7 +1042,7 @@ const Chat = ({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="h-8 hover:bg-gray-100">
-                      <span>Jurisdiction</span>
+                      <span className="hidden md:block">Jurisdiction</span>
                       <Scale className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1077,7 +1077,7 @@ const Chat = ({
                                 setJurisdiction(jurisdictionCode) // Store the code
                                 setJurisdictionSearch("") // Reset search after selection
                               }}
-                              className="flex items-center gap-2"
+                              className="flex items-center gap-0 md:gap-2"
                             >
                               {fullStateName} ({jurisdictionCode})
                               {selectedJurisdiction === jurisdictionCode && <span className="ml-auto">✓</span>}

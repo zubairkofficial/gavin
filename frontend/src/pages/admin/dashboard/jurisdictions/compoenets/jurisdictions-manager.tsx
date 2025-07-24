@@ -74,7 +74,7 @@ export default function JurisdictionsManager() {
       setIsLoading(true)
       try {
         // Simulate API call
-        const response = await API.get("/jurisdictions")
+        const response = await API.get("/jurisdictions/forall")
         setJurisdictions(response.data)
         setFilteredJurisdictions(response.data)
       } catch (error) {

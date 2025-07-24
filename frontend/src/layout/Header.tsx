@@ -4,10 +4,23 @@ import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/Auth.context";
 import { AlignLeft, PlusIcon, ZapIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useCreateConversationMutation } from "./hook";
 
 export default function AppHeader() {
   const { toggleSidebar } = useSidebar()
   const { user } = useAuth()
+  const createConversationMutation = useCreateConversationMutation()
+  const navigate = useNavigate()
+
+
+  const handleNewChat = async () => {
+    try {
+      navigate('/')
+    } catch (error) {
+      console.error("Failed to create new chat:", error)
+    }
+  }
 
   return (
     <div className="md:flex bg-background md:sticky top-0 items-center md:justify-end px-4 h-22 z-20 gap-4 md:border-b">
@@ -29,9 +42,13 @@ export default function AppHeader() {
           </Button>
           <Logo className="max-w-16" />
         </div>
-        <Button variant="outline" className="!px-4 gap-2 !py-3 h-12">
+        <Button
+          variant="outline" className="!px-4 gap-2 !py-3 h-12"
+          onClick={handleNewChat}
+          disabled={createConversationMutation.isPending}
+        >
           <PlusIcon size={18} />
-          <span>New Chat</span>
+          <span>{createConversationMutation.isPending ? "Creating..." : "New Chat"}</span>
         </Button>
       </div>
     </div>

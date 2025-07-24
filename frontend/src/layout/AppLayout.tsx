@@ -12,6 +12,7 @@ import { AccountInformation } from "@/pages/Accounts/desktopPages/account-inform
 
 export default function AppLayout() {
   const { ModalOpen, Modalvalue } = useModel();
+  
 
   return (
     <div>

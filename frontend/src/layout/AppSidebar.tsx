@@ -50,7 +50,6 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
 
   const handleSidebarClose = () => {
     setOpenMobile(false) // Close on mobile
-    // setOpen(false)       // Close on desktop
   }
 
   return (
@@ -77,7 +76,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
   const createConversationMutation = useCreateConversationMutation()
   const updateTitleMutation = useUpdateConversationTitleMutation()
   const deleteChatMutation = useDeleteConversationMutation()
-  
+
   // Add restore mutation
   const queryClient = useQueryClient()
   const restoreChatMutation = useMutation({
@@ -90,7 +89,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     }
   })
-  
+
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -116,7 +115,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
   // const recentChats = (conversationsData?.conversations || [])
   const recentChats = (conversationsData?.conversations || [])
     .slice() // create a shallow copy to avoid mutating original
-    .sort((a : Conversation , b : Conversation) => {
+    .sort((a: Conversation, b: Conversation) => {
       // If createdAt is missing, treat as oldest
       const aTime = a.createdat ? new Date(a.createdat).getTime() : 0
       const bTime = b.createdat ? new Date(b.createdat).getTime() : 0
@@ -187,7 +186,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
 
   return (
     <>
-      <SidebarContent className="md:pt-4">
+      <SidebarContent className="md:pt-4 custom-scrollbar-left">
         <SidebarGroup className="py-0">
           <SidebarMenu>
             {/* Add a back button when in trash view */}
@@ -235,7 +234,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
                 </CollapsibleTrigger>
               </SidebarMenuItem>
 
-              <CollapsibleContent>
+              <CollapsibleContent className="">
                 <SidebarMenu>
                   {isLoading ? (
                     <SidebarMenuItem className="px-2">
@@ -258,7 +257,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ) : (
-                    recentChats.map((chat : any) => {
+                    recentChats.map((chat: any) => {
                       const isActive = location.pathname === `/chat/${chat.conversationid || chat.conversationId}`
                       const isEditing = editingId === chat.conversationid || editingId === chat.conversationId
 
@@ -311,7 +310,11 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
                           ) : (
                             <NavLink
                               to={`/chat/${chat.conversationid}`}
-                              onClick={onNavClick}
+                              onClick={(e) => {
+                                setTimeout(() => {
+                                  onNavClick();
+                                }, 30);
+                              }}
                               className={({ isActive: navActive }) =>
                                 [
                                   "block relative",
@@ -349,7 +352,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
                                         onClick={async (e) => {
                                           e.preventDefault()
                                           e.stopPropagation()
-                                          await handleUpdateTitle(chat.conversationid )
+                                          await handleUpdateTitle(chat.conversationid)
                                           setEditingId(null)
                                           setNewTitle("")
                                         }}
@@ -367,7 +370,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
                                           onClick={(e) => {
                                             e.preventDefault()
                                             e.stopPropagation()
-                                            setEditingId(chat.conversationid )
+                                            setEditingId(chat.conversationid)
                                             setNewTitle(chat.title)
                                           }}
                                           className="p-1 hover:bg-muted/60 rounded text-muted-foreground hover:text-foreground hover:cursor-pointer"
@@ -419,8 +422,8 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton 
-              className={`gap-2 py-5 ${viewMode === 'trash' ? 'text-foreground font-semibold' : ''}`} 
+            <SidebarMenuButton
+              className={`gap-2 py-5 ${viewMode === 'trash' ? 'text-foreground font-semibold' : ''}`}
               onClick={() => handleViewToggle(viewMode === 'trash' ? 'recent' : 'trash')}
             >
               <Trash size={18} />
@@ -610,7 +613,7 @@ function AdminSidebar({ onNavClick }: { onNavClick: () => void }) {
               <NavLink to="/set-cut-tokens" onClick={onNavClick}>
                 <SidebarMenuItem className="px-2">
                   <SidebarMenuButton className="gap-2 py-5 relative">
-                    <Key  size={18} />
+                    <Key size={18} />
                     <span className="truncate" style={{
                       textOverflow: "clip",
                     }}>Tokens Setting</span>
