@@ -281,7 +281,7 @@ OL/0OA==
               let relevantDocs: any[] = [];
 
               const enabledDocsWithScores = await this.vectorStore.similaritySearchWithScore(message, 7, {
-                filter: { enabled: true, jurisdiction: createMessageDto.jurisdiction || jurisdiction },
+                filter: { enabled: true, jurisdiction:  jurisdictionFromUser || jurisdiction },
               });
 
               console.log('Found documents:', enabledDocsWithScores.length);
