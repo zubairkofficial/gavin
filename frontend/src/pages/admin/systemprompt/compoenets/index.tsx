@@ -27,7 +27,7 @@ export default function SystemPromptManager({ className }: SystemPromptManagerPr
       try {
         setIsFetching(true)
         setError(null)
-        const response = await API.get("get-prompt")
+        const response = await API.get("config/get-prompt")
 
         if (response.data) {
           setPrompt(response.data.systemPrompt[0]?.prompt )
@@ -56,7 +56,7 @@ export default function SystemPromptManager({ className }: SystemPromptManagerPr
       setError(null)
       setSuccess(false)
 
-      const response = await API.post("/set-systemprompt", {
+      const response = await API.post("config/set-systemprompt", {
         prompt: prompt,
       })
 

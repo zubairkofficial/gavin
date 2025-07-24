@@ -29,7 +29,7 @@ export default function CreditSettingsComponent() {
     // Fetch initial settings from the backend
     const fetchSettings = async () => {
       try {
-        const response = await API.get("/chat/get-credits")
+        const response = await API.get("/config/get-credits")
         const { cutCredits, minMessages } = response.data
         console.log('Fetched credit settings:', cutCredits, minMessages)
         setCreditsPerThousand(cutCredits )
@@ -57,7 +57,7 @@ export default function CreditSettingsComponent() {
   const handleSave = async () => {
     console.log('credits per 1000 tokens:', creditsPerThousand, 'min messages:', minimumCredits)
     try {
-      await API.post("/chat/manage-credits", {
+      await API.post("/config/manage-credits", {
         cutCreditsPerToken: creditsPerThousand,
         minimumCreditsToSend: minimumCredits,
       })

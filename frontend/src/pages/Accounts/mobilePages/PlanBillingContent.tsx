@@ -34,7 +34,7 @@ export default function PlanBillingContent() {
     try {
       setIsUpgrading(true)
       console.log('creadits that we are purchansing' , Number.parseInt(selectedCredit))
-      await API.post("/chat/add-credits", {
+      await API.post("/config/add-credits", {
         credits: Number.parseInt(selectedCredit),
       })
       // Handle success (maybe show a success message or redirect)

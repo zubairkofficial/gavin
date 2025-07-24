@@ -81,35 +81,7 @@ export class ChatService {
         user: duser,
         password: pass,
         database: data,
-        ssl: {
-          rejectUnauthorized: false,
-          ca: `-----BEGIN CERTIFICATE-----
-MIIEUDCCArigAwIBAgIUFMY7g/gl96OaxPd/8S2wnI/bavYwDQYJKoZIhvcNAQEM
-BQAwQDE+MDwGA1UEAww1NzYyNzYwOWYtOGI5NC00YTNkLTg1OTItZTliZWZhYTJj
-ZmNlIEdFTiAxIFByb2plY3QgQ0EwHhcNMjUwNjE3MTIyMTQxWhcNMzUwNjE1MTIy
-MTQxWjBAMT4wPAYDVQQDDDU3NjI3NjA5Zi04Yjk0LTRhM2QtODU5Mi1lOWJlZmFh
-MmNmY2UgR0VOIDEgUHJvamVjdCBDQTCCAaIwDQYJKoZIhvcNAQEBBQADggGPADCC
-AYoCggGBAN6G/DqFjk79qSzLlo3rAQHZMKWYTQYBUf3sGnZGkdtD/SaETn2QNHvR
-eEXUG7BKIqoz8ruczkij90YAiH/cSOdL0bS9rfZB2/lMy1oUMGjgrtdAS8X7nTPP
-7zthy6EOzMfmb+WXtXzfXXUUvhlVKRO1MNecYp6PWGZTKRwwQeGvWPMVBruyvkgs
-V/Se70WU6XZ3YJtj/+7f8548KliDnxPNBDo27A7AflXVpj4X7uTXV4fXu5WL1s5m
-eQOBoYRoY1kbcf/OQyoaZCe13HbulIkpqrzpQ4EKNG7zOf3TlDovlYlKpAHA9uvm
-y4vlYLjaTMH6B34WFdVBpRcJPahgyD3axvqHShdyXgQEKt1r70Sgvm0D1CV2nQqA
-W0YUajfr+QrK89eqXnXyU43XL1ulhrtNjl4bcSOAJDVR3CjwHVI95ZJcGL5+m/5K
-9AmNVIRfpO/p569fG46HwP2cy4xmBfcZOjw7XMbmdXtVnd2y9kjos7/yZkJ1lgTT
-UBuUxwxJPwIDAQABo0IwQDAdBgNVHQ4EFgQUKIGjJLXwW23PrJ2chOGPWRg+4z8w
-EgYDVR0TAQH/BAgwBgEB/wIBADALBgNVHQ8EBAMCAQYwDQYJKoZIhvcNAQEMBQAD
-ggGBABRAzDjsF2+hzYgUfZncheqBIlXuP3eOcPav838fsgCMUeQNq/2QovWHpIP5
-k8g2BwIXhdhZqOn4WIYWIQ8T1UwmE3gLic64rfUPkeOOJx10BHpkqCawW1AuFfQV
-9LQH/GCQd78xtbvvgoDX0DTGFBJ8j/UeWhuNZtC/Gaw0vMeJ7x2pljdfsCyby0Rp
-h4NqO2k6j8optr5WkH47UrP6fiB6mUbFBwm6OAvUhTRF61uPXUkUaYQch8oIQwW4
-0Ij4aU95p3WToSfBdOXiHQKgrqthQvKwJZKnWfnH1w3VQT39uzPADm7+jLw06rpX
-IeR/weWk5kPQas3jaN0hIEsV/TyjpOPqRlIpkvXCtJXuB1U3Ha0hh9FcF/Qccky5
-RLIg/EqouWzVfgqoHejsgLX/lfweRYOYjXcsG1/OSgLDkVIrimkLxRpLKjs+QHlK
-Bl8yI+HhlS1hA9AsVfY8DRpssIUszmmXpJBGYdcN5qDkZx6Rv811RcVUhaRHak3X
-OL/0OA==
------END CERTIFICATE-----
-`},
+       
 
       },
       tableName: "document_embeddings",
@@ -421,30 +393,9 @@ OL/0OA==
             }),
           }
         );
-
-
-        let promptfromDB = '';
-
-        const data = await this.configurationRepository.find({
-        })
-        // console.log('data that we got for the system prompt',data[0]?.prompt )
-        promptfromDB = data[0]?.prompt 
-        if (data.length == 0) {
-          const data = await this.configurationRepository.create({
-            prompt: `🧑‍🚀 Your name is Gavin AI. You are a legal AI assistant.
-        Instructions:
-          - *Context Understanding*: Check follow-up questions by analyzing the chat history and current question context.
-          - *For New Questions*: Use Document Context and File Content first, then chat history for additional context.
-          - If you do not find an answer in the Document Context, File Content, or chat history, respond with what you can based on the provided information also web search as well.
-          - Provide the answer in a concise manner.
-          - `
-          })
-          const dat = await this.configurationRepository.save(data)
-        // console.log('System prompt created after save:', dat.prompt);
-          promptfromDB = dat.prompt
-        }
+       const promptfromDB = await this.promptManagerService.getSystemPrompt();
+        console.log('Prompt from DB:', promptfromDB);
         const systemPrompt = `${promptfromDB}`
-
 
         const createReActAgent = () => {
           const tools = [ragTool];
@@ -856,101 +807,7 @@ OL/0OA==
       throw new Error('Failed to delete conversation');
     }
   }
-  async addCredits(userId: string, credits: number) {
-    // Get user from repository
-    const user = await this.usersRepository.findOne({
-      where: {
-        id: userId
-      }
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    // Update credits field
-    const updatedCredits = (user.credits || 0) + credits;
-
-    // Update user with new credits
-    const updatedUser = await this.usersRepository.update(userId, {
-      credits: updatedCredits
-    });
-
-    return {
-      message: 'Credits added successfully',
-      userId: userId,
-      previousCredits: user.credits || 0,
-      addedCredits: credits,
-      totalCredits: updatedCredits,
-      user: updatedUser
-    };
-  }
-
-
-  async manageCredits(minmessage: number, cutcredits: number) {
-    // Check if configuration data exists
-    const existingConfig = await this.configurationRepository.find();
-
-    if (existingConfig) {
-      console.log(existingConfig)
-    }
-
-    if (existingConfig) {
-      // Update existing configuration
-      // const updatedConfig = await this.configurationRepository.update( {
-      //   minTokens : minmessage,
-      //   cutCredits : cutcredits 
-      // });
-
-      //   const data = new Configuration()
-      //  data.minTokens = minmessage
-      //    data.cutCredits = cutcredits
-
-      const existingPrompt = existingConfig[0]; // Get the first prompt since we only need one
-      existingPrompt.minTokens = minmessage;
-      existingPrompt.cutCredits = cutcredits;
-      const updatedConfig = await this.configurationRepository.save(existingPrompt);
-
-      //  const updatedConfig =  await this.configurationRepository.update(
-      //   data)
-
-
-
-
-      return {
-        message: 'Configuration updated successfully',
-        configuration: updatedConfig,
-        action: 'updated'
-      };
-    } else {
-      // Create new configuration
-      const newConfig = await this.configurationRepository.create({
-        minTokens: minmessage,
-        cutCredits: cutcredits
-      });
-
-      return {
-        message: 'Configuration created successfully',
-        configuration: newConfig,
-        action: 'created'
-      };
-    }
-  }
-
-
-  async getCredits(): Promise<{ minMessages: number, cutCredits: number }> {
-    // Get user from repository
-    const data = await this.configurationRepository.find();
-
-    if (!data || data.length === 0) {
-      throw new Error('we dont have any configuration data');
-    }
-
-    return {
-      minMessages: data[0].minTokens || 0, // Assuming minTokens is the field for credits
-      cutCredits: data[0].cutCredits || 0 // Assuming cutCredits is the field for credits deduction
-    };
-  }
+ 
 }
 
 function cleanResponseText(input: any): string {

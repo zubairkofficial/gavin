@@ -707,32 +707,5 @@ export class ChatController {
   }
 
 
-  @Post('add-credits')
-  async addCredits(@Req() req,
-    @Body() body: { credits: number },) {
-    const userId = req.user?.id;
-    const credits = body.credits;
-
-    console.log('creadits recived', body)
-
-    return await this.chatService.addCredits(userId, credits);
-  }
-
-  @Post('manage-credits')
-  async manageCredits(@Body() body: { cutCreditsPerToken: number, minimumCreditsToSend: number }) {
-    const minmessage = body.minimumCreditsToSend;
-    const cutcredits = body.cutCreditsPerToken;
-
-
-    return await this.chatService.manageCredits(minmessage, cutcredits);
-  }
-
-  @Get('get-credits')
-  async getCredits() {
-
-    return await this.chatService.getCredits();
-  }
-
-
 
 }
