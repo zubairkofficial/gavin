@@ -313,7 +313,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
                               onClick={(e) => {
                                 setTimeout(() => {
                                   onNavClick();
-                                }, 30);
+                                }, 10);
                               }}
                               className={({ isActive: navActive }) =>
                                 [

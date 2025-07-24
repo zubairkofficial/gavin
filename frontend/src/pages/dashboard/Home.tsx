@@ -1,7 +1,5 @@
 import { useState } from "react";
 import Chat from "./components/Chat";
-import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
 import './chat.css'
 
 
@@ -12,7 +10,7 @@ export default function Home() {
 
 
   const [messages, setMessages] = useState<any>([]);
-  const isMobile = useIsMobile()
+
 
   return (
     <main className="h-[73vh] md:h-[85vh] w-full mx-auto    flex flex-col items-center">
