@@ -43,7 +43,7 @@ import API from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate, useParams } from "react-router-dom"
-import {getStateCodeByName , getStateNameByCode} from "../../common/usStatesWithCodes"
+import { getStateNameByCode } from "../../common/usStatesWithCodes"
 
 interface AttachedDocument {
   id: string

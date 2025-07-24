@@ -1,11 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { User, CreditCard, HelpCircle, LogOut, Check } from "lucide-react"
+import { User, CreditCard, HelpCircle, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog"
 import { cn, getUserInfo } from "@/lib/utils"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"

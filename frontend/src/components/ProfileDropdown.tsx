@@ -1,5 +1,4 @@
 import { User, CreditCard, LogOut, ChevronDown, BookOpenText } from "lucide-react"
-import { Progress } from "@/components/ui/progress"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
