@@ -405,6 +405,8 @@ export class ChatService {
             tools,
             prompt: ` ${systemPrompt}
                     if file content is provided, use it to answer the question and dont use rag_search.
+
+                    if you found out any citation, reference, please don't add it to the response.
                     Instructions:
                     - If only message is provided, ask the user for jurisdiction first
                     ${chatHistoryContext ? `- Use chat history for additional context: ${chatHistoryContext}` : ''}
