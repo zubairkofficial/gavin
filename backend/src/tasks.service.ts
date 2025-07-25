@@ -70,8 +70,6 @@ export class DeleteService {
 
     } catch (error) {
       this.logger.error('Error during permanent deletion of expired messages:', error.stack);
-      // Instead of throwing, we log the error since this is a scheduled task
-      // We don't want the application to crash if deletion fails
       return;
     }
   }
@@ -115,17 +113,6 @@ export class TasksService implements OnModuleInit {
     return cronPattern.test(cronExp);
   }
 
-  // @Cron('0 0 1,15 * *')
-  // async handleCron() {
-  //   this.logger.debug('Scraping starts at midnight (00:00) on the 1st and 15th day of every month, which approximates "every 15 days."');
-  //   this.scrape();
-  // }
-
-
-  // @Cron(CronExpression.)
-  // handleCron() {
-  //   this.logger.debug('Called every 30 seconds');
-  // }
 
   private jobCallbackFactory(jobName: string): () => void {
     return () => {
@@ -223,7 +210,7 @@ export class TasksService implements OnModuleInit {
       StatuteEntity.jurisdiction = 'DE';
       StatuteEntity.content_html = codeData.content;
       StatuteEntity.source_url = 'scaper';
-      
+
       const document = await this.statuteRepository.save(StatuteEntity);
 
       await this.embeddingService.processDocument({
@@ -434,7 +421,6 @@ export class TasksService implements OnModuleInit {
       });
     }
 
-    // console.log('Scraping US Codes...');
 
     for await (const parsedData of openBrowser()) {
       const StatuteEntity = new Statute();
