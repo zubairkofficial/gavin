@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon, FileUp, HomeIcon, Scale, BookOpen, Wrench, CalendarClock, Edit2Icon, Trash2Icon, Save, ArrowUpCircle, Text, Key } from "lucide-react"
+import { ChevronDown, FileText, Trash, HelpCircle, PlusIcon, ZapIcon, Users2Icon, FileUp, HomeIcon, Scale, BookOpen, Wrench, CalendarClock, Edit2Icon, Trash2Icon, Save, ArrowUpCircle, Text, Key, MoreVertical, Ellipsis } from "lucide-react"
 import type React from "react"
 import { useLocation } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -12,6 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 import {
   Sidebar,
@@ -30,17 +37,13 @@ import { useAuth } from "@/context/Auth.context"
 import { NavLink, useNavigate } from "react-router-dom"
 import { useCreateConversationMutation, useUpdateConversationTitleMutation, useDeleteConversationMutation } from "./hook"
 import { useState } from "react"
-// import '../pages/admin/dashboard/chat.css' // Import your custom styles for the chat
 
-// Define Conversation type if not imported from elsewhere
 type Conversation = {
   conversationId: string
   title: string
   createdat?: string // Use optional chaining if createdAt might be missing
-  // Add other fields as needed
 }
 
-// Add this type at the top of the file
 type ViewMode = 'recent' | 'trash';
 
 export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -107,12 +110,6 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
     setViewMode(mode)
   }
 
-  // useEffect(()=>{
-  // setRecentChats(conversationsData?.conversations || [])
-
-  // },[conversationsData])
-
-  // const recentChats = (conversationsData?.conversations || [])
   const recentChats = (conversationsData?.conversations || [])
     .slice() // create a shallow copy to avoid mutating original
     .sort((a: Conversation, b: Conversation) => {
@@ -166,6 +163,13 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
   const handleRestore = async (conversationId: string) => {
     try {
       await restoreChatMutation.mutateAsync(conversationId)
+      // Close all dialogs
+      setDeleteConfirmOpen(false)
+      setPermanentDeleteOpen(false)
+      // Reset current chat ID
+      setCurrentChatId(null)
+      // Close any open dropdown menus
+      document.body.click()
     } catch (error) {
       console.error("Failed to restore chat:", error)
     }
@@ -177,6 +181,12 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
       await API.post(`/chat/permanent-delete/${conversationId}`)
       // Invalidate conversations query to refresh the list
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      // Close dialog and reset state after successful deletion
+      setPermanentDeleteOpen(false)
+      setDeleteConfirmOpen(false)
+      setCurrentChatId(null)
+      // Close any open dropdown menus
+      document.body.click()
     } catch (error) {
       console.error("Failed to permanently delete chat:", error)
     } finally {
@@ -272,37 +282,47 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
                               <SidebarMenuButton className="gap-2 py-5 w-full">
                                 <div className="flex items-center gap-2 w-full pr-8">
                                   <FileText size={18} />
-                                  <span className="truncate flex-1">{chat.title}</span>
-                                  <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden group-hover/item:flex gap-0.5">
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                        handleRestore(chat.conversationid || chat.conversationId)
-                                      }}
-                                      className="p-1 hover:bg-muted/60 rounded text-muted-foreground hover:text-foreground hover:cursor-pointer"
-                                      title="Restore conversation"
-                                      disabled={restoreChatMutation.isPending}
-                                    >
-                                      <ArrowUpCircle size={14} />
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                        setCurrentChatId(chat.conversationid || chat.conversationId)
-                                        setPermanentDeleteOpen(true)
-                                      }}
-                                      className="p-1 hover:bg-muted/60 rounded text-muted-foreground hover:text-destructive hover:cursor-pointer"
-                                      title="Delete permanently"
-                                      disabled={deletingChatIds.includes(chat.conversationid || chat.conversationId)}
-                                    >
-                                      {deletingChatIds.includes(chat.conversationid || chat.conversationId) ? (
-                                        <span className="animate-spin">⌛</span>
-                                      ) : (
-                                        <Trash2Icon size={14} />
-                                      )}
-                                    </button>
+                                  <span className="truncate flex-1 ">{chat.title}</span>
+                                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                        <button className="p-1 hover:bg-muted/60 rounded text-muted-foreground hover:text-foreground cursor-pointer">
+                                          <Ellipsis size={16} />
+                                        </button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={async (e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            await handleRestore(chat.conversationid || chat.conversationId)
+                                            setPermanentDeleteOpen(false)
+                                          }}
+                                          className="gap-2"
+                                          disabled={restoreChatMutation.isPending}
+                                        >
+                                          <ArrowUpCircle size={14} />
+                                          <span>Restore conversation</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            setCurrentChatId(chat.conversationid || chat.conversationId)
+                                            setPermanentDeleteOpen(true)
+                                          }}
+                                          className="gap-2 text-destructive"
+                                          disabled={deletingChatIds.includes(chat.conversationid || chat.conversationId)}
+                                        >
+                                          {deletingChatIds.includes(chat.conversationid || chat.conversationId) ? (
+                                            <span className="animate-spin">⌛</span>
+                                          ) : (
+                                            <Trash2Icon size={14} />
+                                          )}
+                                          <span>Delete permanently</span>
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </div>
                                 </div>
                               </SidebarMenuButton>
@@ -364,37 +384,46 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
                                     </div>
                                   ) : (
                                     <>
-                                      <span className="truncate flex-1">{chat.title}</span>
-                                      <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden group-hover/item:flex gap-0.5">
-                                        <button
-                                          onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            setEditingId(chat.conversationid)
-                                            setNewTitle(chat.title)
-                                          }}
-                                          className="p-1 hover:bg-muted/60 rounded text-muted-foreground hover:text-foreground hover:cursor-pointer"
-                                          title="Edit title"
-                                        >
-                                          <Edit2Icon size={14} />
-                                        </button>
-                                        <button
-                                          onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            setCurrentChatId(chat.conversationid)
-                                            setDeleteConfirmOpen(true)
-                                          }}
-                                          className="p-1 hover:bg-muted/60 rounded text-muted-foreground hover:text-destructive hover:cursor-pointer"
-                                          title="Move to trash"
-                                          disabled={deletingChatIds.includes(chat.conversationid)}
-                                        >
-                                          {deletingChatIds.includes(chat.conversationid) ? (
-                                            <span className="animate-spin">⌛</span>
-                                          ) : (
-                                            <Trash2Icon size={14} />
-                                          )}
-                                        </button>
+                                      <span className="truncate flex-1 ">{chat.title}</span>
+                                      <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                            <button className="p-1 hover:bg-muted/60 rounded text-muted-foreground hover:text-foreground cursor-pointer">
+                                              <Ellipsis  size={16} />
+                                            </button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={(e) => {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                setEditingId(chat.conversationid)
+                                                setNewTitle(chat.title)
+                                              }}
+                                              className="gap-2"
+                                            >
+                                              <Edit2Icon size={14} />
+                                              <span>Edit title</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={(e) => {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                setCurrentChatId(chat.conversationid)
+                                                setDeleteConfirmOpen(true)
+                                              }}
+                                              className="gap-2 text-destructive"
+                                              disabled={deletingChatIds.includes(chat.conversationid)}
+                                            >
+                                              {deletingChatIds.includes(chat.conversationid) ? (
+                                                <span className="animate-spin">⌛</span>
+                                              ) : (
+                                                <Trash2Icon size={14} />
+                                              )}
+                                              <span>Move to trash</span>
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </div>
                                     </>
                                   )}

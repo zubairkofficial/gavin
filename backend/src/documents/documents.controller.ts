@@ -41,6 +41,7 @@ import { Response } from 'express';
 import axios from 'axios';
 import { Case } from './entities/case.entity';
 import { UpdateCaseDto } from './dto/update.case.dto';
+import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 
 // Configure multer storage to save files with original names in uploads folder
 const storage = multer.diskStorage({
@@ -149,10 +150,11 @@ export class DocumentsController {
     // Update DTO with file information
     createDocumentDto.fileName = file.originalname;
     createDocumentDto.filePath = relativeToUploads;
+    const fileType = file.mimetype;
 
     try {
       // Extract and process text from the stored file
-      const fullText = await this.extractTextFromFile(file, filePath);
+      const fullText = await this.extractTextFromFile(fileType, filePath);
 
       // Validate extracted text
       if (!fullText || fullText.length < 10) {
@@ -185,14 +187,17 @@ export class DocumentsController {
    */
   private async extractTextFromFile(file: MulterFile, filePath: string): Promise<string> {
     let fullText = '';
-
+    console.log('📄 Extracting text from file:', {
+      mimetype: file,
+      filePath: filePath,
+    })
     try {
-      if (file.mimetype === 'text/plain') {
+      if (file === 'text/plain') {
         // Read plain text files directly
         fullText = await fs.promises.readFile(filePath, 'utf8');
       } else {
         // Use document service for other file types (PDF, DOC, DOCX)
-        fullText = await this.documentsService.parseDocument(filePath, file.mimetype);
+        fullText = await this.documentsService.parseDocument(filePath, file);
       }
 
       if (!fullText || typeof fullText !== 'string') {
@@ -258,53 +263,112 @@ export class DocumentsController {
     @Request() req: any,
   ) {
 
-    console.log(`the url ${createDocumentDto.filePath} , and the type is ${createDocumentDto.type}`)
+    console.log(`the url ${createDocumentDto.filePath} , and the type is ${createDocumentDto.type} , and jurisdiction is  ${createDocumentDto.jurisdiction}`);
     if (!createDocumentDto.filePath || !createDocumentDto.type) {
       throw new BadRequestException('Both url and type are required');
     }
 
-    console.log(`🌐 Scrape request received:  ${createDocumentDto.filePath} , ${createDocumentDto.type}`);
+    console.log(`🌐 Scrape request received:  ${createDocumentDto.filePath} , ${createDocumentDto.type} , ${createDocumentDto.jurisdiction}`);
 
 
 
-    createDocumentDto.source_url = 'scraper'
+    createDocumentDto.source_url = 'url-scraper'
 
-    try {
-      const response = await axios.get(createDocumentDto.filePath);
-      if (response.status < 200 || response.status >= 300) {
-        throw new BadRequestException(`Failed to fetch URL: ${response.statusText}`);
+
+    const urls = createDocumentDto.filePath.split(',').map(url => url.trim());
+    console.log('🌐 Scraping URLs:', urls);
+    if (urls.length === 0) {
+      throw new BadRequestException('No URLs provided for scraping');
+    }
+    for (const url of urls) {
+      if (!url || !url.trim()) {
+        throw new BadRequestException('Invalid URL provided for scraping');
       }
-      const html = response.data;
+      try {
+        const response = await axios.get(url , {
+          responseType: 'arraybuffer',
+        });
+        console.log(`🌐 Fetched URL: ${url} with status ${response.headers}`);
 
-      // Parse and extract text using Cheerio
-      const cheerio = require('cheerio');
-      const $ = cheerio.load(html);
+        if (response.status < 200 || response.status >= 300) {
+          throw new BadRequestException(`Failed to fetch URL: ${response.statusText}`);
+        }
 
-      // Extract visible text from the body
-      let fullText = $('body').text();
+        const contentType = response.headers['content-type'];
 
-      // Sanitize the extracted text
-      fullText = this.sanitizeText(fullText);
+        if (contentType.includes('application/pdf')) {
+          console.log('📄 PDF content detected, processing PDF extraction');
 
-      // Validate extracted text
-      if (!fullText || fullText.length < 10) {
-        throw new BadRequestException('Could not extract sufficient text from the URL');
+          const timestamp = Date.now();
+          const fileName = `${url.split('/').pop() || `scraped_${timestamp}.pdf`}`;
+          const filePath = path.join(__dirname, '../../../uploads', fileName);
+
+          const uploadsDir = path.dirname(filePath);
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+
+          console.log('📁 Saving PDF to:', response.data);
+          // Save PDF file
+          fs.writeFileSync(filePath, response.data);
+          console.log('📄 PDF file saved to:', filePath);
+          const filetype = { mimetype: contentType } as MulterFile
+          const filety = filetype.mimetype ;
+          console.log(`📄 Extracting text from PDF file: ${filetype}`);
+          // Extract text from PDF
+          const fullText = await this.extractTextFromFile(
+            filety,
+            filePath
+          );
+
+          // Validate extracted text
+          if (!fullText || fullText.length < 10) {
+            throw new BadRequestException('Could not extract sufficient text from PDF');
+          }
+
+          console.log('📄 PDF text extraction successful:', {
+            textLength: fullText.length,
+            firstChars: fullText.substring(0, 100)
+          });
+
+          // Update DTO with file info
+          createDocumentDto.fileName = fileName;
+          createDocumentDto.filePath = path.relative(path.join(process.cwd(), 'uploads'), filePath);
+
+          // Process document
+          return await this.processDocumentByType(createDocumentDto, fullText, req.user?.id);
+
+        } else {
+          // Handle non-PDF content
+          const html = response.data;
+          const cheerio = require('cheerio');
+          const $ = cheerio.load(html);
+          let fullText = $('body').text();
+
+          // Sanitize the extracted text
+          fullText = this.sanitizeText(fullText);
+
+          // Validate extracted text
+          if (!fullText || fullText.length < 10) {
+            throw new BadRequestException('Could not extract sufficient text from the URL');
+          }
+
+          console.log('📄 URL text extraction successful:', {
+            textLength: fullText.length,
+            firstChars: fullText.substring(0, 100),
+          });
+
+          // Process document
+          return await this.processDocumentByType(createDocumentDto, fullText, req.user?.id);
+        }
+
+      } catch (error) {
+        console.error('❌ URL scraping error:', error);
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+        throw new BadRequestException(`Failed to scrape URL: ${error.message}`);
       }
-
-      console.log('📄 URL text extraction successful:', {
-        textLength: fullText.length,
-        firstChars: fullText.substring(0, 100),
-      })
-
-      // Process document based on type
-      return await this.processDocumentByType(createDocumentDto, fullText, req.user?.id);
-
-    } catch (error) {
-      console.error('❌ URL scraping error:', error);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new BadRequestException(`Failed to scrape URL: ${error.message}`);
     }
   }
 
@@ -556,7 +620,6 @@ export class DocumentsController {
           source: dto.source || 'Upload',
         }
       });
-
       return {
         success: true,
         status: 'completed',
@@ -627,28 +690,28 @@ export class DocumentsController {
 
       });
       const uniqueJurisdictions = [...new Set(
-      contracts
-        .map(contract => contract.jurisdiction)
-        .filter(jurisdiction => jurisdiction) // Remove null/undefined values
-    )];
-     const uniqueSource = [...new Set(
-      contracts
-        .map(statute => statute.source)
-        .filter(source => source) // Remove null/undefined values
-    )];
-     const uniqueEnabled = [...new Set(
-      contracts
-        .map(statute => statute.isEnabled)
-        .filter(isEnabled => isEnabled) // Remove null/undefined values
-    )];
-      
+        contracts
+          .map(contract => contract.jurisdiction)
+          .filter(jurisdiction => jurisdiction) // Remove null/undefined values
+      )];
+      const uniqueSource = [...new Set(
+        contracts
+          .map(statute => statute.source)
+          .filter(source => source) // Remove null/undefined values
+      )];
+      const uniqueEnabled = [...new Set(
+        contracts
+          .map(statute => statute.isEnabled)
+          .filter(isEnabled => isEnabled) // Remove null/undefined values
+      )];
+
       return {
         success: true,
         data: contracts,
         count: contracts.length,
-        jurisdiction : uniqueJurisdictions,
-        Source : uniqueSource,
-        isEnabled : uniqueEnabled,
+        jurisdiction: uniqueJurisdictions,
+        Source: uniqueSource,
+        isEnabled: uniqueEnabled,
       };
     } catch (error) {
       throw new BadRequestException(`Failed to fetch contracts: ${error.message}`);
@@ -675,28 +738,28 @@ export class DocumentsController {
           createdAt: 'DESC',
         },
       });
-       const uniqueJurisdictions = [...new Set(
-      cases
-        .map(cases => cases.jurisdiction)
-        .filter(jurisdiction => jurisdiction) // Remove null/undefined values
-    )];
-     const uniqueSource = [...new Set(
-      cases
-        .map(cases => cases.source_url)
-        .filter(source_url => source_url) // Remove null/undefined values
-    )];
-     const uniqueEnabled = [...new Set(
-      cases
-        .map(cases => cases.isEnabled)
-        .filter(isEnabled => isEnabled) // Remove null/undefined values
-    )];
+      const uniqueJurisdictions = [...new Set(
+        cases
+          .map(cases => cases.jurisdiction)
+          .filter(jurisdiction => jurisdiction) // Remove null/undefined values
+      )];
+      const uniqueSource = [...new Set(
+        cases
+          .map(cases => cases.source_url)
+          .filter(source_url => source_url) // Remove null/undefined values
+      )];
+      const uniqueEnabled = [...new Set(
+        cases
+          .map(cases => cases.isEnabled)
+          .filter(isEnabled => isEnabled) // Remove null/undefined values
+      )];
       return {
         success: true,
         data: cases,
         count: cases.length,
-        jurisdiction : uniqueJurisdictions,
-        Source : uniqueSource,
-        isEnabled : uniqueEnabled,
+        jurisdiction: uniqueJurisdictions,
+        Source: uniqueSource,
+        isEnabled: uniqueEnabled,
       };
     } catch (error) {
       throw new BadRequestException(`Failed to fetch contracts: ${error.message}`);
@@ -729,27 +792,27 @@ export class DocumentsController {
         },
       });
       const uniqueJurisdictions = [...new Set(
-      statute
-        .map(statute => statute.jurisdiction)
-        .filter(jurisdiction => jurisdiction) // Remove null/undefined values
-    )];
-     const uniqueSource = [...new Set(
-      statute
-        .map(statute => statute.source_url)
-        .filter(source_url => source_url) // Remove null/undefined values
-    )];
-     const uniqueEnabled = [...new Set(
-      statute
-        .map(statute => statute.isEnabled)
-        .filter(isEnabled => isEnabled) // Remove null/undefined values
-    )];
+        statute
+          .map(statute => statute.jurisdiction)
+          .filter(jurisdiction => jurisdiction) // Remove null/undefined values
+      )];
+      const uniqueSource = [...new Set(
+        statute
+          .map(statute => statute.source_url)
+          .filter(source_url => source_url) // Remove null/undefined values
+      )];
+      const uniqueEnabled = [...new Set(
+        statute
+          .map(statute => statute.isEnabled)
+          .filter(isEnabled => isEnabled) // Remove null/undefined values
+      )];
       return {
         success: true,
         data: statute,
         count: statute.length,
-        jurisdiction : uniqueJurisdictions,
-        Source : uniqueSource,
-        isEnabled : uniqueEnabled,
+        jurisdiction: uniqueJurisdictions,
+        Source: uniqueSource,
+        isEnabled: uniqueEnabled,
       };
     } catch (error) {
       throw new BadRequestException(`Failed to fetch statutes: ${error.message}`);
@@ -780,29 +843,29 @@ export class DocumentsController {
           createdAt: 'DESC',
         },
       });
-     const uniqueJurisdictions = [...new Set(
-      regulations
-        .map(regulations => regulations.jurisdiction)
-        .filter(jurisdiction => jurisdiction) 
-    )];
+      const uniqueJurisdictions = [...new Set(
+        regulations
+          .map(regulations => regulations.jurisdiction)
+          .filter(jurisdiction => jurisdiction)
+      )];
 
-     const uniqueSource = [...new Set(
-      regulations
-        .map(regulations => regulations.source_url)
-        .filter(source_url => source_url) // Remove null/undefined values
-    )];
-     const uniqueEnabled = [...new Set(
-      regulations
-        .map(regulations => regulations.isEnabled)
-        .filter(isEnabled => isEnabled) // Remove null/undefined values
-    )];
+      const uniqueSource = [...new Set(
+        regulations
+          .map(regulations => regulations.source_url)
+          .filter(source_url => source_url) // Remove null/undefined values
+      )];
+      const uniqueEnabled = [...new Set(
+        regulations
+          .map(regulations => regulations.isEnabled)
+          .filter(isEnabled => isEnabled) // Remove null/undefined values
+      )];
       return {
         success: true,
         data: regulations,
         count: regulations.length,
-        jurisdiction : uniqueJurisdictions,
-        Source : uniqueSource,
-        isEnabled : uniqueEnabled,
+        jurisdiction: uniqueJurisdictions,
+        Source: uniqueSource,
+        isEnabled: uniqueEnabled,
       };
     } catch (error) {
       throw new BadRequestException(`Failed to fetch regulations: ${error.message}`);

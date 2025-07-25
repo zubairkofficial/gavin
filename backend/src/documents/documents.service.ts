@@ -45,6 +45,7 @@ async parseDocument(filePath: string, mimeType: string): Promise<string> {
   try {
     switch (mimeType) {
       case 'application/pdf':
+        case 'application/pdf':
         const pdfLoader = new PDFLoader(filePath);
         const pdfDocs = await pdfLoader.load();
         return pdfDocs.map(doc => doc.pageContent).join('\n');
