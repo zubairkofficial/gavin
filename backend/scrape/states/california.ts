@@ -70,7 +70,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
             await page.click('label[for="codeSearchForm:j_idt124:6:selectCode2"]');
             await page.click('label[for="codeSearchForm:j_idt130:4:selectCode3"]');
             await page.click('label[for="codeSearchForm:j_idt118:8:selectCode1"]');
-            await page.click('label[for="codeSearchForm:j_idt130:0:selectCode3"]');
+            await page.click('label[for="codeSearchForm:j_idt130:0:selectCode3"]' , { delay: 100 });
 
             // Execute search
             console.log("Executing search...");

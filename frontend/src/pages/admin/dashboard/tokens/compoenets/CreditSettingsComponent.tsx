@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,63 +9,58 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Coins, Save, Info, AlertCircle, CheckCircle, XCircle, LoaderCircle } from "lucide-react"
-import API from "@/lib/api"
+import { useCreditSettings } from "@/pages/admin/dashboard/tokens/useCreditSettings"
 
 export default function CreditSettingsComponent() {
- 
-  const [creditsPerThousand, setCreditsPerThousand] = useState(1) // Start with 1 credit per 1000 tokens
-  const [minimumCredits, setMinimumCredits] = useState(10) // Start with 10 minimum credits
+  const [creditsPerThousand, setCreditsPerThousand] = useState(1)
+  const [minimumCredits, setMinimumCredits] = useState(10)
   const [currentCredits] = useState(250)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-  const [loading, setloading] = useState(false)
+
+  const { 
+    settings,
+    isLoadingSettings,
+    updateSettings,
+    isUpdating,
+    isSuccess,
+    updateError
+  } = useCreditSettings()
 
   const handleCreditsPerThousandChange = (value: number) => {
-    const intValue = Math.max(1, Math.floor(value)) // Ensure integer value and minimum of 1
+    const intValue = Math.max(1, Math.floor(value))
     setCreditsPerThousand(intValue)
   }
 
-
-  useEffect(()=>{
-    // Fetch initial settings from the backend
-    const fetchSettings = async () => {
-      try {
-        const response = await API.get("/config/get-credits")
-        const { cutCredits, minMessages } = response.data
-        console.log('Fetched credit settings:', cutCredits, minMessages)
-        setCreditsPerThousand(cutCredits )
-        setMinimumCredits(minMessages )
-      } catch (error) {
-        console.error("Failed to fetch credit settings:", error)
-      }
-    }
-
-    fetchSettings()
-  },[])
-
-  // Update the useEffect section to handle the timer
+  // Load initial settings
   useEffect(() => {
-    if (saveMessage) {
+    if (settings) {
+      setCreditsPerThousand(settings.cutCredits)
+      setMinimumCredits(settings.minMessages)
+    }
+  }, [settings])
+
+  // Handle mutation success/error states
+  useEffect(() => {
+    if (isSuccess || updateError) {
+      const newMessage = isSuccess 
+        ? { type: 'success' as const, text: 'Your credit settings have been updated successfully.' }
+        : { type: 'error' as const, text: 'Failed to save settings. Please try again.' }
+      
+      setSaveMessage(newMessage)
+      
       const timer = setTimeout(() => {
-        setSaveMessage(null);
-      }, 3000); // 3 seconds
-
-      // Cleanup timer on unmount or when saveMessage changes
-      return () => clearTimeout(timer);
+        setSaveMessage(null)
+      }, 3000)
+      
+      return () => clearTimeout(timer)
     }
-  }, [saveMessage]);
+  }, [isSuccess, updateError])
 
-  const handleSave = async () => {
-    console.log('credits per 1000 tokens:', creditsPerThousand, 'min messages:', minimumCredits)
-    try {
-      await API.post("/config/manage-credits", {
-        cutCreditsPerToken: creditsPerThousand,
-        minimumCreditsToSend: minimumCredits,
-      })
-      setSaveMessage({ type: 'success', text: 'Your credit settings have been updated successfully.' })
-      setloading(false)
-    } catch (error) {
-      setSaveMessage({ type: 'error', text: 'Failed to save settings. Please try again.' })
-    }
+  const handleSave = () => {
+    updateSettings({
+      cutCreditsPerToken: creditsPerThousand,
+      minimumCreditsToSend: minimumCredits,
+    })
   }
 
   return (
@@ -182,9 +177,22 @@ export default function CreditSettingsComponent() {
                 </AlertDescription>
               </Alert>
             )}
-            <Button onClick={() => { handleSave(); setloading(true); }} className="px-8">
-              {loading ? (<> <LoaderCircle className="animate-spin w-4 h-4 mr-2"/>Saving...</>):(<><Save className="h-4 w-4 mr-2" />Save Settings</> )}
-              
+            <Button 
+              onClick={handleSave} 
+              disabled={isUpdating}
+              className="px-8"
+            >
+              {isUpdating ? (
+                <> 
+                  <LoaderCircle className="animate-spin w-4 h-4 mr-2"/>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Settings
+                </> 
+              )}
             </Button>
           </CardFooter>
         </Card>

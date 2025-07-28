@@ -2,80 +2,43 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Save, AlertCircle } from "lucide-react"
-import API from "@/lib/api"
+import { useSystemPrompt } from "@/pages/admin/systemprompt/useSystemPrompt"
 
 interface SystemPromptManagerProps {
   className?: string
 }
 
 export default function SystemPromptManager({ className }: SystemPromptManagerProps) {
-  const [prompt, setPrompt] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isFetching, setIsFetching] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const { 
+    prompt, 
+    setPrompt,
+    isLoading, 
+    isFetching, 
+    error, 
+    success, 
+    fetchPrompt, 
+    updatePrompt 
+  } = useSystemPrompt()
 
   // Fetch existing prompt on component mount
   useEffect(() => {
-    const fetchPrompt = async () => {
-      try {
-        setIsFetching(true)
-        setError(null)
-        const response = await API.get("config/get-prompt")
-
-        if (response.data) {
-          setPrompt(response.data.systemPrompt[0]?.prompt )
-          // console.log("Fetched system prompt:", response.data.systemPrompt)
-        }
-      } catch (err) {
-        console.error("Failed to fetch prompt:", err)
-        setError("Failed to load existing prompt")
-      } finally {
-        setIsFetching(false)
-      }
-    }
-
     fetchPrompt()
   }, [])
-
-  // Handle update button click
-  const handleUpdate = async () => {
-    if (!prompt) {
-      setError("Please enter a system prompt")
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      setError(null)
-      setSuccess(false)
-
-      const response = await API.post("config/set-systemprompt", {
-        prompt: prompt,
-      })
-
-      if (response.status === 200 || response.status === 201) {
-        setSuccess(true)
-        setTimeout(() => setSuccess(false), 3000) // Hide success message after 3 seconds
-      }
-    } catch (err) {
-      console.error("Failed to save prompt:", err)
-      setError("Failed to save system prompt. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   // Handle textarea change
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPrompt(e.target.value)
-    if (error) setError(null) // Clear error when user starts typing
+  }
+
+  // Handle update button click
+  const handleUpdate = () => {
+    updatePrompt(prompt)
   }
 
   return (

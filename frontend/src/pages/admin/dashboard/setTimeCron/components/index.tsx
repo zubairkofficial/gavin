@@ -1,9 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Plus, Search, Trash2, Clock } from "lucide-react"
-
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,13 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import API from "@/lib/api"
-
-interface CronJob {
-  name: string
-  cronTime: string
-  lastDate: string | null
-}
+import { useCronJobs } from "@/pages/admin/dashboard/setTimeCron/useCronJobs" // Adjust the import path as needed
 
 interface ScheduleOption {
   value: string
@@ -43,38 +35,27 @@ export default function Settime() {
   const [time, setTime] = useState("")
   const [name, setJobName] = useState("")
   const [scheduleType, setScheduleType] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [cronJobs, setCronJobs] = useState<CronJob[]>([])
-  const [isLoadingJobs, setIsLoadingJobs] = useState(true)
-  const [deletingJob, setDeletingJob] = useState<string | null>(null)
+  const [deletingJobName, setDeletingJobName] = useState<string | null>(null)
 
-  // Fetch jobs from API
-  const fetchJobs = async () => {
-    try {
-      setIsLoadingJobs(true)
-      const response = await API.get("jobs")
-      if (response.status >= 200 && response.status < 300) {
-        const data = response.data
-        setCronJobs(data)
-      } else {
-        throw new Error("Failed to fetch jobs")
-      }
-    } catch (error) {
-      console.error("Error fetching jobs:", error)
-      toast.error("Failed to fetch jobs")
-    } finally {
-      setIsLoadingJobs(false)
-    }
-  }
+  // Use the custom hook
+  const {
+    jobs,
+    isLoadingJobs,
+    fetchError,
+    createJob,
+    isCreatingJob,
+    createJobError,
+    deleteJob,
+    isDeletingJob,
+    deleteJobError
+  } = useCronJobs()
 
-  // Load jobs on component mount
-  useEffect(() => {
-    fetchJobs()
-  }, [])
-
-  const filteredJobs = cronJobs.filter((job) => job.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  // Filter jobs based on search term
+  const filteredJobs = jobs.filter((job) => 
+    job.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   // Convert schedule type and time to cron expression
   const generateCronExpression = (scheduleType: string, time: string): string => {
@@ -147,8 +128,6 @@ export default function Settime() {
       return
     }
 
-    setIsLoading(true)
-
     try {
       const cron = generateCronExpression(scheduleType, time)
       console.log(`Generated cron: ${cron}`)
@@ -158,70 +137,64 @@ export default function Settime() {
         `Job: ${name}, Schedule: ${selectedOption?.label}, Time: ${time}, Cron: ${cron}`
       )
 
-      // API call
-      const response = await API.post("/add", {
-        name,
-        cron
-      })
-      console.log(response)
-
-      console.log(response.data.error)
-      if(response.data.error){
-        // toast.error(`response.data.error`)
-        throw new Error(`${response.data.error}`)
-      }
-      // if(response.data){
-      //   toast(`${response.data}`)
-      // }else {
-       
-      // }
-
-
-      if (response.status >= 200 && response.status < 300 ) {
-        const selectedOption = scheduleOptions.find(opt => opt.value === scheduleType)
-        toast.success(`"${name}" scheduled for ${selectedOption?.label} at ${time}`)
-        // Reset form
-        setScheduleType("")
-        setTime("")
-        setJobName("")
-        setIsPopoverOpen(false)
-        // Refresh jobs list
-        fetchJobs()
-      } else {
-        throw new Error("Failed to schedule job")
-
-      }
+      // Use the mutation
+      createJob(
+        { name, cron },
+        {
+          onSuccess: () => {
+            const selectedOption = scheduleOptions.find(opt => opt.value === scheduleType)
+            toast.success(`"${name}" scheduled for ${selectedOption?.label} at ${time}`)
+            // Reset form
+            setScheduleType("")
+            setTime("")
+            setJobName("")
+            setIsPopoverOpen(false)
+          },
+          onError: (error: Error) => {
+            toast.error(`${error.message}`)
+          }
+        }
+      )
     } catch (error) {
       toast.error(`${error}`)
-    } finally {
-      setIsLoading(false)
     }
   }
 
   const handleDeleteJob = async (jobName: string) => {
-    setDeletingJob(jobName)
-    try {
-      const response = await API.delete(`/${encodeURIComponent(jobName)}`)
-      
-      if (response.status >= 200 && response.status < 300) {
+    setDeletingJobName(jobName)
+    
+    deleteJob(jobName, {
+      onSuccess: () => {
         toast.success(`Job "${jobName}" deleted successfully`)
-        // Refresh jobs list
-        fetchJobs()
-      } else {
-        throw new Error("Failed to delete job")
+        setDeletingJobName(null)
+      },
+      onError: (error: Error) => {
+        console.error("Error deleting job:", error)
+        toast.error("Failed to delete job. Please try again.")
+        setDeletingJobName(null)
       }
-    } catch (error) {
-      console.error("Error deleting job:", error)
-      toast.error("Failed to delete job. Please try again.")
-    } finally {
-      setDeletingJob(null)
-    }
+    })
   }
 
   const getPreviewText = () => {
     if (!scheduleType || !time || !name) return null
     const selectedOption = scheduleOptions.find(opt => opt.value === scheduleType)
     return `${name} - ${selectedOption?.label} at ${time}`
+  }
+
+  // Handle fetch error
+  if (fetchError) {
+    toast.error("Failed to fetch jobs")
+  }
+
+  // Handle create job error
+  if (createJobError) {
+    toast.error(`Failed to create job: ${createJobError.message}`)
+  }
+
+  // Handle delete job error
+  if (deleteJobError) {
+    toast.error(`Failed to delete job: ${deleteJobError.message}`)
   }
 
   return (
@@ -310,10 +283,10 @@ export default function Settime() {
                   <div className="flex gap-2">
                     <Button
                       onClick={handleSubmit}
-                      disabled={!scheduleType || !time || !name.trim() || isLoading}
+                      disabled={!scheduleType || !time || !name.trim() || isCreatingJob}
                       className="flex-1"
                     >
-                      {isLoading ? "Creating..." : "Create Job"}
+                      {isCreatingJob ? "Creating..." : "Create Job"}
                     </Button>
                     <Button variant="outline" onClick={() => setIsPopoverOpen(false)}>
                       Cancel
@@ -352,13 +325,13 @@ export default function Settime() {
               <TableBody>
                 {isLoadingJobs ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                       Loading jobs...
                     </TableCell>
                   </TableRow>
                 ) : filteredJobs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                       {searchTerm
                         ? "No jobs found matching your search."
                         : "No scheduled jobs yet. Create your first job!"}
@@ -372,18 +345,15 @@ export default function Settime() {
                       <TableCell className="text-xs font-mono bg-muted px-2 py-1 rounded">
                         {job.cronTime}
                       </TableCell>
-                      {/* <TableCell className="text-sm text-muted-foreground">
-                        {job.lastDate ? new Date(job.lastDate).toLocaleString() : "Never"}
-                      </TableCell> */}
                       <TableCell>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleDeleteJob(job.name)}
-                          disabled={deletingJob === job.name}
+                          disabled={deletingJobName === job.name}
                           className="h-8 w-8 p-0"
                         >
-                          {deletingJob === job.name ? (
+                          {deletingJobName === job.name ? (
                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                           ) : (
                             <Trash2 className="h-4 w-4" />

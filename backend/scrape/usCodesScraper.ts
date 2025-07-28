@@ -266,7 +266,8 @@ export async function* openBrowser(): AsyncGenerator<ParsedXMLData> {
         // Navigate to the US Code download page
         console.log('Navigating to US Code download page...');
         await page.goto('https://uscode.house.gov/download/download.shtml', {
-            waitUntil: 'networkidle2' // Wait until network is idle
+            waitUntil: 'networkidle2', 
+            timeout : 30000 
         });
 
         console.log('Page loaded successfully!');

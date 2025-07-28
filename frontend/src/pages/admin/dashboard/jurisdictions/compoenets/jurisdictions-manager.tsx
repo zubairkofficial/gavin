@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useJurisdictions } from "../useJurisdictions" // Adjust this import based on your file structure
+import { useJurisdictionMutations } from "../useJurisdictionMutations"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -36,7 +38,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Search, Plus, Trash2, Loader2, Pencil, Check, ChevronsUpDown } from "lucide-react"
 import { toast } from "sonner"
-import API from "@/lib/api"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
@@ -54,7 +55,6 @@ export default function JurisdictionsManager() {
   const [jurisdictions, setJurisdictions] = useState<Jurisdiction[]>([])
   const [filteredJurisdictions, setFilteredJurisdictions] = useState<Jurisdiction[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditingDialogOpen, setIsEditingDialogOpen] = useState(false)
   const [isAddingJurisdiction, setIsAddingJurisdiction] = useState(false)
@@ -68,23 +68,14 @@ export default function JurisdictionsManager() {
   const [isComboboxOpen, setIsComboboxOpen] = useState(false)
   const [isEditComboboxOpen, setIsEditComboboxOpen] = useState(false)
 
-  // Load jurisdictions on component mount
+  const { data: jurisdictionsData, isLoading } = useJurisdictions()
+
   useEffect(() => {
-    const loadJurisdictions = async () => {
-      setIsLoading(true)
-      try {
-        // Simulate API call
-        const response = await API.get("/jurisdictions/forall")
-        setJurisdictions(response.data)
-        setFilteredJurisdictions(response.data)
-      } catch (error) {
-        toast.error("Failed to load jurisdictions")
-      } finally {
-        setIsLoading(false)
-      }
+    if (jurisdictionsData) {
+      setJurisdictions(jurisdictionsData)
+      setFilteredJurisdictions(jurisdictionsData)
     }
-    loadJurisdictions()
-  }, [])
+  }, [jurisdictionsData])
 
   // Filter jurisdictions based on search query
   useEffect(() => {
@@ -103,6 +94,8 @@ export default function JurisdictionsManager() {
     }
   }, [searchQuery, jurisdictions])
 
+  const { createJurisdiction } = useJurisdictionMutations()
+
   // Add new jurisdiction
   const handleAddJurisdiction = async () => {
     if (!selectedState.trim()) {
@@ -119,22 +112,17 @@ export default function JurisdictionsManager() {
       return
     }
 
-    setIsAddingJurisdiction(true)
     try {
-      // Send state code to API
-      const response = await API.post("/jurisdictions", {
-        jurisdiction: stateCode,
-      })
-      setJurisdictions((prev) => [response.data, ...prev])
+      await createJurisdiction.mutateAsync({ jurisdiction: stateCode })
       setSelectedState("") // Reset selected state
       setIsAddDialogOpen(false)
       toast.success("Jurisdiction added successfully")
     } catch (error) {
       toast.error("Failed to add jurisdiction")
-    } finally {
-      setIsAddingJurisdiction(false)
     }
   }
+
+  const { updateJurisdiction } = useJurisdictionMutations()
 
   // Handle edit jurisdiction
   const handleEditJurisdiction = async () => {
@@ -154,31 +142,27 @@ export default function JurisdictionsManager() {
       return
     }
 
-    setIsEditingJurisdiction(true)
     try {
-      // Send state code to API
-      const response = await API.patch(`/jurisdictions/${editingJurisdiction.id}`, {
-        jurisdiction: stateCode,
+      await updateJurisdiction.mutateAsync({
+        id: editingJurisdiction.id,
+        data: { jurisdiction: stateCode }
       })
-      setJurisdictions((prev) => prev.map((j) => (j.id === editingJurisdiction.id ? response.data : j)))
       setIsEditingDialogOpen(false)
       setEditingJurisdiction(null)
       setEditingSelectedState("")
       toast.success("Jurisdiction updated successfully")
     } catch (error) {
       toast.error("Failed to update jurisdiction")
-    } finally {
-      setIsEditingJurisdiction(false)
     }
   }
+
+  const { deleteJurisdiction } = useJurisdictionMutations()
 
   // Delete jurisdiction
   const handleDeleteJurisdiction = async (id: number) => {
     setDeletingId(id)
     try {
-      // Simulate API call
-      await API.delete(`/jurisdictions/${id}`)
-      setJurisdictions((prev) => prev.filter((j) => j.id !== id))
+      await deleteJurisdiction.mutateAsync(id)
       toast.success("Jurisdiction deleted successfully")
     } catch (error) {
       toast.error("Failed to delete jurisdiction")

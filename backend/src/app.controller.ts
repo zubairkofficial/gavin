@@ -77,14 +77,6 @@ export class AppController {
   @Post('run-task')
   async runTask() {
 
-   
-  //   const statusList: Status[] = await this.StatusRepository.find({ where: { isScraping: true } });
-  // if (statusList.length > 0) {
-  //   return { message: 'Task is already running in background' };
-  // }
-
-  // const status = this.StatusRepository.create({ isScraping: true });
-  // await this.StatusRepository.save(status);
     if(isProcessing === true){
       return { message: 'Task is already running in background' };
     }
