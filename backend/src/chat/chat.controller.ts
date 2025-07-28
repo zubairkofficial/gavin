@@ -144,18 +144,18 @@ export class ChatController {
       console.log('web search that is using in the controller', createMessageDto.websearch);
       // console.log('Result from chatService:', result);
 
-      // const user = await this.usersRepository.findOne({
-      //   where: { id: req.user.id },
-      //   select: ['id', 'credits'],
-      // })
+      const user = await this.usersRepository.findOne({
+        where: { id: req.user.id },
+        select: ['id', 'credits'],
+      })
 
-      // const currentCredits = user?.credits || 0;
+      const currentCredits = user?.credits || 0;
 
-      // const config = await this.configurationRepository.find()
-      // let cutTokens
-      // if (config) {
-      //   cutTokens = config[0]?.cutCredits
-      // }
+      const config = await this.configurationRepository.find()
+      let cutTokens
+      if (config) {
+        cutTokens = config[0]?.cutCredits
+      }
 
 
       if (createMessageDto.websearch == 'false') {
@@ -178,21 +178,57 @@ export class ChatController {
         sentMetadata = true;
 
         fullAiResponse = '';
-
+        let totalToken
         try {
-          for await (const chunk of result.stream) {
-            if (clientDisconnected || res.destroyed) break;
-            const chunkContent = chunk?.data?.chunk?.content || ''; 
+          // Wait for the stream Promise to resolve
+          const streamResult = await result.stream;
 
-            if (chunkContent) {
-              fullAiResponse += chunkContent;
-              res.write(`data: ${JSON.stringify(chunkContent)}\n\n`);
+          // Handle the case where streamResult itself is a string or has direct content
+          if (typeof streamResult === 'string' || streamResult?.content) {
+            const content = typeof streamResult === 'string' ? streamResult : streamResult.content;
+            fullAiResponse = content;
+            res.write(`data: ${JSON.stringify(content)}\n\n`);
+            if (typeof (res as any).flush === 'function') {
+              (res as any).flush();
+            }
 
-              if (typeof (res as any).flush === 'function') {
-                (res as any).flush();  
+            // Handle metadata/tokens if available
+            const metadata = streamResult?.metadata || streamResult?.response_metadata;
+            if (metadata?.total_tokens) {
+              totalToken = metadata.total_tokens;
+            }
+          }
+          // Handle the case where streamResult is an async iterable
+          else if (streamResult && typeof streamResult[Symbol.asyncIterator] === 'function') {
+            for await (const chunk of streamResult) {
+              if (clientDisconnected || res.destroyed) break;
+
+              const chunkContent = chunk?.data?.chunk?.content || chunk?.content || '';
+
+              if (chunkContent) {
+                fullAiResponse += chunkContent;
+                res.write(`data: ${JSON.stringify(chunkContent)}\n\n`);
+
+                if (typeof (res as any).flush === 'function') {
+                  (res as any).flush();
+                }
+              } else {
+                console.warn('Received chunk with no content:', chunk);
               }
-            } else {
-              console.warn('Received chunk with no content:', chunk);
+
+              const data = chunk?.data?.output?.response_metadata;
+              if (data?.total_tokens) {
+                totalToken = (totalToken || 0) + data.total_tokens;
+              }
+            }
+          } else {
+            console.warn('Unexpected stream result format:', streamResult);
+            // Handle as single response if we can't iterate
+            const content = JSON.stringify(streamResult);
+            fullAiResponse = content;
+            res.write(`data: ${content}\n\n`);
+            if (typeof (res as any).flush === 'function') {
+              (res as any).flush();
             }
           }
         } catch (streamError) {
@@ -201,22 +237,22 @@ export class ChatController {
         }
         // ----------------- Handle token usage and credit deduction-----------------
 
-        // const messageWithUsage = result.stream.messages.find(msg => 
-        //   msg.usage_metadata?.total_tokens
-        // );
+        // const messageWithUsage = result.stream
+
+        // console.log('metadata of message:', messageWithUsage);
 
         // const outputTokenCount = messageWithUsage?.usage_metadata?.total_tokens
         //   || result.stream.usage_metadata?.total_tokens;
-
+        //   // console.log('metadata of message:', messageWithUsage);
         // console.log('outputcreditCount:', outputTokenCount);
-
-        // let rounded = ((outputTokenCount * 1) / cutTokens)
+        // console.log('totalToken:', totalToken);
+        // let rounded = ((totalToken * 1) / cutTokens)
 
         // let totalCredits = Math.round(rounded);
         // console.log('rounded credits:', totalCredits);
 
         // const finaltoken = currentCredits - totalCredits
-
+        // console.log('final token after deduction:', finaltoken);
         // const re = await this.usersRepository.update(
         //   { id: req.user.id },
         //   { credits: finaltoken }

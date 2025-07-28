@@ -23,7 +23,8 @@ import { Configuration } from '@/documents/entities/configuration.entity';
 import { User } from '@/auth/entities/user.entity';
 import { tool } from '@langchain/core/tools';
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
-import {PromptManagerService} from './prompt-manager.service';
+import { PromptManagerService } from './prompt-manager.service';
+import { ca } from 'zod/dist/types/v4/locales';
 
 
 
@@ -49,7 +50,7 @@ export class ChatService {
   @InjectRepository(Configuration)
   private configurationRepository: Repository<Configuration>;
 
-  constructor(private configService: ConfigService , private promptManagerService: PromptManagerService) {
+  constructor(private configService: ConfigService, private promptManagerService: PromptManagerService) {
     const openAiApiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!openAiApiKey) {
       throw new Error('OPENAI_API_KEY is not configured');
@@ -175,6 +176,10 @@ export class ChatService {
         inputKey: 'input',
         outputKey: 'output',
       });
+      (memory as any).chat_history = chatHistoryContext;
+
+      console.log('Chat history context:', memory.chatHistory);
+
       let documentContext: Array<{ title: string; reference: string; jurisdiction?: string; citation?: string; subject_area?: string; code?: string; decision_date?: string; name?: string; case_type?: string; }> = [];
       let annotations: Array<{ title: string; reference: string, type: string, start_index: string, end_index: string, }> = [];
       let str
@@ -188,7 +193,7 @@ export class ChatService {
         context += fileContent ? `File Content:\n${fileContent}\n` : '';
         
         const promptfromDB = await this.promptManagerService.getSystemPrompt();
-        console.log('Prompt from DB:', promptfromDB);
+        // console.log('Prompt from DB:', promptfromDB);
         const systemPrompt = `${promptfromDB}`
         let prompt = `
         Use the following information to answer the question:
@@ -245,15 +250,13 @@ export class ChatService {
 
       } else if (websearch == 'false') {
         const jurisdictionFromUser = createMessageDto.jurisdiction
-        const ragTool = tool(
-          async ({ message, jurisdiction , jurisdictionFromUser }) => {
-            try {
+
               console.log('RAG search for:', message, 'in jurisdiction:', createMessageDto.jurisdiction);
 
               let relevantDocs: any[] = [];
 
               const enabledDocsWithScores = await this.vectorStore.similaritySearchWithScore(message, 7, {
-                filter: { enabled: true, jurisdiction:  jurisdictionFromUser || jurisdiction },
+                filter: { enabled: true, jurisdiction:  jurisdictionFromUser  },
               });
 
               console.log('Found documents:', enabledDocsWithScores.length);
@@ -261,9 +264,7 @@ export class ChatService {
               const sortedDocs = enabledDocsWithScores.sort((a, b) => a[1] - b[1]);
               const top3DocsWithScores = sortedDocs.slice(0, 3);
               relevantDocs = top3DocsWithScores.map(([doc]) => doc);
-
-              let context = '';
-
+        let context = ''
               if (relevantDocs.length > 0) {
                 console.log('jurisdictionfromuser:', createMessageDto.jurisdiction);
                 const enabledDocs = relevantDocs.filter(doc =>
@@ -368,58 +369,23 @@ export class ChatService {
                 }
               }
 
-              return {
-                context,
-                documentContext,
-                documentsFound: relevantDocs.length
-              };
-            } catch (error) {
-              console.error('RAG Tool Error:', error);
-              return {
-                context: '',
-                documentContext: [],
-                documentsFound: 0,
-                error: error.message
-              };
-            }
-          },
-          {
-            name: "rag_search",
-            description: "Searches legal documents using RAG for the given message and jurisdiction. .",
-            schema: z.object({
-              message: z.string().min(1, "Message is required"),
-              jurisdiction: z.string().describe("Legal jurisdiction (e.g., 'FEDERAL', 'TX', 'NY', etc.)"),
-              jurisdictionFromUser: z.string().optional().describe("Legal jurisdiction (e.g., 'FEDERAL', 'TX', 'NY', etc.)"),
-            }),
-          }
-        );
        const promptfromDB = await this.promptManagerService.getSystemPrompt();
-        console.log('Prompt from DB:', promptfromDB);
+        // console.log('Prompt from DB:', promptfromDB);
         const systemPrompt = `${promptfromDB}`
 
-        const createReActAgent = () => {
-          const tools = [ragTool];
-
-          return createReactAgent({
-            llm: this.model,
-            tools,
-            prompt: ` ${systemPrompt}
-                    if file content is provided, use it to answer the question and dont use rag_search.
-
-                    if you found out any citation, reference, please don't add it to the response.
-                    Instructions:
-                    - If only message is provided, ask the user for jurisdiction first
+        let prompt = ` 
                     ${chatHistoryContext ? `- Use chat history for additional context: ${chatHistoryContext}` : ''}
                     ${fileContent ? `- Use file content for additional context: ${fileContent}` : ''}
+                    ${context ? `- Use the following context for additional information: ${context}` : ''}
+                    - If the user asks about a specific jurisdiction, use the relevant documents from that jurisdiction.
+                    Question: ${message}
+                    `
 
-                    `,
-          });
-        };
+        const result = this.model.stream([
+          new SystemMessage(systemPrompt),
+          new HumanMessage(prompt),
+        ]);
 
-        let inputs = { messages: [{ role: "user", content:  `${message}  ${!createMessageDto.jurisdiction ? `in jurisdiction ${createMessageDto.jurisdiction}` : '' }` }] };
-
-        const result = await createReActAgent().streamEvents(inputs, { version: "v2" });
-        // To log the streamed content, iterate over the stream
         
         str = result
         
