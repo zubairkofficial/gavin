@@ -35,7 +35,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { AppSidebarHeader } from "./AppSidebarHeader"
 import { useAuth } from "@/context/Auth.context"
 import { NavLink, useNavigate } from "react-router-dom"
-import { useCreateConversationMutation, useUpdateConversationTitleMutation, useDeleteConversationMutation } from "./hook"
+import { useCreateConversationMutation, useUpdateConversationTitleMutation, useDeleteConversationMutation } from "./hooks/hook"
 import { useState } from "react"
 
 type Conversation = {

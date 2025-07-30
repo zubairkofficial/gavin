@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button"
 import { useModel } from "@/context/Model.context"
 import { useState } from "react"
 import API from "@/lib/api"
+import { useNavigate } from "react-router-dom"
 
 export default function PlanBillingContent() {
   const [selectedCredit, setSelectedCredit] = useState<keyof typeof creditPricing>("100")
   const [isUpgrading, setIsUpgrading] = useState(false)
+  const navigate = useNavigate()
 
   const freeFeatures = ["Real-time contact syncing", "Automatic data enrichment", "Up to 3 seats", "Basic support"]
 
@@ -33,12 +35,24 @@ export default function PlanBillingContent() {
   const handleUpgrade = async () => {
     try {
       setIsUpgrading(true)
-      console.log('creadits that we are purchansing' , Number.parseInt(selectedCredit))
-      await API.post("/config/add-credits", {
-        credits: Number.parseInt(selectedCredit),
+      const credits = Number.parseInt(selectedCredit)
+      const price = creditPricing[selectedCredit]
+      
+      console.log('Purchasing credits:', credits, 'at price:', price)
+      
+     const data =  await API.post("/payment-session/create", {
+        credits: credits,
+        price: price,
       })
+
+      if(data){
+       console.log("Payment session created:", data)
+       console.log("Opening payment session URL:", data.data.url)
+        window.location.href = data.data.url
+      }
+      
       // Handle success (maybe show a success message or redirect)
-      console.log("Successfully upgraded with", selectedCredit, "credits")
+      console.log("Successfully initiated payment session for", credits, "credits at $", price)
     } catch (error) {
       console.error("Error upgrading plan:", error)
       // Handle error (maybe show an error message)
@@ -48,7 +62,7 @@ export default function PlanBillingContent() {
   }
 
   return (
-    <div className="px-4 md:px-6 w-full font-inter">
+    <div className="px-4 md:px-6 mt-0 md:mt-10 w-full font-inter">
       <div className="w-full flex justify-end ">
         <Button
           variant="ghost"

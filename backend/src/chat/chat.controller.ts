@@ -180,26 +180,9 @@ export class ChatController {
         fullAiResponse = '';
         let totalToken
         try {
-          // Wait for the stream Promise to resolve
           const streamResult = await result.stream;
-
-          // Handle the case where streamResult itself is a string or has direct content
-          if (typeof streamResult === 'string' || streamResult?.content) {
-            const content = typeof streamResult === 'string' ? streamResult : streamResult.content;
-            fullAiResponse = content;
-            res.write(`data: ${JSON.stringify(content)}\n\n`);
-            if (typeof (res as any).flush === 'function') {
-              (res as any).flush();
-            }
-
-            // Handle metadata/tokens if available
-            const metadata = streamResult?.metadata || streamResult?.response_metadata;
-            if (metadata?.total_tokens) {
-              totalToken = metadata.total_tokens;
-            }
-          }
-          // Handle the case where streamResult is an async iterable
-          else if (streamResult && typeof streamResult[Symbol.asyncIterator] === 'function') {
+         if (streamResult && typeof streamResult[Symbol.asyncIterator] === 'function') {
+            console.log('we are in else  if condition of streamResult');
             for await (const chunk of streamResult) {
               if (clientDisconnected || res.destroyed) break;
 
@@ -207,6 +190,7 @@ export class ChatController {
 
               if (chunkContent) {
                 fullAiResponse += chunkContent;
+                console.log('Chunk content:', chunkContent);
                 res.write(`data: ${JSON.stringify(chunkContent)}\n\n`);
 
                 if (typeof (res as any).flush === 'function') {
@@ -216,19 +200,29 @@ export class ChatController {
                 console.warn('Received chunk with no content:', chunk);
               }
 
-              const data = chunk?.data?.output?.response_metadata;
-              if (data?.total_tokens) {
-                totalToken = (totalToken || 0) + data.total_tokens;
+              // Extract token information from response_metadata or usage_metadata
+              const tokenInfo = chunk?.response_metadata?.usage || chunk?.usage_metadata;
+              console.log('Token info:', tokenInfo);
+              
+              if (tokenInfo?.total_tokens) {
+                totalToken = (totalToken || 0) + tokenInfo.total_tokens;
+                console.log('Running total tokens:', totalToken);
               }
             }
           } else {
             console.warn('Unexpected stream result format:', streamResult);
-            // Handle as single response if we can't iterate
             const content = JSON.stringify(streamResult);
             fullAiResponse = content;
             res.write(`data: ${content}\n\n`);
             if (typeof (res as any).flush === 'function') {
               (res as any).flush();
+            }
+            
+            // Handle token count for non-streaming response
+            const tokenInfo = streamResult?.response_metadata?.usage || streamResult?.usage_metadata;
+            if (tokenInfo?.total_tokens) {
+              totalToken = tokenInfo.total_tokens;
+              console.log('Total tokens from non-streaming response:', totalToken);
             }
           }
         } catch (streamError) {
@@ -237,28 +231,33 @@ export class ChatController {
         }
         // ----------------- Handle token usage and credit deduction-----------------
 
-        // const messageWithUsage = result.stream
+        // Calculate credits based on total tokens
+        console.log('Final total tokens:', totalToken);
+        
+        if (!totalToken || isNaN(totalToken)) {
+          console.warn('No valid token count available, using fallback');
+          totalToken = 0;
+        }
+        
+        if (!cutTokens || cutTokens === 0) {
+          console.warn('Invalid cutTokens value, defaulting to 1');
+          cutTokens = 1;
+        }
+        
+        let rounded = Math.max(0, (totalToken * 1) / cutTokens);
+        let totalCredits = rounded;
+        
+        console.log('Cut tokens ratio:', cutTokens);
+        console.log('Rounded credits:', totalCredits);
+        console.log('Current credits before deduction:', currentCredits);
+        const finaltoken = currentCredits - totalCredits
+        console.log('final token after deduction:', finaltoken);
+        const re = await this.usersRepository.update(
+          { id: req.user.id },
+          { credits: finaltoken }
+        );
 
-        // console.log('metadata of message:', messageWithUsage);
-
-        // const outputTokenCount = messageWithUsage?.usage_metadata?.total_tokens
-        //   || result.stream.usage_metadata?.total_tokens;
-        //   // console.log('metadata of message:', messageWithUsage);
-        // console.log('outputcreditCount:', outputTokenCount);
-        // console.log('totalToken:', totalToken);
-        // let rounded = ((totalToken * 1) / cutTokens)
-
-        // let totalCredits = Math.round(rounded);
-        // console.log('rounded credits:', totalCredits);
-
-        // const finaltoken = currentCredits - totalCredits
-        // console.log('final token after deduction:', finaltoken);
-        // const re = await this.usersRepository.update(
-        //   { id: req.user.id },
-        //   { credits: finaltoken }
-        // );
-
-        // console.log('Updated user credits:', re);
+        console.log('Updated user credits:', re);
 
         // ------------------------- End of token usage and credit deduction-----------------
 
@@ -351,28 +350,28 @@ export class ChatController {
           return;
         }
 
-        // console.log('token usage for the message of web search  is', result.stream.usage_metadata?.total_tokens);
-        // const outputTokenCount = result.stream.usage_metadata?.total_tokens
+        console.log('token usage for the message of web search  is', result.stream.usage_metadata?.total_tokens);
+        const outputTokenCount = result.stream.usage_metadata?.total_tokens
 
-        // console.log('outputcreditCount:', outputTokenCount);
+        console.log('outputcreditCount:', outputTokenCount);
 
-        // let rounded = ((outputTokenCount * 1) / cutTokens)
+        let rounded = ((outputTokenCount * 1) / cutTokens)
 
-        // let totalCredits = Math.round(rounded);
-        // console.log('rounded credits:', totalCredits);
+        let totalCredits = rounded;
+        console.log('rounded credits:', totalCredits);
 
-        // const finaltoken = currentCredits - totalCredits
+        const finaltoken = currentCredits - totalCredits
 
-        // const re = await this.usersRepository.update(
-        //   { id: req.user.id },
-        //   { credits: finaltoken }
-        // );
+        const re = await this.usersRepository.update(
+          { id: req.user.id },
+          { credits: finaltoken }
+        );
 
-        // console.log('Updated user credits:', re);
-        // console.log('total tokens used:', result.stream.usage_metadata?.total_tokens
-        // )
+        console.log('Updated user credits:', re);
+        console.log('total tokens used:', result.stream.usage_metadata?.total_tokens
+        )
 
-        // console.log(result.stream.content)
+        console.log(result.stream.content)
 
         // Send initial metadata with the content
         const initialEvent = {

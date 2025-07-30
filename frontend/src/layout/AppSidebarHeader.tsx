@@ -2,11 +2,19 @@ import { SidebarHeader, useSidebar } from "@/components/ui/sidebar";
 import { Logo } from "@/components/Logo";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpenText, ChevronLeft, ChevronRight, CreditCard, LogOutIcon, UserIcon } from "lucide-react";
-import {  useEffect, useState } from "react";
+import { BookOpenText, ChevronLeft, ChevronRight, CreditCard, Loader2, LogOutIcon, UserIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useQuery } from '@tanstack/react-query';
+import API from '@/lib/api';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/Auth.context";
 import { useModel } from "@/context/Model.context";
+
+interface CreditInfo {
+  credits: number;
+  totalCredits: number;
+  success: boolean;
+}
 
 export function AppSidebarHeader() {
 
@@ -100,14 +108,39 @@ export function AppSidebarHeader() {
         </>:<>
          <div className="w-full bg-transparent border rounded-md p-4 mb-4">
           <h3 className="font-semibold text-left">Credits Used</h3>
-          <div className="flex justify-between mb-1 items-center">
-            <Progress value={60} className="h-[5px] w-[80%]" />
-            <span className="text-xs">0/250</span>
+          {(() => {
+            const { data: creditInfo, isLoading } = useQuery<CreditInfo>({
+              queryKey: ['credit-info'],
+              queryFn: async () => {
+                const response = await API.get('/payment-session/get-credit-info');
+                return response.data;
+              },
+            });
 
-          </div>
-          <div className="flex justify-between mt-2">
-            <span className="text-xs text-gray-500 text-start">You have 5 daily credits to use first</span>
-          </div>
+            if (isLoading) {
+              return (
+                <div className="flex items-center justify-center py-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                </div>
+              );
+            }
+
+            const percentage = creditInfo ? (creditInfo.credits / creditInfo.totalCredits) * 100 : 0;
+            
+            return (
+              <>
+                <div className="flex justify-between mb-1 items-center">
+                  <Progress value={percentage} className="h-[5px] w-[80%]" />
+                  <span className="text-xs">{creditInfo?.credits}/{creditInfo?.totalCredits}</span>
+                </div>
+                <div className="flex justify-between mt-2">
+                  <span className="text-xs text-gray-500 text-start">
+                    {creditInfo?.success ? `You have ${creditInfo.credits} credits remaining` : 'Unable to load credits'}
+                  </span>
+                </div>
+              </>
+            );
+          })()}
         </div>
         </>}
       </div>

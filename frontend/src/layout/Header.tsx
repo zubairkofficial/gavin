@@ -3,15 +3,21 @@ import ProfileDropdown from "@/components/ProfileDropdown";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/Auth.context";
-import { AlignLeft, PlusIcon, ZapIcon } from "lucide-react";
+import { AlignLeft, CreditCard, Loader2, PlusIcon, ZapIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useCreateConversationMutation } from "./hook";
+import { useCreateConversationMutation } from "./hooks/hook";
+import { useModel } from "@/context/Model.context";
+import { useState } from "react";
+import { useGetCreditInfo } from "./hooks/useGetCreditInfo";
 
 export default function AppHeader() {
   const { toggleSidebar } = useSidebar()
   const { user } = useAuth()
+  const { setIsModalOpen ,setIsModalvalue  , ModalOpen } = useModel();
+  const [isInnerSideBarOpen, setIsInnerSideBarOpen] = useState(false)
   const createConversationMutation = useCreateConversationMutation()
   const navigate = useNavigate()
+  const { data: creditInfo, isLoading: isCreditInfoLoading } = useGetCreditInfo()
 
 
   const handleNewChat = async () => {
@@ -26,11 +32,26 @@ export default function AppHeader() {
     <div className="md:flex bg-background md:sticky top-0 items-center md:justify-end px-4 h-22 z-20 gap-4 md:border-b">
       {user && user.role !== "admin" && (
         <div className="md:flex hidden items-center gap-4">
-          <p className="text-sm">Credit plan: 100/90</p>
-
-          <Button className="hover:bg-transparent bg-orange py-2 h-[unset] hover:text-orange hover:shadow-none">
+          <p className="text-sm">
+            {isCreditInfoLoading 
+              ? <>
+              <div className="flex items-center justify-center py-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                </div>
+              </>
+              : `Credit plan: ${creditInfo?.totalCredits || ''}/${(creditInfo?.credits)?.toString().slice(0, 6) || ''}`
+            }
+          </p>
+          <Button 
+            className="hover:bg-transparent bg-orange py-2 h-[unset] hover:text-orange hover:shadow-none border-1 hover:border-gray-200" 
+            onClick={() => {
+              setIsModalOpen(!ModalOpen); 
+              setIsInnerSideBarOpen(!isInnerSideBarOpen);   
+              setIsModalvalue('PlansBilling')
+            }}
+          >
             <ZapIcon />
-            Upgrade Plan
+            upgrade Plan
           </Button>
         </div>
       )}

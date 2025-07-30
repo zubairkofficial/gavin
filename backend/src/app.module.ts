@@ -23,6 +23,7 @@ import { ChatModule } from './chat/chat.module';
 import { Message } from './chat/entities/message.entity';
 import { Configuration } from './documents/entities/configuration.entity';
 import { ConfiModule } from './config/config.module';
+import { PaymentSeassionModule } from './payment-seassion/payment-seassion.module';
 
 
 @Module({
@@ -63,6 +64,7 @@ import { ConfiModule } from './config/config.module';
     JurisdictionsModule,
     TypeOrmModule.forFeature([Statute , Regulation , Status , Crons , Case , Message, Configuration]),
     ConfiModule,
+    PaymentSeassionModule,
   ],
   controllers: [AppController],
   providers: [

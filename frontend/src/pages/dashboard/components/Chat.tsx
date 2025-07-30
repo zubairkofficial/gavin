@@ -384,6 +384,7 @@ const Chat = ({
                 const data = JSON.parse(jsonStr)
                 console.log("Parsed data:", data)
 
+               
                 if (data.conversationId && !hasNavigated) {
                   setConversationId(data.conversationId)
                   if (!urlConversationId || urlConversationId !== data.conversationId) {
@@ -437,8 +438,11 @@ const Chat = ({
                   setTimeout(() => {
                     queryClient.invalidateQueries({ queryKey: ["conversations"] })
                   }, 300)
+                  setTimeout(() => queryClient.invalidateQueries({ queryKey: ["credit-info"] }), 10)
+
                   return
                 }
+
 
                 // Handle errors
                 if (data.error) {
