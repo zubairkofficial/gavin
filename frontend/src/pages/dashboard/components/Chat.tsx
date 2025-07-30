@@ -892,7 +892,7 @@ const Chat = ({
       {/* Messages Section */}
       {messages.length > 0 && (
         <div className="flex-1 pb-2 w-full ">
-          <div className="w-full max-w-5xl px-5  flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px]">
+          <div className="w-full max-w-5xl px-4  flex items-center justify-center mx-auto mb-4 overflow-hidden text-[12px] ">
             <div className="w-full space-y-4 pt-3 pb-[200px]">
               {messages.map(renderMessage)}
               <div ref={messagesEndRef} />
