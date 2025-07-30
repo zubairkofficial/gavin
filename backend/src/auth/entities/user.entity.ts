@@ -23,10 +23,10 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 100, default: "" })
   companySize: string;
 
-  @Column({nullable : true , type: 'decimal'})
+  @Column({nullable : true , type: 'decimal', default: 0})
   credits: number;
 
-  @Column({nullable : true})
+  @Column({nullable : true , default: 0})
   totalCredits: number;
  
 

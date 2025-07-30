@@ -377,7 +377,6 @@ export class ChatService {
                     ${chatHistoryContext ? `- Use chat history for additional context: ${chatHistoryContext}` : ''}
                     ${fileContent ? `- Use file content for additional context: ${fileContent}` : ''}
                     ${context ? `- Use the following context for additional information: ${context}` : ''}
-                    - If the user asks about a specific jurisdiction, use the relevant documents from that jurisdiction.
                     Question: ${message}
                     `
 
