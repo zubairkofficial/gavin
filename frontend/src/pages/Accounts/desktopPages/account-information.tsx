@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { User, X } from "lucide-react"
 import { ChangePasswordModal } from "./change.password.model"
 import { useModel } from "@/context/Model.context"
+import { useAuth } from "@/context/Auth.context"
+import API from "@/lib/api"
 // import { AccountSuccessModal } from "./"
 
 interface AccountInformationProps {
@@ -16,19 +18,20 @@ interface AccountInformationProps {
 }
 
 export function AccountInformation({ onSave, onCancel }: AccountInformationProps) {
-  const [fullName, setFullName] = useState("Victor Vance")
-  const [email, setEmail] = useState("victor@example.com")
+   const { ModalOpen, setIsModalOpen } = useModel();
+   const {user} = useAuth();
+  const [fullName, setFullName] = useState(user?.fullName)
+  const [email, setEmail] = useState(user?.email || "vectore@gmail.com")
   const [userType, setUserType] = useState("solo-lawyer")
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
-   const { ModalOpen, setIsModalOpen } = useModel();
 
+  
   const handleSaveAccount = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("/api/user/update-profile", {
-        method: "PUT",
+      const response = await API.post("/auth/user/update", {
         headers: {
           "Content-Type": "application/json",
         },
@@ -38,7 +41,7 @@ export function AccountInformation({ onSave, onCancel }: AccountInformationProps
         }),
       })
 
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         setShowSuccessModal(true)
         onSave?.()
       } else {

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Req } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { hashSync } from 'bcrypt';
 import { FindOptionsWhere, Repository } from 'typeorm/index';
@@ -135,6 +135,16 @@ export class UserService {
 
     return {
       message: 'User status toggled successfully',
+    };
+  }
+  async userDetails(@Req() req: any,) {
+    const user = await this.usersRepository.findOneBy({ id: req?.user.id });
+    if (!user) {
+      throw new NotFoundException('User not Found');
+    }
+
+    return {
+      message: user,
     };
   }
 }

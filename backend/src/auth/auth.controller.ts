@@ -256,6 +256,18 @@ export class AuthController {
     return this.userService.toggleUserStatus(input);
   }
 
+  @ApiOperation({ summary: 'Toggle user status' })
+  @ApiResponse({
+    status: 200,
+    description: 'User status toggled successfully',
+  })
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @Get('/user-details')
+  async userDetails(@Body() input: ToggleUserStatusInput) {
+    return this.userService.userDetails(input);
+  }
+
 
   
 

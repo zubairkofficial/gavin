@@ -131,11 +131,11 @@ export function AppSidebarHeader() {
               <>
                 <div className="flex justify-between mb-1 items-center">
                   <Progress value={percentage} className="h-[5px] w-[80%]" />
-                  <span className="text-xs">{creditInfo?.credits}/{creditInfo?.totalCredits}</span>
+                  <span className="text-xs">{creditInfo?.credits?.toString().slice(0, 6)}/{creditInfo?.totalCredits}</span>
                 </div>
                 <div className="flex justify-between mt-2">
                   <span className="text-xs text-gray-500 text-start">
-                    {creditInfo?.success ? `You have ${creditInfo.credits} credits remaining` : 'Unable to load credits'}
+                    {creditInfo?.success ? `You have ${creditInfo.credits?.toString().slice(0 , 6)} credits remaining` : 'Unable to load credits'}
                   </span>
                 </div>
               </>
