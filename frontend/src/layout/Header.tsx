@@ -39,7 +39,7 @@ export default function AppHeader() {
                   <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
                 </div>
               </>
-              : `Credit plan: ${creditInfo?.totalCredits || ''}/${(creditInfo?.credits)?.toString().slice(0, 6) || ''}`
+              : `Credit plan: ${creditInfo?.totalCredits || '0'}/${(creditInfo?.credits)?.toString().slice(0, 6) || '0'}`
             }
           </p>
           <Button 

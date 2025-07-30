@@ -37,6 +37,7 @@ import { useAuth } from "@/context/Auth.context"
 import { NavLink, useNavigate } from "react-router-dom"
 import { useCreateConversationMutation, useUpdateConversationTitleMutation, useDeleteConversationMutation } from "./hooks/hook"
 import { useState } from "react"
+import { useModel } from "@/context/Model.context"
 
 type Conversation = {
   conversationId: string
@@ -79,6 +80,10 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
   const createConversationMutation = useCreateConversationMutation()
   const updateTitleMutation = useUpdateConversationTitleMutation()
   const deleteChatMutation = useDeleteConversationMutation()
+  
+     const { setIsModalOpen ,setIsModalvalue  , ModalOpen } = useModel();
+    const {toggleSidebar} = useSidebar()
+    const [isInnerSideBarOpen, setIsInnerSideBarOpen] = useState(false)
 
   // Add restore mutation
   const queryClient = useQueryClient()
@@ -460,7 +465,7 @@ export function UserSidebar({ onNavClick }: { onNavClick: () => void }) {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton className="gap-2 py-5" onClick={onNavClick}>
+            <SidebarMenuButton className="gap-2 py-5" onClick={() => {setIsModalOpen(!ModalOpen); onNavClick; setIsInnerSideBarOpen(!isInnerSideBarOpen);  setIsModalvalue('HelpCenter')}}>
               <HelpCircle size={18} />
               <span>Help & support</span>
             </SidebarMenuButton>
