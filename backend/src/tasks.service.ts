@@ -13,11 +13,13 @@ import { EmbeddingService } from './documents/services/embedding.service';
 import { parseXmlTitlesFromRepo } from '../scrape/gitScrape';
 import { Regulation } from './documents/entities/regulation.entity';
 import { openBrowser } from 'scrape/usCodesScraper';
+import { scrapeSecAPI } from 'scrape/sec-api';
 import { Crons } from './cron.entity';
 import { Cron } from '@nestjs/schedule';
 import { scrapeCourtListener } from 'scrape/CourtListner';
 import { Case } from './documents/entities/case.entity';
 import { Message } from './chat/entities/message.entity';
+import { Contract } from './documents/entities/contract.entity';
 
 
 export interface CronJobInfo {
@@ -79,6 +81,8 @@ export class TasksService implements OnModuleInit {
   constructor(
     @InjectRepository(Statute)
     private readonly statuteRepository: Repository<Statute>,
+    @InjectRepository(Contract)
+    private readonly contractRepository: Repository<Contract>,
     @InjectRepository(Case)
     private readonly caseRepository: Repository<Case>,
     @InjectRepository(Regulation)
@@ -190,13 +194,15 @@ export class TasksService implements OnModuleInit {
     this.logger.log('Deleted all regulations with source_url = "scaper"');
     await this.regulationRepository.delete({ source_url: 'scaper' });
     this.logger.log('Deleted all cases with source_url = "api"');
+    await this.contractRepository.delete({ source: 'SEC Scraper' });
+    this.logger.log('Deleted all contracts with source_url = "scraper"');
     await this.caseRepository.delete({ source_url: 'Api' });
     this.logger.log('Deleting all embadings with source_url = "scaper"');
     await this.embeddingService.deleteDocumentEmbadings('Scraper');
 
 
     await this.scrpaeData();
-    // await this.scrapeStates();
+    await this.scrapeStates();
 
   }
 
@@ -290,6 +296,34 @@ export class TasksService implements OnModuleInit {
       //   }
       // });
     }
+
+    // for await (const result of scrapeSecAPI()) {
+    //   const contractEntity = new Contract();
+    //   contractEntity.type = (result as any).contractType || 'contract';
+    //   contractEntity.filePath = (result as any).filingUrl || '';
+    //   contractEntity.fileName = (result as any).filingUrl?.split('/').pop() || '';
+    //   contractEntity.title = (result as any).companyNameLong || "";
+    //   contractEntity.jurisdiction =  'FEDERAL';
+    //   contractEntity.content_html = (result as any).scrapedContent || '';
+    //   contractEntity.source =  'SEC Scraper';
+
+    //   const document = await this.contractRepository.save(contractEntity);
+    //   // await this.embeddingService.processDocument({
+    //   //   documentId: document.id,
+    //   //   content: document.content_html || '',
+    //   //   additionalMetadata: {
+    //   //     document_id: document.id,
+    //   //     document_type: document.type,
+    //   //     processed_at: new Date().toISOString(),
+    //   //     enabled: true,
+    //   //     source: 'Scaper',
+    //   //     jurisdiction : 'FEDERAL'
+    //   //   }
+    //   // });
+
+
+
+    // }
 
   }
 

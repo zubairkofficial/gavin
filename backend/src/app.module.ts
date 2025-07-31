@@ -24,6 +24,7 @@ import { Message } from './chat/entities/message.entity';
 import { Configuration } from './documents/entities/configuration.entity';
 import { ConfiModule } from './config/config.module';
 import { PaymentSeassionModule } from './payment-seassion/payment-seassion.module';
+import { Contract } from './documents/entities/contract.entity';
 
 
 @Module({
@@ -62,7 +63,7 @@ import { PaymentSeassionModule } from './payment-seassion/payment-seassion.modul
     SharedModule,
     DocumentsModule,
     JurisdictionsModule,
-    TypeOrmModule.forFeature([Statute , Regulation , Status , Crons , Case , Message, Configuration]),
+    TypeOrmModule.forFeature([Statute , Regulation , Contract, Status , Crons , Case , Message, Configuration]),
     ConfiModule,
     PaymentSeassionModule,
   ],
