@@ -91,8 +91,8 @@ export function PlansBillingModal({ isOpen, onClose, initialSection = "plans-bil
                   <User className="w-4 h-4 text-gray-600" />
                 </div> */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">Alex Smith</p>
-                  <p className="text-xs text-gray-500 truncate">alexsmith@gmail.com</p>
+                  <p className="text-sm font-medium text-gray-900 truncate">{user?.fullName || 'Alex Smith'}</p>
+                  <p className="text-xs text-gray-500 truncate">{user?.email || 'alexsmith@gmail.com'}</p>
                 </div>
               </div>
             </div>
