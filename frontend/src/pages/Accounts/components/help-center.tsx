@@ -61,28 +61,6 @@ export function HelpCenter() {
     setOpenItems((prev) => (prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId]))
   }
 
-  const handleContactSupport = async () => {
-    try {
-      // API call to create support ticket or redirect to support
-      const response = await fetch("/api/support/contact", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          source: "help-center",
-          timestamp: new Date().toISOString(),
-        }),
-      })
-
-      if (response.ok) {
-        // Redirect to support portal or show success message
-        window.open("/support", "_blank")
-      }
-    } catch (error) {
-      console.error("Failed to contact support:", error)
-    }
-  }
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 md:p-6 space-y-3">
@@ -151,7 +129,6 @@ export function HelpCenter() {
       {/* Contact Support */}
       <div className="space-y-3">
         <Button
-          onClick={handleContactSupport}
           className="w-full bg-gray-600 hover:bg-gray-400 text-white py-1"
           size="lg"
         >

@@ -39,6 +39,7 @@ import "swiper/css"
 // @ts-ignore
 import "swiper/css/navigation"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useJurisdictions } from "@/pages/dashboard/hooks/useJurisdictions"
 import API from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
@@ -98,18 +99,14 @@ const Chat = ({
   const queryClient = useQueryClient()
 
 
-  const fetchJurisdictions = async () => {
-      try {
-        const response = await API.get("/jurisdictions/forall")
-        if (response.data) {
-          // Store the jurisdiction codes from API
-          setJurisdictions(response.data?.map((jurisdiction: any) => jurisdiction.jurisdiction))
-          console.log(response.data, "jurisdictions fetched")
-        }
-      } catch (error) {
-        console.error("Error fetching jurisdictions:", error)
-      }
+  const { data: jurisdictionList } = useJurisdictions()
+
+  // Update jurisdictions state when data is available
+  useEffect(() => {
+    if (jurisdictionList) {
+      setJurisdictions(jurisdictionList)
     }
+  }, [jurisdictionList])
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const streamingContentRef = useRef("")
@@ -226,7 +223,6 @@ const Chat = ({
       setTitle("")
     }
     queryClient.invalidateQueries({ queryKey: ["conversations"] })
-    fetchJurisdictions()
   }, [urlConversationId])
 
   useEffect(() => {

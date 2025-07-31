@@ -7,13 +7,13 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useModel } from "@/context/Model.context"
 import { useState } from "react"
-import API from "@/lib/api"
-import { useNavigate } from "react-router-dom"
+import { useCreatePaymentSession } from "@/pages/Accounts/hooks/useCreatePaymentSession"
+import { toast } from "sonner"
 
 export default function PlanBillingContent() {
   const [selectedCredit, setSelectedCredit] = useState<keyof typeof creditPricing>("100")
   const [isUpgrading, setIsUpgrading] = useState(false)
-  const navigate = useNavigate()
+  const createPaymentSession = useCreatePaymentSession()
 
   const freeFeatures = ["Real-time contact syncing", "Automatic data enrichment", "Up to 3 seats", "Basic support"]
 
@@ -33,32 +33,28 @@ export default function PlanBillingContent() {
   const { ModalOpen, setIsModalOpen } = useModel()
 
   const handleUpgrade = async () => {
-    try {
-      setIsUpgrading(true)
-      const credits = Number.parseInt(selectedCredit)
-      const price = creditPricing[selectedCredit]
-      
-      console.log('Purchasing credits:', credits, 'at price:', price)
-      
-     const data =  await API.post("/payment-session/create", {
-        credits: credits,
-        price: price,
-      })
-
-      if(data){
-       console.log("Payment session created:", data)
-       console.log("Opening payment session URL:", data.data.url)
-        window.location.href = data.data.url
+    setIsUpgrading(true)
+    const credits = Number.parseInt(selectedCredit)
+    const price = creditPricing[selectedCredit]
+    
+    console.log('Purchasing credits:', credits, 'at price:', price)
+    
+    createPaymentSession.mutate(
+      { credits, price },
+      {
+        onSuccess: (data) => {
+          console.log("Payment session created:", data)
+          toast.success("Opening payment session URL:", data.url)
+          window.location.href = data.url
+          setIsUpgrading(false)
+        },
+        onError: (error) => {
+          console.error("Error upgrading plan:", error)
+          setIsUpgrading(false)
+          // Handle error (maybe show an error message)
+        }
       }
-      
-      // Handle success (maybe show a success message or redirect)
-      console.log("Successfully initiated payment session for", credits, "credits at $", price)
-    } catch (error) {
-      console.error("Error upgrading plan:", error)
-      // Handle error (maybe show an error message)
-    } finally {
-      setIsUpgrading(false)
-    }
+    )
   }
 
   return (

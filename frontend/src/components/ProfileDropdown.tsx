@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/context/Auth.context"
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
-import { PlansBillingModal } from "../../src/pages/Accounts/desktopPages/plans-biling-model"
+import { PlansBillingModal } from "../pages/Accounts/components/plans-biling-model"
 import { getUserInfo } from "@/lib/utils"
 
 export default function ProfileDropdown() {

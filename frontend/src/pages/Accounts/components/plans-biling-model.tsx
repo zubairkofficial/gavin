@@ -10,7 +10,7 @@ import { useAuth } from "@/context/Auth.context"
 import { useNavigate } from "react-router-dom"
 import { AccountInformation } from "./account-information"
 import { HelpCenter } from "./help-center"
-import PlanBillingContent from "../mobilePages/PlanBillingContent"
+import PlanBillingContent from "./PlanBillingContent"
 
 
 interface PlansBillingModalProps {

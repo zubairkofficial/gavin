@@ -1,11 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import React, { useEffect } from "react";
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,

@@ -5,10 +5,10 @@ import AppHeader from "./Header";
 
 import { useModel } from "@/context/Model.context";
 
-import PlanBillingContent from "@/pages/Accounts/mobilePages/PlanBillingContent";
+import PlanBillingContent from "@/pages/Accounts/components/PlanBillingContent";
 // import { HelpCenterMobile } from "@/pages/Accounts/mobilePages/HelpCenterMobile";
-import { HelpCenter } from "@/pages/Accounts/desktopPages/help-center";
-import { AccountInformation } from "@/pages/Accounts/desktopPages/account-information";
+import { HelpCenter } from "@/pages/Accounts/components/help-center";
+import { AccountInformation } from "@/pages/Accounts/components/account-information";
 
 export default function AppLayout() {
   const { ModalOpen, Modalvalue } = useModel();

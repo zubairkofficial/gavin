@@ -178,7 +178,6 @@ export default function DocumentsTable() {
     setError(null)
     try {
       const url = `/documents/${type}`
-      console.log(`Fetching ${type} from ${url}`)
       const response = await API.get(url)
       if (response.status < 200 || response.status >= 300) {
         throw new Error(`Failed to fetch ${type}`)

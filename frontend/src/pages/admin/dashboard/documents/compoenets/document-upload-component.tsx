@@ -7,8 +7,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Check, ChevronsUpDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import API from "@/lib/api"
-import {  getStateNameByCode , } from "@/pages/common/usStatesWithCodes"
+import { useJurisdictions, useUploadDocument } from "@/pages/admin/dashboard/documents/useDocumentApi"
+import { getStateNameByCode } from "@/pages/common/usStatesWithCodes"
 
 
 interface AttachedDocument {
@@ -110,6 +110,10 @@ const DocumentUploadComponent = () => {
   const [jurisdictionOpen, setJurisdictionOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Initialize React Query hooks
+  const { data: jurisdictionsData } = useJurisdictions();
+  const uploadDocumentMutation = useUploadDocument();
+
   // Progress messages for upload
   const messages = [
     "We are doing our work... please wait",
@@ -120,17 +124,13 @@ const DocumentUploadComponent = () => {
   ]
 
   // Fetch jurisdictions when component mounts
+  // Update jurisdictions when data is available
+  // Update jurisdictions when data is available
   useEffect(() => {
-    const fetchJurisdictions = async () => {
-      try {
-        const response = await API.get("/jurisdictions")
-        setJurisdictions(response.data)
-      } catch (error) {
-        toast.error("Failed to load jurisdictions")
-      }
+    if (jurisdictionsData) {
+      setJurisdictions(jurisdictionsData as Jurisdiction[]);
     }
-    fetchJurisdictions()
-  }, [])
+  }, [jurisdictionsData]);
 
   const handleTypeSelection = (type: DocumentType): void => {
     setSelectedType(type)
@@ -193,11 +193,10 @@ const DocumentUploadComponent = () => {
     }
 
     setIsUploading(true)
-    let currentTimer: NodeJS.Timeout | null = null
     let clearCurrentTimer: (() => void) | null = null
 
     try {
-      ;[currentTimer, clearCurrentTimer] = startProgressTimer()
+      ;[, clearCurrentTimer] = startProgressTimer()
 
       for (let i = 0; i < documents.length; i++) {
         const doc = documents[i]
@@ -226,28 +225,16 @@ const DocumentUploadComponent = () => {
         })
 
         // For uploading documents with formData
-        const response = await API.post("/documents/upload", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data", // Important for file uploads
-            Accept: "application/json",
-          },
-        })
-
-        if (response.status < 200 || response.status >= 300) {
-          throw new Error(`Upload failed for ${doc.file.name}: ${response.statusText}`)
-        }
+        await uploadDocumentMutation.mutateAsync({ formData });
 
         // Clear current timer
         if (clearCurrentTimer) {
           clearCurrentTimer()
         }
 
-        // Show success message for current file
-        toast.success(`✅ ${doc.file.name} uploaded successfully!`)
-
         // If there are more files to upload, start timer for next file
         if (i < documents.length - 1) {
-          ;[currentTimer, clearCurrentTimer] = startProgressTimer()
+          ;[, clearCurrentTimer] = startProgressTimer()
         }
       }
 
@@ -264,7 +251,7 @@ const DocumentUploadComponent = () => {
     } catch (error: unknown) {
       console.error("Upload error:", error)
       const errorMessage = error instanceof Error ? error.message : "An error occurred during upload."
-      toast.error(errorMessage)
+      
     } finally {
       // Clear the timer when upload is done or failed
       if (clearCurrentTimer) {
