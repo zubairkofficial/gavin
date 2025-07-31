@@ -132,23 +132,23 @@ export class ChatService {
     const convId = conversationId || uuidv4();
     const userId = req.user?.id;
 
-    // const data = await this.usersRepository.findOne({
-    //   where: {
-    //     id: userId
-    //   }
-    // })
+    const data = await this.usersRepository.findOne({
+      where: {
+        id: userId
+      }
+    })
 
 
 
-    // const config = await this.configurationRepository.find()
-    // let minTokens
-    // if (config) {
-    //   minTokens = config[0]?.minTokens
-    // }
+    const config = await this.configurationRepository.find()
+    let minTokens
+    if (config) {
+      minTokens = config[0]?.minTokens
+    }
 
-    // if ((data?.credits ?? 0) < minTokens) {
-    //   throw new BadRequestException('You have low credits, please Add credits');
-    // }
+    if ((data?.credits ?? 0) < minTokens) {
+      throw new BadRequestException('You have low credits, please Add credits');
+    }
 
     try {
       // Fetch previous messages for buffer memory

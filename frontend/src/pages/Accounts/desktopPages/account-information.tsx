@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { use, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,7 +9,8 @@ import { User, X } from "lucide-react"
 import { ChangePasswordModal } from "./change.password.model"
 import { useModel } from "@/context/Model.context"
 import { useAuth } from "@/context/Auth.context"
-import API from "@/lib/api"
+import { useUpdateUser } from "@/hooks/useUpdateUser"
+import { toast } from "sonner"
 // import { AccountSuccessModal } from "./"
 
 interface AccountInformationProps {
@@ -19,39 +20,41 @@ interface AccountInformationProps {
 
 export function AccountInformation({ onSave, onCancel }: AccountInformationProps) {
    const { ModalOpen, setIsModalOpen } = useModel();
-   const {user} = useAuth();
-  const [fullName, setFullName] = useState(user?.fullName)
-  const [email, setEmail] = useState(user?.email || "vectore@gmail.com")
+  const [fullName, setFullName] = useState( "Victor Vance")
+  const [email, setEmail] = useState( "vectore@gmail.com")
   const [userType, setUserType] = useState("solo-lawyer")
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
 
-  
-  const handleSaveAccount = async () => {
-    setIsLoading(true)
-    try {
-      const response = await API.post("/auth/user/update", {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fullName,
-          userType,
-        }),
-      })
+  useEffect(() => {
+      const userData = localStorage.getItem("userData");
+      setFullName(userData ? JSON.parse(userData).fullName : fullName);
+      setEmail(userData ? JSON.parse(userData).email : email);
 
-      if (response.status >= 200 && response.status < 300) {
-        setShowSuccessModal(true)
-        onSave?.()
-      } else {
-        throw new Error("Failed to update profile")
-      }
+  },[])
+  
+  const updateUserMutation = useUpdateUser();
+ 
+  const handleSaveAccount = async () => {
+    try {
+    
+     const data =  await updateUserMutation.mutateAsync({
+        fullName: fullName,
+        userType: userType,
+      });
+      setShowSuccessModal(true);
+      toast.success("Account updated successfully!");
+      onSave?.();
+       setIsLoading(false);
+      console.log("Account updated successfully:", data);
+      localStorage.setItem("userData", JSON.stringify(data.data));
+      // onAuth(user , token);
+      setIsModalOpen(false);
     } catch (error) {
-      console.error("Failed to save account:", error)
+      console.error("Failed to save account:", error);
+      setIsLoading(false);
       // Show error toast or notification
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -141,7 +144,10 @@ export function AccountInformation({ onSave, onCancel }: AccountInformationProps
           Cancel
         </Button>
         <Button
-          onClick={handleSaveAccount}
+          onClick={()=>{
+            handleSaveAccount();
+            setIsLoading(true);
+          }}
           disabled={isLoading}
           className="w-full sm:w-auto bg-gray-600 hover:bg-gray-400"
         >

@@ -206,9 +206,10 @@ export class AuthController {
     @Body() input: UpdateUserDTO,
     @JWTUser() userInfo: JWTPayload,
   ) {
-    await this.userService.updateUserByFilters({ id: userInfo.id }, input);
+    console.log("userInfo that we are going to update " , input)
+   const data =  await this.userService.updateUserByFilters({ id: userInfo.id }, input);
 
-    return { message: 'Updated Successfully' };
+    return { message: 'Updated Successfully' ,  data : data };
   }
 
   @ApiOperation({ summary: 'Get all users' })

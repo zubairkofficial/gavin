@@ -56,25 +56,10 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('User not Found');
     }
-
-    const payload = {
-      ...input,
-    };
-
-    Object.keys(payload).forEach(function (key) {
-      if (
-        !payload[key] &&
-        key != 'proposalEmailNotifications' &&
-        key != 'proposalStatusEmailNotifications'
-      )
-        delete payload[key];
-    });
-
-    if (payload?.['password']) {
-      payload['password'] = hashSync(payload['password'], 10);
+    console.log("user that is updated " , user, " also the input is " , input )
+    if ('fullName' in input && input.fullName !== undefined) {
+      user.fullName = input.fullName;
     }
-
-    Object.assign(user, payload);
 
     return this.usersRepository.save(user);
   }
