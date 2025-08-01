@@ -105,7 +105,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                 if (currentUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
                     console.log("CAPTCHA detected! Waiting 5 minutes before restarting browser...");
                     await browser?.close();
-                    await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
+                    await new Promise(resolve => setTimeout(resolve, 3 * 60 * 1000));
                     
                     const newPage = await setupBrowser();
                     return await navigateToPage(newPage, targetPageNumber);
@@ -289,7 +289,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                     
                     const savedPageNumber = pageCount;
                     await browser?.close();
-                    await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000)); // Wait 5 minutes
+                    await new Promise(resolve => setTimeout(resolve, 3 * 60 * 1000)); // Wait 5 minutes
                     
                     // Restart browser and navigate to saved page
                     page = await setupBrowser();
@@ -365,7 +365,7 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                         if (postNavUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
                             console.log(`CAPTCHA detected after navigation! Last processed page: ${lastProcessedPage}. Waiting 5 minutes before restarting browser...`);
                             await browser?.close();
-                            await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000)); // Wait 5 minutes
+                            await new Promise(resolve => setTimeout(resolve, 3 * 60 * 1000)); // Wait 5 minutes
                             
                             // Restart browser and navigate back to the last processed page
                             page = await setupBrowser();
@@ -457,43 +457,43 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
 }
 
 // Enhanced main execution with better error handling and progress tracking
-(async () => {
-    try {
-        console.log("=".repeat(60));
-        console.log("Starting California Code Scraper");
-        console.log("=".repeat(60));
+// (async () => {
+//     try {
+//         console.log("=".repeat(60));
+//         console.log("Starting California Code Scraper");
+//         console.log("=".repeat(60));
 
-        let processedCount = 0;
-        let errorCount = 0;
-        const startTime = Date.now();
+//         let processedCount = 0;
+//         let errorCount = 0;
+//         const startTime = Date.now();
 
-        for await (const { url, content , code , section , Title, subject_area  } of scrapeCaliforniaCodes()) {
-            processedCount++;
+//         for await (const { url, content , code , section , Title, subject_area  } of scrapeCaliforniaCodes()) {
+//             processedCount++;
 
-            console.log(`\n[${processedCount}] Processing California code section:`);
-            console.log(`URL: ${url}`);
-            console.log(`Content length: ${content.length} characters`);
-            console.log(`Content preview: ${content.substring(0, 100)}...`);
-            console.log(`Code: ${code}`);
-            console.log(`Section: ${section}`);
-            console.log(`source_url: scraper`);
-            console.log(`type is Statutes`);
-            console.log(`Title: ${Title}`);
-            console.log(`subject_area: ${subject_area}`);
+//             console.log(`\n[${processedCount}] Processing California code section:`);
+//             console.log(`URL: ${url}`);
+//             console.log(`Content length: ${content.length} characters`);
+//             console.log(`Content preview: ${content.substring(0, 100)}...`);
+//             console.log(`Code: ${code}`);
+//             console.log(`Section: ${section}`);
+//             console.log(`source_url: scraper`);
+//             console.log(`type is Statutes`);
+//             console.log(`Title: ${Title}`);
+//             console.log(`subject_area: ${subject_area}`);
 
-        }
+//         }
 
-        const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+//         const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
 
-        console.log("\n" + "=".repeat(60));
-        console.log("SCRAPING COMPLETED");
-        console.log("=".repeat(60));
-        console.log(`Total sections processed: ${processedCount}`);
-        console.log(`Total time: ${totalTime} seconds`);
-        console.log(`Average time per section: ${(parseFloat(totalTime) / processedCount).toFixed(2)}s`);
+//         console.log("\n" + "=".repeat(60));
+//         console.log("SCRAPING COMPLETED");
+//         console.log("=".repeat(60));
+//         console.log(`Total sections processed: ${processedCount}`);
+//         console.log(`Total time: ${totalTime} seconds`);
+//         console.log(`Average time per section: ${(parseFloat(totalTime) / processedCount).toFixed(2)}s`);
 
-    } catch (error) {
-        console.error('Error in main process:', error);
-        process.exit(1);
-    }
-})();
+//     } catch (error) {
+//         console.error('Error in main process:', error);
+//         process.exit(1);
+//     }
+// })();
