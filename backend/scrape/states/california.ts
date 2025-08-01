@@ -1,6 +1,8 @@
-import puppeteer , {Browser } from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import { Browser } from 'puppeteer';
 import * as cheerio from 'cheerio';
 import axios from 'axios';
+const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 
 // Define the type for extracted content
 export interface ExtractedContent {
@@ -21,13 +23,14 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
         console.log("Starting California codes scraping...");
 
         // Function to launch browser and setup initial page
-        const setupBrowser = async () => {
+        const setupBrowser = async (savedPageNumber?: number) => {
             if (browser) {
                 await browser.close();
             }
+            puppeteer.use(StealthPlugin());
 
             browser = await puppeteer.launch({
-                headless: true,
+                headless: false,
                 timeout: 0,
                 args: [
                     '--start-maximized',
@@ -53,8 +56,9 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
             });
 
             // Navigate to search tab
-            await page.waitForSelector('a[id="j_idt121:textsearchtab"]', { timeout: 30000 });
-            await page.click('a[id="j_idt121:textsearchtab"]');
+
+            await page.waitForSelector('#tab_panel span:nth-child(2) a', { timeout: 50000 });
+            await page.click('#tab_panel span:nth-child(2) a');
 
             // Select code categories
             console.log("Selecting code categories...");
@@ -85,49 +89,33 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
         const navigateToPage = async (page: import('puppeteer').Page, targetPageNumber: number) => {
             console.log(`Navigating to page ${targetPageNumber}...`);
             
-            // Navigate through pages to reach the target page
-            let currentPage = 1;
-            while (currentPage < targetPageNumber) {
-                // Check for CAPTCHA before clicking next
+            try {
+                // Set the page number in the input field
+                await page.evaluate((pageNum) => {
+                    const input = document.querySelector('input[id="datanavform:go_to_page"]') as HTMLInputElement;
+                    if (input) input.value = pageNum.toString();
+                }, targetPageNumber);
+                
+                // Click the Go button
+                await page.click('input[id="datanavform:gotopage"]');
+                await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
+                
+                // Check for CAPTCHA
                 const currentUrl = page.url();
                 if (currentUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
-                    console.log("CAPTCHA detected! Restarting browser...");
+                    console.log("CAPTCHA detected! Waiting 5 minutes before restarting browser...");
                     await browser?.close();
-                    await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                    await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
                     
-                    // Restart browser and navigate back to target page
                     const newPage = await setupBrowser();
-                    const newUrl = page.url();
-                    if (newUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
-                        console.error("Still getting CAPTCHA after restart. Stopping scraper.");
-                        break;
-                    }
-                    return  page = await navigateToPage(newPage, targetPageNumber);
+                    return await navigateToPage(newPage, targetPageNumber);
                 }
-
-                const preNavCheck = await page.evaluate(() => {
-                    const nextBtn = document.querySelector('input[id="datanavform:nextTen"]');
-                    return {
-                        hasNextBtn: !!nextBtn,
-                        nextBtnDisabled: nextBtn ? nextBtn.hasAttribute('disabled') : true
-                    };
-                });
-
-                if (!preNavCheck.hasNextBtn || preNavCheck.nextBtnDisabled) {
-                    console.log(`Cannot navigate to page ${targetPageNumber}, reached end at page ${currentPage}`);
-                    break;
-                }
-
-                await page.click('input[id="datanavform:nextTen"]');
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 })
-                    .catch(() => new Promise(resolve => setTimeout(resolve, 3000)));
-                await new Promise(resolve => setTimeout(resolve, 3000));
-
-                currentPage++;
+                
+                return page;
+            } catch (error) {
+                console.error(`Error navigating to page ${targetPageNumber}:`, error);
+                throw error;
             }
-
-            return page;
         };
 
         // Initial browser setup
@@ -135,24 +123,41 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
 
         console.log("Search completed, starting content extraction...");
 
+        // Track last processed page and links
+        let lastProcessedPage = 1;
+        let lastProcessedLinks: string[] = [];
+        
         // Process pages and extract content immediately
         let pageCount = 1;
         let consecutiveEmptyPages = 0;
         const maxConsecutiveEmptyPages = 3;
 
         while (consecutiveEmptyPages < maxConsecutiveEmptyPages) {
+            // Update tracking variables at the start of each page
+            lastProcessedPage = pageCount;
+            
             console.log(`Processing page ${pageCount}...`);
 
             // Check for CAPTCHA at the beginning of each page processing
             const currentUrl = page.url();
             if (currentUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
-                console.log("CAPTCHA detected! Restarting browser and resuming from page", pageCount);
+                console.log("CAPTCHA detected! Saving page number:", pageCount);
+                const savedPageNumber = pageCount;
+                await new Promise(resolve => setTimeout(resolve, 10000)); 
                 await browser?.close();
-                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                await new Promise(resolve => setTimeout(resolve, 20000)); 
                 
-                // Restart browser and navigate back to current page
-               const  newPage = await setupBrowser();
-                page = await navigateToPage(page, pageCount);
+                // Restart browser with saved page number
+                const newPage = await setupBrowser();
+                
+                // Execute initial search
+                await page.click('input[id="codeSearchForm:execute_search"]');
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                await page.waitForSelector('span[title="Sections Returned"]', { timeout: 30000 });
+                
+                // Navigate directly to the saved page number
+                console.log("Navigating back to saved page:", savedPageNumber);
+                page = await navigateToPage(newPage, savedPageNumber);
                 
                 // Re-check the URL after navigation
                 const newUrl = page.url();
@@ -183,7 +188,6 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                     }
                 }
             }
-
             const $ = cheerio.load(html);
             const linkElems = $('.table_main a');
 
@@ -267,8 +271,6 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                         console.warn(`⚠ No content found for link: ${link}`);
                     }
 
-                    await new Promise(resolve => setTimeout(resolve, 800));
-
                 } catch (error) {
                     console.error(`✗ Error processing link ${link}:`, (error as Error).message);
                     continue;
@@ -282,15 +284,24 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                 // Check for CAPTCHA before attempting navigation
                 const currentUrl = page.url();
                 if (currentUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
-                    console.log("CAPTCHA detected during navigation! Restarting browser...");
+                    console.log("CAPTCHA detected during navigation! Waiting 5 minutes before restarting browser...");
 
                     
+                    const savedPageNumber = pageCount;
                     await browser?.close();
-                    await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                    await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000)); // Wait 5 minutes
                     
-                    // Restart browser and navigate to next page
+                    // Restart browser and navigate to saved page
                     page = await setupBrowser();
-                    page = await navigateToPage(page, pageCount + 1);
+                    
+                    // Execute initial search
+                    await page.click('input[id="codeSearchForm:execute_search"]');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await page.waitForSelector('span[title="Sections Returned"]', { timeout: 30000 });
+                    
+                    // Navigate directly to the saved page number
+                    console.log("Navigating back to saved page:", savedPageNumber);
+                    page = await navigateToPage(page, savedPageNumber + 1);
                     
                     const newUrl = page.url();
                     if (newUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
@@ -306,14 +317,19 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                 const preNavCheck = await page.evaluate(() => {
                     const sectionsSpan = document.querySelector('span[title="Sections Returned"]');
                     const tableMain = document.querySelector('.table_main');
-                    const nextBtn = document.querySelector('input[id="datanavform:nextTen"]');
+                    const pageInput = document.querySelector('input[id="datanavform:go_to_page"]') as HTMLInputElement;
                     return {
                         hasValidPage: !!(sectionsSpan && tableMain),
-                        hasNextBtn: !!nextBtn,
-                        nextBtnDisabled: nextBtn ? nextBtn.hasAttribute('disabled') : true,
-                        currentUrl: window.location.href
+                        currentUrl: window.location.href,
+                        currentPageNumber: pageInput ? parseInt(pageInput.value) : 1
                     };
                 });
+                
+                // Update lastProcessedPage with the current page number from the input
+                if (preNavCheck.currentPageNumber) {
+                    lastProcessedPage = preNavCheck.currentPageNumber;
+                    console.log(`Updated last processed page to: ${lastProcessedPage}`);
+                }
                 
                 console.log('Pre-navigation check:', preNavCheck);
                 
@@ -322,12 +338,20 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                     break;
                 }
                 
-                if (preNavCheck.hasNextBtn && !preNavCheck.nextBtnDisabled) {
+                // Continue to next page if current page is valid
+                if (preNavCheck.hasValidPage) {
                     console.log(`Moving to page ${pageCount + 1}...`);
                     
                     try {
-                        await page.click('input[id="datanavform:nextTen"]');
-                        console.log('Next button clicked, waiting for page update...');
+                        // Set the page number in the input field
+                        await page.evaluate((nextPage) => {
+                            const input = document.querySelector('input[id="datanavform:go_to_page"]') as HTMLInputElement;
+                            if (input) input.value = nextPage.toString();
+                        }, pageCount + 1);
+                        
+                        // Click the Go button
+                        await page.click('input[id="datanavform:gotopage"]');
+                        console.log('Go button clicked for page navigation, waiting for update...');
                         
                         await new Promise(resolve => setTimeout(resolve, 1000));
                         
@@ -339,13 +363,24 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                         // Check for CAPTCHA after navigation
                         const postNavUrl = page.url();
                         if (postNavUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
-                            console.log("CAPTCHA detected after navigation! Restarting browser...");
+                            console.log(`CAPTCHA detected after navigation! Last processed page: ${lastProcessedPage}. Waiting 5 minutes before restarting browser...`);
                             await browser?.close();
-                            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                            await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000)); // Wait 5 minutes
                             
-                            // Restart browser and navigate to next page
+                            // Restart browser and navigate back to the last processed page
                             page = await setupBrowser();
-                            page = await navigateToPage(page, pageCount + 1);
+                            console.log(`Navigating back to last processed page ${lastProcessedPage}...`);
+                            page = await navigateToPage(page, lastProcessedPage);
+                            
+                            // After navigation, go to the page input field and set it
+                            await page.evaluate((targetPage) => {
+                                const input = document.querySelector('input[id="datanavform:go_to_page"]') as HTMLInputElement;
+                                if (input) input.value = targetPage.toString();
+                            }, pageCount + 1);
+                            
+                            // Click the Go button to navigate to the next page
+                            await page.click('input[id="datanavform:gotopage"]');
+                            await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
                             
                             const finalUrl = page.url();
                             if (finalUrl === 'https://leginfo.legislature.ca.gov/faces/captcha.xhtml') {
@@ -383,46 +418,12 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
                         
                     } catch (navError) {
                         console.error('Navigation error:', (navError as Error).message);
-                        
-                        const recoveryCheck = await page.evaluate(() => {
-                            return {
-                                url: window.location.href,
-                                title: document.title,
-                                hasForm: !!document.querySelector('form')
-                            };
-                        });
-                        
-                        console.log('Recovery check:', recoveryCheck);
-                        
-                        if (recoveryCheck.url.includes('codes_displaySection') || 
-                            recoveryCheck.url.includes('codes.xhtml')) {
-                            console.log('Page seems to have redirected, stopping scraper');
-                            break;
-                        }
-                        
+                        console.log('Navigation to next page failed, stopping scraper');
                         hasNextPage = false;
                     }
                     
                 } else {
-                    console.log("No enabled next page button found");
-                    
-                    const finalPageInfo = await page.evaluate(() => {
-                        const buttons = Array.from(document.querySelectorAll('input[type="submit"], input[type="button"]'));
-                        const sectionsSpan = document.querySelector('span[title="Sections Returned"]');
-                        return {
-                            buttons: buttons.map(btn => ({
-                                id: btn.id,
-                                value: btn.getAttribute('value'),
-                                disabled: btn.hasAttribute('disabled'),
-                                title: btn.getAttribute('title')
-                            })),
-                            sectionsText: sectionsSpan?.textContent || 'Not found',
-                            currentUrl: window.location.href,
-                            pageTitle: document.title
-                        };
-                    });
-                    console.log('Final page diagnostic:', finalPageInfo);
-                    
+                    console.log("Page navigation failed, stopping scraper");
                     hasNextPage = false;
                 }
                 
@@ -456,43 +457,43 @@ export async function* scrapeCaliforniaCodes(): AsyncGenerator<ExtractedContent>
 }
 
 // Enhanced main execution with better error handling and progress tracking
-// (async () => {
-//     try {
-//         console.log("=".repeat(60));
-//         console.log("Starting California Code Scraper");
-//         console.log("=".repeat(60));
+(async () => {
+    try {
+        console.log("=".repeat(60));
+        console.log("Starting California Code Scraper");
+        console.log("=".repeat(60));
 
-//         let processedCount = 0;
-//         let errorCount = 0;
-//         const startTime = Date.now();
+        let processedCount = 0;
+        let errorCount = 0;
+        const startTime = Date.now();
 
-//         for await (const { url, content , code , section , Title, subject_area  } of scrapeCaliforniaCodes()) {
-//             processedCount++;
+        for await (const { url, content , code , section , Title, subject_area  } of scrapeCaliforniaCodes()) {
+            processedCount++;
 
-//             console.log(`\n[${processedCount}] Processing California code section:`);
-//             console.log(`URL: ${url}`);
-//             console.log(`Content length: ${content.length} characters`);
-//             console.log(`Content preview: ${content.substring(0, 100)}...`);
-//             console.log(`Code: ${code}`);
-//             console.log(`Section: ${section}`);
-//             console.log(`source_url: scraper`);
-//             console.log(`type is Statutes`);
-//             console.log(`Title: ${Title}`);
-//             console.log(`subject_area: ${subject_area}`);
+            console.log(`\n[${processedCount}] Processing California code section:`);
+            console.log(`URL: ${url}`);
+            console.log(`Content length: ${content.length} characters`);
+            console.log(`Content preview: ${content.substring(0, 100)}...`);
+            console.log(`Code: ${code}`);
+            console.log(`Section: ${section}`);
+            console.log(`source_url: scraper`);
+            console.log(`type is Statutes`);
+            console.log(`Title: ${Title}`);
+            console.log(`subject_area: ${subject_area}`);
 
-//         }
+        }
 
-//         const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+        const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
 
-//         console.log("\n" + "=".repeat(60));
-//         console.log("SCRAPING COMPLETED");
-//         console.log("=".repeat(60));
-//         console.log(`Total sections processed: ${processedCount}`);
-//         console.log(`Total time: ${totalTime} seconds`);
-//         console.log(`Average time per section: ${(parseFloat(totalTime) / processedCount).toFixed(2)}s`);
+        console.log("\n" + "=".repeat(60));
+        console.log("SCRAPING COMPLETED");
+        console.log("=".repeat(60));
+        console.log(`Total sections processed: ${processedCount}`);
+        console.log(`Total time: ${totalTime} seconds`);
+        console.log(`Average time per section: ${(parseFloat(totalTime) / processedCount).toFixed(2)}s`);
 
-//     } catch (error) {
-//         console.error('Error in main process:', error);
-//         process.exit(1);
-//     }
-// })();
+    } catch (error) {
+        console.error('Error in main process:', error);
+        process.exit(1);
+    }
+})();
